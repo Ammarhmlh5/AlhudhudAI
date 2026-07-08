@@ -1,0 +1,26 @@
+# 2026/04/03 16:54:17.370597 [TestBug4_GetCurrentLoad_ReturnsZeroMessages] [rapid] draw messageCount: 35
+# 2026/04/03 16:54:17.387642 [TestBug4_GetCurrentLoad_ReturnsZeroMessages] 
+# 	Error Trace:	D:/ALHudhudAI/services/backend/internal/redis/analytics_bug4_test.go:82
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:371
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:380
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:205
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:120
+# 	            				D:/ALHudhudAI/services/backend/internal/redis/analytics_bug4_test.go:41
+# 	Error:      	"0" is not greater than "0"
+# 	Test:       	TestBug4_GetCurrentLoad_ReturnsZeroMessages
+# 	Messages:   	BUG DETECTED: GetCurrentLoad() returned MessageCount=0 despite 35 messages existing in system. Event ID: EV260403165434110001, EventCount: 3, Expected MessageCount: >0, Actual: 0
+# 2026/04/03 16:54:17.387642 [TestBug4_GetCurrentLoad_ReturnsZeroMessages] 
+# 	Error Trace:	D:/ALHudhudAI/services/backend/internal/redis/analytics_bug4_test.go:88
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:371
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:380
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:205
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:120
+# 	            				D:/ALHudhudAI/services/backend/internal/redis/analytics_bug4_test.go:41
+# 	Error:      	"0" is not greater than or equal to "35"
+# 	Test:       	TestBug4_GetCurrentLoad_ReturnsZeroMessages
+# 	Messages:   	MessageCount should be at least 35 (messages created), got 0
+# 
+v0.4.8#4139786924630734294
+0xdc5ba30c1bac4
+0xe9671e2a4dd26
+0x1e

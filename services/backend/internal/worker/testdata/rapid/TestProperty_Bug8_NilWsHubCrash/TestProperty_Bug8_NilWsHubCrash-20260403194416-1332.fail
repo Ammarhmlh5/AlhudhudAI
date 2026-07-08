@@ -1,0 +1,68 @@
+# 2026/04/03 19:44:16.844746 [TestProperty_Bug8_NilWsHubCrash] [rapid] draw phoneNumber: "+0452870350"
+# 2026/04/03 19:44:16.844746 [TestProperty_Bug8_NilWsHubCrash] [rapid] draw content: "A"
+# 2026/04/03 19:44:16.844746 [TestProperty_Bug8_NilWsHubCrash] 
+# 	Error Trace:	D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug8_test.go:87
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:371
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:380
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:205
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:120
+# 	            				D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug8_test.go:35
+# 	            				C:/Program Files/Go/src/runtime/asm_amd64.s:1771
+# 	Error:      	Should be false
+# 	Test:       	TestProperty_Bug8_NilWsHubCrash
+# 	Messages:   	Bug Condition: Calling wsHub.SendMessage() with nil wsHub should NOT panic. On UNFIXED code, this assertion FAILS because panic occurs. Panic value: runtime error: invalid memory address or nil pointer dereference. This failure confirms Bug 8 exists: Nil wsHub Crash.
+# 2026/04/03 19:44:16.844746 [TestProperty_Bug8_NilWsHubCrash] UNFIXED CODE DETECTED: Panic occurred with value: runtime error: invalid memory address or nil pointer dereference
+# 2026/04/03 19:44:16.844746 [TestProperty_Bug8_NilWsHubCrash] This confirms Bug 8: No nil check before calling wsHub.SendMessage()
+# 
+v0.4.8#17578264118588774885
+0x0
+0x266edadf3666c
+0x0
+0xe8b164d5f4243
+0x0
+0x1ba8722cedfa78
+0x0
+0x1ca4d2abe3330f
+0x4
+0xa6817c8062193
+0x0
+0x17616eea7e54a4
+0x5
+0xa9b98226d1976
+0x0
+0x4cef1cc279fd8
+0x2
+0x13aebe8c233324
+0x0
+0x1605afcd9348df
+0xb
+0xa
+0xc
+0x8
+0x142ce92d1c0bfc
+0x0
+0x7a8ce38a6aa36
+0x7
+0x91d974da9ab23
+0x0
+0x3727f4a5ab2c8
+0x0
+0x3127db5597380
+0x0
+0x84a3bfb207ac8
+0x3
+0x1938fe8ca7b28b
+0x0
+0x12b24154e8aacb
+0x5
+0x1bec2714ecfa49
+0x0
+0x303c3fb85eb51
+0x0
+0x223f9cdc910ba
+0xb80103a0948a2
+0x35
+0xa
+0x3c796d169db25
+0x0
+0x4e22a9580c3dc

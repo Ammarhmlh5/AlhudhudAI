@@ -1,0 +1,70 @@
+# 2026/02/27 22:22:25.506525 [TestProperty_RateLimitIsolationUnderLoad] [rapid] draw numTenants: 4
+# 2026/02/27 22:22:25.506525 [TestProperty_RateLimitIsolationUnderLoad] [rapid] draw requestsPerTenant: 27
+# 2026/02/27 22:22:25.506525 [TestProperty_RateLimitIsolationUnderLoad] [rapid] draw apiRate_0: 9
+# 2026/02/27 22:22:25.506525 [TestProperty_RateLimitIsolationUnderLoad] [rapid] draw msgRate_0: 53
+# 2026/02/27 22:22:25.506525 [TestProperty_RateLimitIsolationUnderLoad] [rapid] draw queryRate_0: 17
+# 2026/02/27 22:22:25.506525 [TestProperty_RateLimitIsolationUnderLoad] [rapid] draw apiRate_1: 5
+# 2026/02/27 22:22:25.506525 [TestProperty_RateLimitIsolationUnderLoad] [rapid] draw msgRate_1: 144
+# 2026/02/27 22:22:25.506525 [TestProperty_RateLimitIsolationUnderLoad] [rapid] draw queryRate_1: 18
+# 2026/02/27 22:22:25.506525 [TestProperty_RateLimitIsolationUnderLoad] [rapid] draw apiRate_2: 6
+# 2026/02/27 22:22:25.506525 [TestProperty_RateLimitIsolationUnderLoad] [rapid] draw msgRate_2: 77
+# 2026/02/27 22:22:25.506525 [TestProperty_RateLimitIsolationUnderLoad] [rapid] draw queryRate_2: 18
+# 2026/02/27 22:22:25.506525 [TestProperty_RateLimitIsolationUnderLoad] [rapid] draw apiRate_3: 14
+# 2026/02/27 22:22:25.506525 [TestProperty_RateLimitIsolationUnderLoad] [rapid] draw msgRate_3: 51
+# 2026/02/27 22:22:25.506525 [TestProperty_RateLimitIsolationUnderLoad] [rapid] draw queryRate_3: 17
+# 2026/02/27 22:22:25.506525 [TestProperty_RateLimitIsolationUnderLoad] 
+# 	Error Trace:	D:/ALHudhudAI/services/backend/internal/resources/limiter_property_test.go:194
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:371
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:380
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:205
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:120
+# 	            				D:/ALHudhudAI/services/backend/internal/resources/limiter_property_test.go:101
+# 	Error:      	"4" is not less than "4"
+# 	Test:       	TestProperty_RateLimitIsolationUnderLoad
+# 	Messages:   	Success counts should show some variation, indicating independent rate limiting
+# 
+v0.4.8#18391843891734773241
+0x1b00ee318b233a
+0x1846c1d03fb1ee
+0x3
+0x2
+0xd09912e2beba4
+0x1ca0c75fc26809
+0x11
+0x1d1d0d97b1cd97
+0x7249c7900b574
+0x4
+0x1c85b8033d4ac7
+0xcf344f756d7d2
+0x3
+0x1846e2f46f87fd
+0x1d6458af241627
+0xc
+0x145d53474e6f21
+0x1d33dcccd07604
+0xc
+0x0
+0x13350b03491b6e
+0x155cce054589f1
+0x5e
+0x40482503b2990
+0xa4739ef0b601c
+0xd
+0x7aa54c9b221a1
+0x1949682514cc61
+0x1
+0x1317ebe0e282cc
+0x1ad0e18113e20a
+0x1b
+0x126ad3df8caef9
+0xb77a3623e12b0
+0xd
+0x71b67878fb66f
+0x15a7648fb4833b
+0x9
+0xa02b41319e2ba
+0x44add2e80ae5d
+0x1
+0xfb50e3035265b
+0x156b06efc1cd2c
+0xc

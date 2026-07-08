@@ -1,0 +1,23 @@
+# 2026/03/21 08:21:10.912718 [TestProperty_RolloverMessages_ExpiryDate] [rapid] draw messages_remaining: 1
+# 2026/03/21 08:21:10.912718 [TestProperty_RolloverMessages_ExpiryDate] [rapid] draw rollover_expiry_months: 1
+# 2026/03/21 08:21:11.915752 [TestProperty_RolloverMessages_ExpiryDate] 
+# 	Error Trace:	D:/ALHudhudAI/services/backend/internal/rollover/manager_property_test.go:477
+# 	            				D:/ALHudhudAI/services/backend/internal/rollover/manager_property_test.go:345
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:371
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:380
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:205
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:120
+# 	            				D:/ALHudhudAI/services/backend/internal/rollover/manager_property_test.go:336
+# 	Error:      	Received unexpected error:
+# 	            	failed to connect to `user=postgres database=sms_gateway_test`:
+# 	            		[::1]:5432 (localhost): dial error: dial tcp [::1]:5432: connectex: No connection could be made because the target machine actively refused it.
+# 	            		127.0.0.1:5432 (localhost): dial error: dial tcp 127.0.0.1:5432: connectex: No connection could be made because the target machine actively refused it.
+# 	Test:       	TestProperty_RolloverMessages_ExpiryDate
+# 
+v0.4.8#8649417357301473300
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

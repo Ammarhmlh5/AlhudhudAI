@@ -1,0 +1,343 @@
+# Prometheus Alert Rules for Tariff Pricing System
+# Task 35.6: Alerting Setup
+# Requirements: 24.1-24.9
+
+groups:
+  # Subscription Alerts
+  - name: tariff_subscriptions
+    interval: 30s
+    rules:
+      # High subscription renewal failures
+      - alert: HighSubscriptionRenewalFailures
+        expr: rate(tariff_subscription_renewal_failures_total[5m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: subscriptions
+        annotations:
+          summary: "High subscription renewal failure rate"
+          description: "Subscription renewal failure rate is {{ $value }} failures/second. Multiple subscriptions failing to renew."
+          impact: "Customers losing service access"
+          action: "Check balance deduction system, investigate failure reasons"
+
+      # Critical subscription renewal failures
+      - alert: CriticalSubscriptionRenewalFailures
+        expr: rate(tariff_subscription_renewal_failures_total[5m]) > 20
+        for: 2m
+        labels:
+          severity: critical
+          component: subscriptions
+        annotations:
+          summary: "Critical subscription renewal failure rate"
+          description: "Subscription renewal failure rate is {{ $value }} failures/second. Mass renewal failures detected."
+          impact: "Severe service disruption for customers"
+          action: "URGENT: Investigate billing system, check database and payment processing"
+
+      # Expiring subscriptions not renewed
+      - alert: ExpiringSubscriptionsNotRenewed
+        expr: tariff_subscriptions_expiring_soon > 100
+        for: 1h
+        labels:
+          severity: warning
+          component: subscriptions
+        annotations:
+          summary: "Many subscriptions expiring soon"
+          description: "{{ $value }} subscriptions expiring within 24 hours without renewal."
+          impact: "Potential service interruption for customers"
+          action: "Send renewal reminders, check auto-renewal settings"
+
+  # Rollover Alerts
+  - name: tariff_rollover
+    interval: 30s
+    rules:
+      # High rollover forfeitures
+      - alert: HighRolloverForfeitures
+        expr: rate(tariff_rollover_forfeited_total[1h]) > 50
+        for: 30m
+        labels:
+          severity: warning
+          component: rollover
+        annotations:
+          summary: "High rollover message forfeitures"
+          description: "{{ $value }} rollover messages forfeited per hour. Many customers losing rollover benefits."
+          impact: "Customer dissatisfaction, revenue loss"
+          action: "Review rollover policy, send payment reminders earlier"
+
+      # Rollover expiration warnings
+      - alert: RolloverMessagesExpiringSoon
+        expr: tariff_rollover_expiring_soon > 1000
+        for: 1h
+        labels:
+          severity: info
+          component: rollover
+        annotations:
+          summary: "Many rollover messages expiring soon"
+          description: "{{ $value }} rollover messages expiring within 7 days."
+          impact: "Customers may lose unused messages"
+          action: "Send expiration warnings to customers"
+
+  # Gateway Performance Alerts
+  - name: tariff_gateway_performance
+    interval: 30s
+    rules:
+      # High gateway resource usage
+      - alert: HighGatewayResourceUsage
+        expr: tariff_gateway_resource_usage > 80
+        for: 10m
+        labels:
+          severity: warning
+          component: gateway
+        annotations:
+          summary: "High resource usage on dedicated gateway"
+          description: "Gateway {{ $labels.gateway_id }} resource usage is {{ $value }}% (threshold: 80%)."
+          impact: "Performance degradation for enterprise customer"
+          action: "Check gateway load, consider scaling resources"
+
+      # Critical gateway resource usage
+      - alert: CriticalGatewayResourceUsage
+        expr: tariff_gateway_resource_usage > 95
+        for: 5m
+        labels:
+          severity: critical
+          component: gateway
+        annotations:
+          summary: "Critical resource usage on dedicated gateway"
+          description: "Gateway {{ $labels.gateway_id }} resource usage is {{ $value }}% (threshold: 95%)."
+          impact: "Imminent service failure for enterprise customer"
+          action: "URGENT: Scale gateway resources immediately"
+
+      # Gateway quota exceeded
+      - alert: GatewayQuotaExceeded
+        expr: tariff_gateway_quota_exceeded_total > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: gateway
+        annotations:
+          summary: "Gateway quota exceeded"
+          description: "Gateway {{ $labels.gateway_id }} has exceeded its quota {{ $value }} times."
+          impact: "Messages being throttled or rejected"
+          action: "Review quota settings, notify customer"
+
+  # Tariff Calculation Alerts
+  - name: tariff_calculation
+    interval: 30s
+    rules:
+      # High tariff calculation errors
+      - alert: HighTariffCalculationErrors
+        expr: rate(tariff_calculation_errors_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: tariff
+        annotations:
+          summary: "High tariff calculation error rate"
+          description: "Tariff calculation error rate is {{ $value }} errors/second."
+          impact: "Incorrect pricing, potential revenue loss"
+          action: "Check tariff engine, review error logs"
+
+      # Missing tariff definitions
+      - alert: MissingTariffDefinitions
+        expr: tariff_missing_definitions_total > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: tariff
+        annotations:
+          summary: "Missing tariff definitions"
+          description: "{{ $value }} requests failed due to missing tariff definitions."
+          impact: "Unable to price messages correctly"
+          action: "URGENT: Add missing tariff definitions"
+
+  # Balance Alerts
+  - name: tariff_balance
+    interval: 30s
+    rules:
+      # High insufficient balance rate
+      - alert: HighInsufficientBalanceRate
+        expr: rate(tariff_insufficient_balance_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: balance
+        annotations:
+          summary: "High insufficient balance rate"
+          description: "Insufficient balance rate is {{ $value }} attempts/second."
+          impact: "Many customers unable to send messages"
+          action: "Send balance low notifications, review pricing"
+
+      # Balance deduction failures
+      - alert: BalanceDeductionFailures
+        expr: rate(tariff_balance_deduction_failures_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: critical
+          component: balance
+        annotations:
+          summary: "Balance deduction failures detected"
+          description: "Balance deduction failure rate is {{ $value }} failures/second."
+          impact: "Financial integrity compromised"
+          action: "URGENT: Investigate balance manager, check database transactions"
+
+  # Database Performance Alerts
+  - name: tariff_database
+    interval: 30s
+    rules:
+      # Slow tariff queries
+      - alert: SlowTariffQueries
+        expr: histogram_quantile(0.95, rate(tariff_query_duration_seconds_bucket[5m])) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Slow tariff database queries"
+          description: "95th percentile query time is {{ $value }}s (threshold: 0.5s)."
+          impact: "Slow response times, poor user experience"
+          action: "Check database indexes, optimize queries, review query plans"
+
+      # Critical query performance
+      - alert: CriticalTariffQueryPerformance
+        expr: histogram_quantile(0.95, rate(tariff_query_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Critical tariff query performance"
+          description: "95th percentile query time is {{ $value }}s (threshold: 2s)."
+          impact: "Severe performance degradation"
+          action: "URGENT: Investigate database performance, check for locks"
+
+  # Cache Performance Alerts
+  - name: tariff_cache
+    interval: 30s
+    rules:
+      # Low cache hit rate
+      - alert: LowTariffCacheHitRate
+        expr: tariff_cache_hit_rate < 0.8
+        for: 15m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Low tariff cache hit rate"
+          description: "Cache hit rate is {{ $value }} (threshold: 0.8)."
+          impact: "Increased database load, slower response times"
+          action: "Check cache TTL settings, review cache strategy"
+
+      # Critical cache hit rate
+      - alert: CriticalTariffCacheHitRate
+        expr: tariff_cache_hit_rate < 0.5
+        for: 5m
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: "Critical tariff cache hit rate"
+          description: "Cache hit rate is {{ $value }} (threshold: 0.5)."
+          impact: "Severe database overload"
+          action: "URGENT: Investigate Redis health, check cache configuration"
+
+  # Package Management Alerts
+  - name: tariff_packages
+    interval: 30s
+    rules:
+      # High overage usage
+      - alert: HighOverageUsage
+        expr: sum(tariff_overage_messages_total) / sum(tariff_included_messages_total) > 0.3
+        for: 1h
+        labels:
+          severity: info
+          component: packages
+        annotations:
+          summary: "High overage usage detected"
+          description: "Overage usage is {{ $value | humanizePercentage }} of included messages."
+          impact: "Customers paying extra for overage"
+          action: "Consider recommending package upgrades to customers"
+
+      # Package upgrade recommendations
+      - alert: PackageUpgradeRecommended
+        expr: tariff_customers_exceeding_package_limit > 10
+        for: 24h
+        labels:
+          severity: info
+          component: packages
+        annotations:
+          summary: "Many customers exceeding package limits"
+          description: "{{ $value }} customers consistently exceeding their package limits."
+          impact: "Customers paying unnecessary overage fees"
+          action: "Send package upgrade recommendations"
+
+  # Financial Alerts
+  - name: tariff_financial
+    interval: 30s
+    rules:
+      # Revenue anomaly
+      - alert: RevenueAnomaly
+        expr: abs(rate(tariff_revenue_total[1h]) - rate(tariff_revenue_total[1h] offset 24h)) / rate(tariff_revenue_total[1h] offset 24h) > 0.5
+        for: 2h
+        labels:
+          severity: warning
+          component: financial
+        annotations:
+          summary: "Revenue anomaly detected"
+          description: "Revenue has changed by {{ $value | humanizePercentage }} compared to same time yesterday."
+          impact: "Potential pricing issue or system problem"
+          action: "Review recent changes, check tariff calculations"
+
+      # High refund rate
+      - alert: HighRefundRate
+        expr: rate(tariff_refunds_total[1h]) / rate(tariff_charges_total[1h]) > 0.1
+        for: 2h
+        labels:
+          severity: warning
+          component: financial
+        annotations:
+          summary: "High refund rate detected"
+          description: "Refund rate is {{ $value | humanizePercentage }} of charges."
+          impact: "Revenue loss, potential service quality issues"
+          action: "Investigate refund reasons, check message delivery success rate"
+
+  # System Health Alerts
+  - name: tariff_system_health
+    interval: 30s
+    rules:
+      # High error rate
+      - alert: HighTariffSystemErrorRate
+        expr: rate(tariff_errors_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High tariff system error rate"
+          description: "Error rate is {{ $value }} errors/second (threshold: 0.05)."
+          impact: "System reliability compromised"
+          action: "Check error logs, investigate common error types"
+
+      # Critical error rate
+      - alert: CriticalTariffSystemErrorRate
+        expr: rate(tariff_errors_total[5m]) > 0.2
+        for: 2m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "Critical tariff system error rate"
+          description: "Error rate is {{ $value }} errors/second (threshold: 0.2)."
+          impact: "Severe system instability"
+          action: "URGENT: Investigate system health, check all components"
+
+      # API response time
+      - alert: SlowTariffAPIResponses
+        expr: histogram_quantile(0.95, rate(tariff_api_response_time_seconds_bucket[5m])) > 1
+        for: 10m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "Slow tariff API responses"
+          description: "95th percentile API response time is {{ $value }}s (threshold: 1s)."
+          impact: "Poor user experience"
+          action: "Check API server load, database performance, cache hit rate"

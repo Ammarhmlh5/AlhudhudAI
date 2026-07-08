@@ -1,0 +1,13 @@
+# 2026/04/03 18:49:45.751230 [TestBug6_Preservation_MultipleOperationsAtomic] 
+# 	Error Trace:	D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug6_preservation_test.go:147
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:371
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:380
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:205
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:120
+# 	            				D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug6_preservation_test.go:123
+# 	Error:      	Received unexpected error:
+# 	            	ERROR: insert or update on table "messages" violates foreign key constraint "fk_messages_tenant" (SQLSTATE 23503)
+# 	Test:       	TestBug6_Preservation_MultipleOperationsAtomic
+# 	Messages:   	Preservation: Should be able to insert message
+# 
+v0.4.8#12971075552044195775

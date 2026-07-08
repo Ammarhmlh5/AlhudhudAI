@@ -1,0 +1,4 @@
+phone_number,content,metadata
+966500000000,Test Message 1,{"key": "value"}
+966511111111,Hello from Hudhud AI,{"id": 101}
+966522222222,System Alert: Balance Low,{"priority": "high"}

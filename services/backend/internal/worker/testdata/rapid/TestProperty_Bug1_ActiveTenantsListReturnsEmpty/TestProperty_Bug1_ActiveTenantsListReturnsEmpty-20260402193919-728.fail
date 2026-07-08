@@ -1,0 +1,18 @@
+# 2026/04/02 19:39:19.871854 [TestProperty_Bug1_ActiveTenantsListReturnsEmpty] [rapid] draw tenantCount: 7
+# 2026/04/02 19:39:19.871854 [TestProperty_Bug1_ActiveTenantsListReturnsEmpty] 
+# 	Error Trace:	D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug1_test.go:105
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:371
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:380
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:205
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:120
+# 	            				D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug1_test.go:66
+# 	            				C:/Program Files/Go/src/runtime/asm_amd64.s:1771
+# 	Error:      	"[]" should have 7 item(s), but has 0
+# 	Test:       	TestProperty_Bug1_ActiveTenantsListReturnsEmpty
+# 	Messages:   	Bug Condition: getActiveTenants() returns empty list when Redis set has 7 tenant UUIDs. Expected: 7 tenants, Got: 0 tenants. This failure confirms the bug exists.
+# 
+v0.4.8#15746974143327146400
+0x30d8860b3aa3f
+0x15347113357113
+0xb
+0x6

@@ -1,0 +1,45 @@
+# 2026/04/05 16:46:01.226757 [TestProperty_Bug2_GormQueriesContinueToWork] [rapid] draw tenantName: "ऻ/$¥ʵa<"
+# 2026/04/05 16:46:01.227758 [TestProperty_Bug2_GormQueriesContinueToWork] 
+# 	Error Trace:	D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug2_preservation_test.go:63
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:371
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:380
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:205
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:120
+# 	            				D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug2_preservation_test.go:43
+# 	            				C:/Program Files/Go/src/runtime/asm_amd64.s:1771
+# 	Error:      	Received unexpected error:
+# 	            	ERROR: duplicate key value violates unique constraint "idx_tenants_api_key_accounting" (SQLSTATE 23505)
+# 	Test:       	TestProperty_Bug2_GormQueriesContinueToWork
+# 	Messages:   	Preservation: GORM Create operation should continue to work. This test verifies that adding PgxPool does not break GORM.
+# 
+v0.4.8#14481530036478824057
+0x18a2e50db513b2
+0x23
+0x88ae57e5c18f
+0x1
+0x886af35f9dac8
+0x6
+0x11dd0ba0ff05ff
+0x18
+0x121bb55227398c
+0xd
+0xa279b17575bce
+0x7
+0x5a99ade02adbc
+0x1e
+0x19a0e8c5980c47
+0x4
+0xa7b25a56ff7e0
+0x17
+0x8a5425c63d2ac
+0x5
+0xde9d9507abf48
+0x5
+0x3cbd06027932b
+0x1
+0x17a89fab8aa3e8
+0x8
+0x15990f5e068ad2
+0x3c
+0x1e
+0x14ba0ee121d05

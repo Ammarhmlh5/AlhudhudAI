@@ -1,0 +1,21 @@
+# 2026/04/06 16:36:42.433483 [TestProperty_BugCondition_ExportFunctionsNotImplemented] [rapid] draw total_referrals: 0
+# 2026/04/06 16:36:42.433483 [TestProperty_BugCondition_ExportFunctionsNotImplemented] [rapid] draw completed_referrals: 0
+# 2026/04/06 16:36:42.433483 [TestProperty_BugCondition_ExportFunctionsNotImplemented] [rapid] draw rewarded_referrals: 0
+# 2026/04/06 16:36:42.433483 [TestProperty_BugCondition_ExportFunctionsNotImplemented] [rapid] draw tenant_name: ""
+# 2026/04/06 16:36:42.433483 [TestProperty_BugCondition_ExportFunctionsNotImplemented] [rapid] draw referrer_total: 1
+# 2026/04/06 16:36:42.433483 [TestProperty_BugCondition_ExportFunctionsNotImplemented] Expected 'not implemented' error for JSON export, got nil (function may be implemented)
+# 
+v0.4.8#14077175279393341
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

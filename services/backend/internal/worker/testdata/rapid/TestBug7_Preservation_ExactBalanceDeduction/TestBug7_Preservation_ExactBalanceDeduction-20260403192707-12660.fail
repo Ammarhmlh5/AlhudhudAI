@@ -1,0 +1,32 @@
+# 2026/04/03 19:27:07.710453 [TestBug7_Preservation_ExactBalanceDeduction] [rapid] draw initialBalance: 92
+# 2026/04/03 19:27:07.710453 [TestBug7_Preservation_ExactBalanceDeduction] 
+# 	Error Trace:	D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug7_preservation_test.go:238
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:371
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:380
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:205
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:120
+# 	            				D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug7_preservation_test.go:200
+# 	            				C:/Program Files/Go/src/runtime/asm_amd64.s:1771
+# 	Error:      	Not equal: 
+# 	            	expected: decimal.Decimal{value:(*big.Int)(0x28c720752b60), exp:1}
+# 	            	actual  : decimal.Decimal{value:(*big.Int)(0x28c720a1f620), exp:0}
+# 	            	
+# 	            	Diff:
+# 	            	--- Expected
+# 	            	+++ Actual
+# 	            	@@ -3,5 +3,6 @@
+# 	            	   neg: (bool) false,
+# 	            	-  abs: (big.nat) <nil>
+# 	            	+  abs: (big.nat) {
+# 	            	+  }
+# 	            	  }),
+# 	            	- exp: (int32) 1
+# 	            	+ exp: (int32) 0
+# 	            	 }
+# 	Test:       	TestBug7_Preservation_ExactBalanceDeduction
+# 	Messages:   	Preservation: New balance should be 0 after deducting exact amount
+# 
+v0.4.8#7301053094081130182
+0x3a0bebd025ed5
+0x108856ce3a2bf9
+0x52

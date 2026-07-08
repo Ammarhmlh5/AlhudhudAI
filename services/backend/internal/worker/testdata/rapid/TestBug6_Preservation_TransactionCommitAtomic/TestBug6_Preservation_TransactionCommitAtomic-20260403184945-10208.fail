@@ -1,0 +1,17 @@
+# 2026/04/03 18:49:45.743205 [TestBug6_Preservation_TransactionCommitAtomic] [rapid] draw messageCount: 1
+# 2026/04/03 18:49:45.743205 [TestBug6_Preservation_TransactionCommitAtomic] 
+# 	Error Trace:	D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug6_preservation_test.go:85
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:371
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:380
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:205
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:120
+# 	            				D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug6_preservation_test.go:55
+# 	Error:      	Received unexpected error:
+# 	            	ERROR: insert or update on table "messages" violates foreign key constraint "fk_messages_tenant" (SQLSTATE 23503)
+# 	Test:       	TestBug6_Preservation_TransactionCommitAtomic
+# 	Messages:   	Preservation: Should be able to insert message in transaction
+# 
+v0.4.8#16322289430146359538
+0x0
+0x0
+0x0

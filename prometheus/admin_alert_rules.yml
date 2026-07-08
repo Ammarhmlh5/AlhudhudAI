@@ -1,0 +1,343 @@
+groups:
+  - name: admin_api_alerts
+    interval: 30s
+    rules:
+      # High API Response Time
+      - alert: HighAPIResponseTime
+        expr: histogram_quantile(0.95, rate(admin_api_request_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High API response time detected"
+          description: "API p95 response time is {{ $value }}s (threshold: 0.5s) for endpoint {{ $labels.endpoint }}"
+
+      # Critical API Response Time
+      - alert: CriticalAPIResponseTime
+        expr: histogram_quantile(0.95, rate(admin_api_request_duration_seconds_bucket[5m])) > 1.0
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "Critical API response time detected"
+          description: "API p95 response time is {{ $value }}s (threshold: 1.0s) for endpoint {{ $labels.endpoint }}"
+
+      # High API Error Rate
+      - alert: HighAPIErrorRate
+        expr: rate(admin_api_request_total{status_code=~"5.."}[5m]) / rate(admin_api_request_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High API error rate detected"
+          description: "API error rate is {{ $value | humanizePercentage }} (threshold: 5%) for endpoint {{ $labels.endpoint }}"
+
+      # Critical API Error Rate
+      - alert: CriticalAPIErrorRate
+        expr: rate(admin_api_request_total{status_code=~"5.."}[5m]) / rate(admin_api_request_total[5m]) > 0.10
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "Critical API error rate detected"
+          description: "API error rate is {{ $value | humanizePercentage }} (threshold: 10%) for endpoint {{ $labels.endpoint }}"
+
+  - name: admin_server_health_alerts
+    interval: 30s
+    rules:
+      # Server Unhealthy
+      - alert: ServerUnhealthy
+        expr: admin_server_health_status == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: server_health
+        annotations:
+          summary: "Server is unhealthy"
+          description: "Server {{ $labels.server_id }} for tenant {{ $labels.tenant_id }} is unhealthy"
+
+      # Server Degraded
+      - alert: ServerDegraded
+        expr: admin_server_health_status == 1
+        for: 5m
+        labels:
+          severity: warning
+          component: server_health
+        annotations:
+          summary: "Server is degraded"
+          description: "Server {{ $labels.server_id }} for tenant {{ $labels.tenant_id }} is degraded"
+
+      # High Server Response Time
+      - alert: HighServerResponseTime
+        expr: admin_server_response_time_ms > 500
+        for: 5m
+        labels:
+          severity: warning
+          component: server_health
+        annotations:
+          summary: "High server response time"
+          description: "Server {{ $labels.server_id }} response time is {{ $value }}ms (threshold: 500ms)"
+
+      # Critical Server Response Time
+      - alert: CriticalServerResponseTime
+        expr: admin_server_response_time_ms > 1000
+        for: 2m
+        labels:
+          severity: critical
+          component: server_health
+        annotations:
+          summary: "Critical server response time"
+          description: "Server {{ $labels.server_id }} response time is {{ $value }}ms (threshold: 1000ms)"
+
+      # Server Health Check Failures
+      - alert: ServerHealthCheckFailures
+        expr: rate(admin_server_health_check_total{status="unhealthy"}[5m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: server_health
+        annotations:
+          summary: "High rate of server health check failures"
+          description: "Server {{ $labels.server_id }} has {{ $value }} health check failures per second"
+
+  - name: admin_distribution_alerts
+    interval: 30s
+    rules:
+      # No Active Devices
+      - alert: NoActiveDevices
+        expr: sum by (tenant_id) (admin_device_status_active) == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: distribution
+        annotations:
+          summary: "No active devices available"
+          description: "Tenant {{ $labels.tenant_id }} has no active devices for message distribution"
+
+      # High Device Load
+      - alert: HighDeviceLoad
+        expr: admin_device_load_current > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: distribution
+        annotations:
+          summary: "High device load detected"
+          description: "Device {{ $labels.device_id }} for tenant {{ $labels.tenant_id }} has load of {{ $value }} (threshold: 80)"
+
+      # Critical Device Load
+      - alert: CriticalDeviceLoad
+        expr: admin_device_load_current > 95
+        for: 2m
+        labels:
+          severity: critical
+          component: distribution
+        annotations:
+          summary: "Critical device load detected"
+          description: "Device {{ $labels.device_id }} for tenant {{ $labels.tenant_id }} has load of {{ $value }} (threshold: 95)"
+
+  - name: admin_timing_alerts
+    interval: 30s
+    rules:
+      # High Timing Violation Rate
+      - alert: HighTimingViolationRate
+        expr: rate(admin_timing_violation_total[1m]) * 60 > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: timing
+        annotations:
+          summary: "High timing violation rate"
+          description: "Tenant {{ $labels.tenant_id }} has {{ $value }} timing violations per minute (threshold: 10) for {{ $labels.message_type }}"
+
+      # Critical Timing Violation Rate
+      - alert: CriticalTimingViolationRate
+        expr: rate(admin_timing_violation_total{severity="severe"}[1m]) * 60 > 5
+        for: 2m
+        labels:
+          severity: critical
+          component: timing
+        annotations:
+          summary: "Critical timing violation rate"
+          description: "Tenant {{ $labels.tenant_id }} has {{ $value }} severe timing violations per minute (threshold: 5) for {{ $labels.message_type }}"
+
+      # High Anomaly Score
+      - alert: HighAnomalyScore
+        expr: admin_anomaly_detection_score > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: timing
+        annotations:
+          summary: "High anomaly detection score"
+          description: "Tenant {{ $labels.tenant_id }} has anomaly score of {{ $value }} (threshold: 2) for {{ $labels.message_type }}"
+
+      # Critical Anomaly Score
+      - alert: CriticalAnomalyScore
+        expr: admin_anomaly_detection_score > 3
+        for: 2m
+        labels:
+          severity: critical
+          component: timing
+        annotations:
+          summary: "Critical anomaly detection score"
+          description: "Tenant {{ $labels.tenant_id }} has anomaly score of {{ $value }} (threshold: 3) for {{ $labels.message_type }}"
+
+      # Enforcement Action Triggered
+      - alert: EnforcementActionTriggered
+        expr: rate(admin_enforcement_action_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: timing
+        annotations:
+          summary: "Enforcement action triggered"
+          description: "Enforcement action {{ $labels.action_type }} triggered for tenant {{ $labels.tenant_id }} due to {{ $labels.anomaly_level }} anomaly"
+
+  - name: admin_alert_system_alerts
+    interval: 30s
+    rules:
+      # High Number of Active Alerts
+      - alert: HighActiveAlerts
+        expr: sum(admin_active_alerts_count) > 50
+        for: 5m
+        labels:
+          severity: warning
+          component: alerts
+        annotations:
+          summary: "High number of active alerts"
+          description: "There are {{ $value }} active alerts in the system (threshold: 50)"
+
+      # Critical Number of Active Alerts
+      - alert: CriticalActiveAlerts
+        expr: sum(admin_active_alerts_count{severity="critical"}) > 10
+        for: 2m
+        labels:
+          severity: critical
+          component: alerts
+        annotations:
+          summary: "High number of critical alerts"
+          description: "There are {{ $value }} critical alerts in the system (threshold: 10)"
+
+      # High Alert Creation Rate
+      - alert: HighAlertCreationRate
+        expr: rate(admin_alert_created_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: alerts
+        annotations:
+          summary: "High alert creation rate"
+          description: "Alerts are being created at {{ $value }} per second (threshold: 1/s)"
+
+  - name: admin_rating_alerts
+    interval: 30s
+    rules:
+      # Company Rating Dropped
+      - alert: CompanyRatingDropped
+        expr: delta(admin_company_rating_score[15m]) < -10
+        for: 5m
+        labels:
+          severity: warning
+          component: rating
+        annotations:
+          summary: "Company rating dropped significantly"
+          description: "Company {{ $labels.tenant_id }} rating dropped by {{ $value }} points in the last 15 minutes"
+
+      # Critical Company Rating
+      - alert: CriticalCompanyRating
+        expr: admin_company_rating_score < 40
+        for: 10m
+        labels:
+          severity: critical
+          component: rating
+        annotations:
+          summary: "Company has critical rating"
+          description: "Company {{ $labels.tenant_id }} has rating of {{ $value }} (threshold: 40)"
+
+      # Slow Rating Calculation
+      - alert: SlowRatingCalculation
+        expr: rate(admin_rating_calculation_duration_seconds_sum[5m]) / rate(admin_rating_calculation_duration_seconds_count[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          component: rating
+        annotations:
+          summary: "Slow rating calculation"
+          description: "Rating calculation is taking {{ $value }}s on average (threshold: 0.01s)"
+
+  - name: admin_routing_alerts
+    interval: 30s
+    rules:
+      # Dedicated Server Unavailable
+      - alert: DedicatedServerUnavailable
+        expr: admin_dedicated_server_availability == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: routing
+        annotations:
+          summary: "Dedicated server unavailable"
+          description: "Dedicated server {{ $labels.server_id }} for tenant {{ $labels.tenant_id }} is unavailable"
+
+      # High Routing Failure Rate
+      - alert: HighRoutingFailureRate
+        expr: rate(admin_routing_decision_total{result="failed"}[5m]) / rate(admin_routing_decision_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: routing
+        annotations:
+          summary: "High routing failure rate"
+          description: "Routing failure rate is {{ $value | humanizePercentage }} (threshold: 5%) for tenant {{ $labels.tenant_id }}"
+
+      # Slow Routing Decisions
+      - alert: SlowRoutingDecisions
+        expr: histogram_quantile(0.95, rate(admin_routing_decision_duration_seconds_bucket[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: routing
+        annotations:
+          summary: "Slow routing decisions"
+          description: "Routing decision p95 latency is {{ $value }}s (threshold: 0.05s) for tenant {{ $labels.tenant_id }}"
+
+  - name: admin_performance_alerts
+    interval: 30s
+    rules:
+      # Low Message Success Rate
+      - alert: LowMessageSuccessRate
+        expr: admin_message_success_rate < 95
+        for: 10m
+        labels:
+          severity: warning
+          component: performance
+        annotations:
+          summary: "Low message success rate"
+          description: "Message success rate is {{ $value }}% (threshold: 95%) for tenant {{ $labels.tenant_id }}"
+
+      # Critical Message Success Rate
+      - alert: CriticalMessageSuccessRate
+        expr: admin_message_success_rate < 90
+        for: 5m
+        labels:
+          severity: critical
+          component: performance
+        annotations:
+          summary: "Critical message success rate"
+          description: "Message success rate is {{ $value }}% (threshold: 90%) for tenant {{ $labels.tenant_id }}"
+
+      # Slow Metrics Collection
+      - alert: SlowMetricsCollection
+        expr: rate(admin_performance_metrics_collection_duration_seconds_sum[5m]) / rate(admin_performance_metrics_collection_duration_seconds_count[5m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: performance
+        annotations:
+          summary: "Slow metrics collection"
+          description: "Metrics collection is taking {{ $value }}s on average (threshold: 5s) for tenant {{ $labels.tenant_id }}"

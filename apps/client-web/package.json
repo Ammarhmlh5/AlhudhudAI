@@ -1,0 +1,49 @@
+{
+  "name": "client-web",
+  "private": true,
+  "version": "3.2.7",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --mode development",
+    "build": "vite build --mode production",
+    "build:staging": "vite build --mode staging",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "test:bug15": "node src/api/__tests__/axios.bug15.test.js",
+    "test:bug15:preservation": "node src/api/__tests__/axios.bug15.preservation.test.js",
+    "test:bug17": "node src/api/__tests__/axios.bug17.test.js",
+    "test:bug26": "node src/api/__tests__/config.bug26.test.js",
+    "test:bug26:preservation": "node src/api/__tests__/config.bug26.preservation.test.js",
+    "test:bug28": "node src/api/__tests__/messages.bug28.test.js",
+    "test:bug28:simple": "node src/api/__tests__/messages.bug28.simple.test.js",
+    "test:bug28:preservation": "node src/api/__tests__/messages.bug28.preservation.test.js",
+    "test:bug28:preservation:simple": "node src/api/__tests__/messages.bug28.preservation.simple.test.js"
+  },
+  "dependencies": {
+    "@alhudhud/shared": "file:../libs/shared",
+    "axios": "^1.13.6",
+    "i18next": "^25.9.0",
+    "lucide-react": "^0.577.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-i18next": "^16.5.8",
+    "react-router-dom": "^7.13.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "autoprefixer": "^10.4.24",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.18",
+    "typescript": "~5.7.0",
+    "vite": "^7.3.1"
+  }
+}

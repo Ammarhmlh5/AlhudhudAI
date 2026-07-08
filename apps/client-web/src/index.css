@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  --font-cairo: "Cairo", system-ui, sans-serif;
+  --color-brand-primary: #f43f5e;
+  /* rose-500 */
+  --color-brand-secondary: #f97316;
+  /* orange-500 */
+}
+
+:root {
+  font-family: var(--font-cairo);
+}
+
+body {
+  @apply bg-slate-950 text-slate-100 min-h-screen;
+}
+
+.glass-card {
+  @apply bg-slate-900/50 border border-slate-800 backdrop-blur-md rounded-3xl shadow-xl;
+}
+
+.btn-premium {
+  @apply bg-gradient-to-r from-rose-600 to-orange-600 text-white font-bold py-3 px-6 rounded-2xl shadow-lg shadow-rose-900/20 hover:shadow-rose-900/40 hover:scale-[1.02] transition-all active:scale-95;
+}

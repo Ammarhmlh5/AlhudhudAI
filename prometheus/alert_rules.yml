@@ -1,0 +1,348 @@
+# Prometheus Alert Rules for Al-Hudhud SMS Gateway
+# Purpose: Define alerting rules for system monitoring
+# Related Requirements: 16.5, 16.6, 16.7
+
+groups:
+  # Queue and Performance Alerts
+  - name: queue_performance
+    interval: 30s
+    rules:
+      # Requirement 16.5: Alert when queue_size > 1000
+      - alert: HighQueueSize
+        expr: hudhud_queue_size > 1000
+        for: 2m
+        labels:
+          severity: warning
+          component: queue
+        annotations:
+          summary: "High message queue size detected"
+          description: "Queue size is {{ $value }} messages (threshold: 1000). System may be experiencing high load or processing delays."
+          impact: "Messages may experience increased latency"
+          action: "Check worker pool status and consider scaling up workers"
+
+      # Critical queue size alert
+      - alert: CriticalQueueSize
+        expr: hudhud_queue_size > 5000
+        for: 1m
+        labels:
+          severity: critical
+          component: queue
+        annotations:
+          summary: "Critical message queue size detected"
+          description: "Queue size is {{ $value }} messages (threshold: 5000). System is severely overloaded."
+          impact: "Severe message delivery delays expected"
+          action: "URGENT: Scale up workers immediately and investigate processing bottlenecks"
+
+      # Requirement 16.6: Alert when average_latency > 2 seconds
+      - alert: HighAverageLatency
+        expr: hudhud_message_latency_seconds_avg > 2
+        for: 3m
+        labels:
+          severity: warning
+          component: performance
+        annotations:
+          summary: "High average message latency detected"
+          description: "Average message latency is {{ $value }}s (threshold: 2s). Messages are taking too long to process."
+          impact: "Poor user experience, delayed message delivery"
+          action: "Check database performance, Redis cache hit rate, and worker pool efficiency"
+
+      # Critical latency alert
+      - alert: CriticalLatency
+        expr: hudhud_message_latency_seconds_avg > 5
+        for: 1m
+        labels:
+          severity: critical
+          component: performance
+        annotations:
+          summary: "Critical message latency detected"
+          description: "Average message latency is {{ $value }}s (threshold: 5s). System performance is severely degraded."
+          impact: "Unacceptable user experience"
+          action: "URGENT: Investigate system bottlenecks, check database and Redis health"
+
+  # Success Rate and Reliability Alerts
+  - name: reliability
+    interval: 30s
+    rules:
+      # Requirement 16.7: Critical alert when success_rate < 95%
+      - alert: LowSuccessRate
+        expr: (hudhud_messages_sent_total / (hudhud_messages_sent_total + hudhud_messages_failed_total)) * 100 < 95
+        for: 5m
+        labels:
+          severity: critical
+          component: reliability
+        annotations:
+          summary: "Low message success rate detected"
+          description: "Message success rate is {{ $value }}% (threshold: 95%). System reliability is compromised."
+          impact: "High message failure rate affecting customers"
+          action: "URGENT: Check channel availability, network connectivity, and error logs"
+
+      # Warning for success rate below 98%
+      - alert: DegradedSuccessRate
+        expr: (hudhud_messages_sent_total / (hudhud_messages_sent_total + hudhud_messages_failed_total)) * 100 < 98
+        for: 10m
+        labels:
+          severity: warning
+          component: reliability
+        annotations:
+          summary: "Degraded message success rate"
+          description: "Message success rate is {{ $value }}% (threshold: 98%). Success rate is below optimal."
+          impact: "Increased message failures"
+          action: "Monitor channel health and investigate failure reasons"
+
+      # High failure rate alert
+      - alert: HighFailureRate
+        expr: rate(hudhud_messages_failed_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          component: reliability
+        annotations:
+          summary: "High message failure rate detected"
+          description: "Message failure rate is {{ $value }} failures/second. Unusual number of failures detected."
+          impact: "Customers experiencing message delivery issues"
+          action: "Check error logs and investigate common failure reasons"
+
+  # Database Performance Alerts
+  - name: database
+    interval: 30s
+    rules:
+      # High database connections
+      - alert: HighDatabaseConnections
+        expr: hudhud_db_connections_active > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "High database connection count"
+          description: "Active database connections: {{ $value }} (threshold: 80/100). Connection pool is near capacity."
+          impact: "Risk of connection exhaustion and query timeouts"
+          action: "Check for connection leaks, optimize queries, or increase connection pool size"
+
+      # Critical database connections
+      - alert: CriticalDatabaseConnections
+        expr: hudhud_db_connections_active > 95
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Critical database connection count"
+          description: "Active database connections: {{ $value }} (threshold: 95/100). Connection pool is almost exhausted."
+          impact: "Imminent connection exhaustion and system failure"
+          action: "URGENT: Investigate connection usage, kill idle connections if needed"
+
+      # Slow database queries
+      - alert: SlowDatabaseQueries
+        expr: hudhud_db_query_duration_seconds_avg > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Average query duration is {{ $value }}s (threshold: 1s). Database performance is degraded."
+          impact: "Increased latency and reduced throughput"
+          action: "Check slow query log, optimize indexes, analyze query plans"
+
+  # Cache Performance Alerts
+  - name: cache
+    interval: 30s
+    rules:
+      # Low cache hit rate
+      - alert: LowCacheHitRate
+        expr: (hudhud_cache_hits_total / (hudhud_cache_hits_total + hudhud_cache_misses_total)) * 100 < 90
+        for: 10m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Low Redis cache hit rate"
+          description: "Cache hit rate is {{ $value }}% (threshold: 90%). Cache effectiveness is reduced."
+          impact: "Increased database load and slower response times"
+          action: "Check cache TTL settings, Redis memory usage, and cache key patterns"
+
+      # Critical cache hit rate
+      - alert: CriticalCacheHitRate
+        expr: (hudhud_cache_hits_total / (hudhud_cache_hits_total + hudhud_cache_misses_total)) * 100 < 70
+        for: 5m
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: "Critical cache hit rate"
+          description: "Cache hit rate is {{ $value }}% (threshold: 70%). Cache is severely ineffective."
+          impact: "Severe database overload and performance degradation"
+          action: "URGENT: Check Redis health, memory eviction policy, and cache configuration"
+
+      # Redis memory usage
+      - alert: HighRedisMemoryUsage
+        expr: hudhud_redis_memory_used_bytes / hudhud_redis_memory_max_bytes * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "High Redis memory usage"
+          description: "Redis memory usage is {{ $value }}% (threshold: 80%). Memory is near capacity."
+          impact: "Risk of cache eviction and performance degradation"
+          action: "Review cache TTL settings, increase Redis memory, or optimize cache usage"
+
+  # Worker Pool Alerts
+  - name: workers
+    interval: 30s
+    rules:
+      # Worker failures
+      - alert: WorkerFailures
+        expr: rate(hudhud_worker_failures_total[5m]) > 1
+        for: 3m
+        labels:
+          severity: warning
+          component: workers
+        annotations:
+          summary: "Worker failures detected"
+          description: "Worker failure rate is {{ $value }} failures/second. Workers are experiencing issues."
+          impact: "Reduced processing capacity and potential message delays"
+          action: "Check worker logs, investigate failure causes, ensure worker health monitoring"
+
+      # High worker failures
+      - alert: HighWorkerFailures
+        expr: rate(hudhud_worker_failures_total[5m]) > 5
+        for: 1m
+        labels:
+          severity: critical
+          component: workers
+        annotations:
+          summary: "High worker failure rate"
+          description: "Worker failure rate is {{ $value }} failures/second. Multiple workers are failing."
+          impact: "Severe processing capacity reduction"
+          action: "URGENT: Investigate worker crashes, check system resources, restart worker pool if needed"
+
+      # Low worker count
+      - alert: LowWorkerCount
+        expr: hudhud_workers_active < 30
+        for: 2m
+        labels:
+          severity: warning
+          component: workers
+        annotations:
+          summary: "Low active worker count"
+          description: "Active workers: {{ $value }} (expected: 50). Worker pool is understaffed."
+          impact: "Reduced processing capacity"
+          action: "Check worker health, restart failed workers, investigate worker crashes"
+
+  # Balance and Financial Alerts
+  - name: financial
+    interval: 30s
+    rules:
+      # Low tenant balance
+      - alert: LowTenantBalance
+        expr: hudhud_tenant_balance < 10
+        for: 1m
+        labels:
+          severity: warning
+          component: financial
+        annotations:
+          summary: "Low tenant balance detected"
+          description: "Tenant {{ $labels.tenant_id }} balance is {{ $value }} units (threshold: 10). Balance is running low."
+          impact: "Tenant may soon be unable to send messages"
+          action: "Notify tenant to recharge balance"
+
+      # Critical tenant balance
+      - alert: CriticalTenantBalance
+        expr: hudhud_tenant_balance < 5
+        for: 30s
+        labels:
+          severity: critical
+          component: financial
+        annotations:
+          summary: "Critical tenant balance"
+          description: "Tenant {{ $labels.tenant_id }} balance is {{ $value }} units (threshold: 5). Balance is critically low."
+          impact: "Tenant will soon be unable to send messages"
+          action: "URGENT: Notify tenant immediately to recharge balance"
+
+      # Insufficient balance attempts
+      - alert: HighInsufficientBalanceAttempts
+        expr: rate(hudhud_balance_insufficient_total[5m]) > 5
+        for: 3m
+        labels:
+          severity: warning
+          component: financial
+        annotations:
+          summary: "High insufficient balance attempts"
+          description: "Insufficient balance attempts: {{ $value }}/second. Multiple tenants have low balance."
+          impact: "Messages being rejected due to insufficient funds"
+          action: "Review tenant balances and send recharge notifications"
+
+  # System Health Alerts
+  - name: system_health
+    interval: 30s
+    rules:
+      # API response time
+      - alert: SlowAPIResponses
+        expr: hudhud_api_response_time_seconds_avg > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "Slow API response times"
+          description: "Average API response time is {{ $value }}s (threshold: 0.01s/10ms). API is responding slowly."
+          impact: "Poor client experience"
+          action: "Check API server load, database performance, and Redis cache"
+
+      # High error rate
+      - alert: HighAPIErrorRate
+        expr: rate(hudhud_api_errors_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High API error rate"
+          description: "API error rate is {{ $value }} errors/second. Unusual number of API errors."
+          impact: "Clients experiencing errors"
+          action: "Check error logs, investigate common error types"
+
+      # WebSocket disconnections
+      - alert: HighWebSocketDisconnections
+        expr: rate(hudhud_websocket_disconnections_total[5m]) > 5
+        for: 3m
+        labels:
+          severity: warning
+          component: websocket
+        annotations:
+          summary: "High WebSocket disconnection rate"
+          description: "WebSocket disconnection rate is {{ $value }}/second. Devices are frequently disconnecting."
+          impact: "Message delivery delays and reconnection overhead"
+          action: "Check network stability, investigate disconnection reasons"
+
+  # Throughput Alerts
+  - name: throughput
+    interval: 30s
+    rules:
+      # Low throughput
+      - alert: LowMessageThroughput
+        expr: rate(hudhud_messages_processed_total[1m]) * 60 < 1000
+        for: 10m
+        labels:
+          severity: warning
+          component: performance
+        annotations:
+          summary: "Low message throughput"
+          description: "Message throughput is {{ $value }} messages/minute (expected: 5000+). System is underperforming."
+          impact: "Reduced processing capacity"
+          action: "Check system load, worker pool status, and processing bottlenecks"
+
+      # Very low throughput
+      - alert: CriticalLowThroughput
+        expr: rate(hudhud_messages_processed_total[1m]) * 60 < 500
+        for: 5m
+        labels:
+          severity: critical
+          component: performance
+        annotations:
+          summary: "Critical low message throughput"
+          description: "Message throughput is {{ $value }} messages/minute (expected: 5000+). System is severely underperforming."
+          impact: "Severe processing capacity reduction"
+          action: "URGENT: Investigate system bottlenecks, check all components health"

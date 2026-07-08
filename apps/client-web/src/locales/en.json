@@ -1,0 +1,18 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "send": "Send Message",
+    "customers": "Contacts",
+    "excel": "Excel Import",
+    "devices": "Devices",
+    "packages": "My Subscriptions",
+    "gateways": "My Gateways",
+    "history": "Messages",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "app": {
+    "welcome": "Welcome back",
+    "coming_soon": "This page is under development and will be available soon..."
+  }
+}

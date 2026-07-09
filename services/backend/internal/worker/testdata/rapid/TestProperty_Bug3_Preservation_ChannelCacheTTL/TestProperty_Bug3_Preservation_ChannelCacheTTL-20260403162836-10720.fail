@@ -1,0 +1,13 @@
+# 2026/04/03 16:28:38.049536 [TestProperty_Bug3_Preservation_ChannelCacheTTL] 
+# 	Error Trace:	D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug3_preservation_test.go:178
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:371
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:380
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:205
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:120
+# 	            				D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug3_preservation_test.go:139
+# 	            				C:/Program Files/Go/src/runtime/asm_amd64.s:1771
+# 	Error:      	An error is expected but got nil.
+# 	Test:       	TestProperty_Bug3_Preservation_ChannelCacheTTL
+# 	Messages:   	Preservation: Cache Get should return error after TTL expires. This test verifies that fixing mock channel selection does not break cache TTL behavior.
+# 
+v0.4.8#7382250467918126448

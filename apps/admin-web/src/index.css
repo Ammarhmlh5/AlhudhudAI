@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+:root {
+  font-family: 'Cairo', system-ui, sans-serif;
+}
+
+body {
+  @apply bg-slate-950 text-slate-100 min-h-screen;
+}

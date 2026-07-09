@@ -1,0 +1,13 @@
+# Ignore test results
+results/
+*.log
+*.tsv
+*.txt
+
+# Ignore temporary files
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Keep results directory structure
+!results/.gitkeep

@@ -1,0 +1,18 @@
+pluginManagement { includeBuild("../node_modules/@react-native/gradle-plugin") }
+plugins { id("com.facebook.react.settings") }
+extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
+rootProject.name = 'ALHudhudGateway'
+include ':app'
+
+gradle.projectsLoaded { gradle ->
+    gradle.rootProject.allprojects {
+        buildscript {
+            configurations.all {
+                resolutionStrategy {
+                    force("com.android.tools.build:gradle:8.6.0")
+                    force("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24")
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,301 @@
+diff --git a/node_modules/@react-native/codegen/lib/parsers/typescript/components/componentsUtils.js b/node_modules/@react-native/codegen/lib/parsers/typescript/components/componentsUtils.js
+index 3ba47fe..5bf649d 100644
+--- a/node_modules/@react-native/codegen/lib/parsers/typescript/components/componentsUtils.js
++++ b/node_modules/@react-native/codegen/lib/parsers/typescript/components/componentsUtils.js
+@@ -36,7 +36,7 @@ function getUnionOfLiterals(name, forArray, elementTypes, defaultValue, types) {
+   if (
+     unionType === 'TSLiteralType' &&
+     ((_elementTypes$0$liter = elementTypes[0].literal) === null ||
+-    _elementTypes$0$liter === void 0
++      _elementTypes$0$liter === void 0
+       ? void 0
+       : _elementTypes$0$liter.type) === 'StringLiteral'
+   ) {
+@@ -48,7 +48,7 @@ function getUnionOfLiterals(name, forArray, elementTypes, defaultValue, types) {
+   } else if (
+     unionType === 'TSLiteralType' &&
+     ((_elementTypes$0$liter2 = elementTypes[0].literal) === null ||
+-    _elementTypes$0$liter2 === void 0
++      _elementTypes$0$liter2 === void 0
+       ? void 0
+       : _elementTypes$0$liter2.type) === 'NumericLiteral'
+   ) {
+@@ -64,13 +64,12 @@ function getUnionOfLiterals(name, forArray, elementTypes, defaultValue, types) {
+   } else {
+     var _elementTypes$0$liter3;
+     throw new Error(
+-      `Unsupported union type for "${name}", received "${
+-        unionType === 'TSLiteralType'
+-          ? (_elementTypes$0$liter3 = elementTypes[0].literal) === null ||
+-            _elementTypes$0$liter3 === void 0
+-            ? void 0
+-            : _elementTypes$0$liter3.type
+-          : unionType
++      `Unsupported union type for "${name}", received "${unionType === 'TSLiteralType'
++        ? (_elementTypes$0$liter3 = elementTypes[0].literal) === null ||
++          _elementTypes$0$liter3 === void 0
++          ? void 0
++          : _elementTypes$0$liter3.type
++        : unionType
+       }"`,
+     );
+   }
+@@ -293,18 +292,25 @@ function getTypeAnnotationForArray(
+     }
+     return arrayType;
+   }
++  const getTypeName = (typeName) => {
++    if (typeName.type === 'TSQualifiedName') {
++      return typeName.right.name;
++    }
++    return typeName.name;
++  };
++
+   const type =
+-    extractedTypeAnnotation.elementType === 'TSTypeReference'
+-      ? extractedTypeAnnotation.elementType.typeName.name
++    extractedTypeAnnotation.elementType && extractedTypeAnnotation.elementType.type === 'TSTypeReference'
++      ? getTypeName(extractedTypeAnnotation.elementType.typeName)
+       : ((_extractedTypeAnnotat = extractedTypeAnnotation.elementType) ===
+-          null || _extractedTypeAnnotat === void 0
+-          ? void 0
+-          : _extractedTypeAnnotat.type) ||
+-        ((_extractedTypeAnnotat2 = extractedTypeAnnotation.typeName) === null ||
++        null || _extractedTypeAnnotat === void 0
++        ? void 0
++        : _extractedTypeAnnotat.type) ||
++      ((_extractedTypeAnnotat2 = extractedTypeAnnotation.typeName) === null ||
+         _extractedTypeAnnotat2 === void 0
+-          ? void 0
+-          : _extractedTypeAnnotat2.name) ||
+-        extractedTypeAnnotation.type;
++        ? void 0
++        : getTypeName(_extractedTypeAnnotat2)) ||
++      extractedTypeAnnotation.type;
+   const common = getCommonTypeAnnotation(
+     name,
+     true,
+@@ -372,7 +378,7 @@ function getTypeAnnotation(
+   }
+   const type =
+     typeAnnotation.type === 'TSTypeReference' ||
+-    typeAnnotation.type === 'TSTypeAliasDeclaration'
++      typeAnnotation.type === 'TSTypeAliasDeclaration'
+       ? parser.getTypeAnnotationName(typeAnnotation)
+       : typeAnnotation.type;
+   const common = getCommonTypeAnnotation(
+diff --git a/node_modules/@react-native/codegen/lib/parsers/typescript/parseTopLevelType.js b/node_modules/@react-native/codegen/lib/parsers/typescript/parseTopLevelType.js
+index 0ef998d..ca4b79e 100644
+--- a/node_modules/@react-native/codegen/lib/parsers/typescript/parseTopLevelType.js
++++ b/node_modules/@react-native/codegen/lib/parsers/typescript/parseTopLevelType.js
+@@ -88,10 +88,14 @@ function handleUnionAndParen(type, result, knownTypes) {
+       }
+       break;
+     }
+-    case 'TSTypeReference':
+-      if (type.typeName.name === 'Readonly') {
++    case 'TSTypeReference': {
++      const typeName =
++        type.typeName.type === 'TSQualifiedName'
++          ? type.typeName.right.name
++          : type.typeName.name;
++      if (typeName === 'Readonly') {
+         handleUnionAndParen(type.typeParameters.params[0], result, knownTypes);
+-      } else if (type.typeName.name === 'WithDefault') {
++      } else if (typeName === 'WithDefault') {
+         if (result.optional) {
+           throw new Error(
+             'WithDefault<> is optional and does not need to be marked as optional. Please remove the union of undefined and/or null',
+@@ -116,7 +120,9 @@ function handleUnionAndParen(type, result, knownTypes) {
+         const resolvedType = getValueFromTypes(type, knownTypes);
+         if (
+           resolvedType.type === 'TSTypeReference' &&
+-          resolvedType.typeName.name === type.typeName.name
++          (resolvedType.typeName.type === 'TSQualifiedName'
++            ? resolvedType.typeName.right.name
++            : resolvedType.typeName.name) === typeName
+         ) {
+           result.unions.push(type);
+         } else {
+@@ -124,6 +130,7 @@ function handleUnionAndParen(type, result, knownTypes) {
+         }
+       }
+       break;
++    }
+     default:
+       result.unions.push(type);
+   }
+@@ -165,14 +172,18 @@ function handleIntersectionAndParen(type, result, knownTypes) {
+       }
+       break;
+     }
+-    case 'TSTypeReference':
+-      if (type.typeName.name === 'Readonly') {
++    case 'TSTypeReference': {
++      const typeName =
++        type.typeName.type === 'TSQualifiedName'
++          ? type.typeName.right.name
++          : type.typeName.name;
++      if (typeName === 'Readonly') {
+         handleIntersectionAndParen(
+           type.typeParameters.params[0],
+           result,
+           knownTypes,
+         );
+-      } else if (type.typeName.name === 'WithDefault') {
++      } else if (typeName === 'WithDefault') {
+         throw new Error('WithDefault<> is now allowed in intersection types.');
+       } else if (!knownTypes) {
+         result.push(type);
+@@ -180,7 +191,9 @@ function handleIntersectionAndParen(type, result, knownTypes) {
+         const resolvedType = getValueFromTypes(type, knownTypes);
+         if (
+           resolvedType.type === 'TSTypeReference' &&
+-          resolvedType.typeName.name === type.typeName.name
++          (resolvedType.typeName.type === 'TSQualifiedName'
++            ? resolvedType.typeName.right.name
++            : resolvedType.typeName.name) === typeName
+         ) {
+           result.push(type);
+         } else {
+@@ -188,6 +201,7 @@ function handleIntersectionAndParen(type, result, knownTypes) {
+         }
+       }
+       break;
++    }
+     default:
+       result.push(type);
+   }
+diff --git a/node_modules/@react-native/codegen/lib/parsers/typescript/parser.js b/node_modules/@react-native/codegen/lib/parsers/typescript/parser.js
+index da4afe3..b5c7ad6 100644
+--- a/node_modules/@react-native/codegen/lib/parsers/typescript/parser.js
++++ b/node_modules/@react-native/codegen/lib/parsers/typescript/parser.js
+@@ -14,11 +14,11 @@ function _defineProperty(e, r, t) {
+   return (
+     (r = _toPropertyKey(r)) in e
+       ? Object.defineProperty(e, r, {
+-          value: t,
+-          enumerable: !0,
+-          configurable: !0,
+-          writable: !0,
+-        })
++        value: t,
++        enumerable: !0,
++        configurable: !0,
++        writable: !0,
++      })
+       : (e[r] = t),
+     e
+   );
+@@ -100,6 +100,13 @@ class TypeScriptParser {
+     return 'TypeScript';
+   }
+   getTypeAnnotationName(typeAnnotation) {
++    if (
++      typeAnnotation &&
++      typeAnnotation.typeName &&
++      typeAnnotation.typeName.type === 'TSQualifiedName'
++    ) {
++      return typeAnnotation.typeName.right.name;
++    }
+     var _typeAnnotation$typeN;
+     return typeAnnotation === null ||
+       typeAnnotation === void 0 ||
+@@ -120,8 +127,8 @@ class TypeScriptParser {
+     const remapLiteral = item => {
+       return item.literal
+         ? item.literal.type
+-            .replace('NumericLiteral', 'NumberTypeAnnotation')
+-            .replace('StringLiteral', 'StringTypeAnnotation')
++          .replace('NumericLiteral', 'NumberTypeAnnotation')
++          .replace('StringLiteral', 'StringTypeAnnotation')
+         : 'ObjectTypeAnnotation';
+     };
+     return [...new Set(membersTypes.map(remapLiteral))];
+@@ -171,15 +178,15 @@ class TypeScriptParser {
+     var _typeAnnotation$membe;
+     const enumInitializer =
+       (_typeAnnotation$membe = typeAnnotation.members[0]) === null ||
+-      _typeAnnotation$membe === void 0
++        _typeAnnotation$membe === void 0
+         ? void 0
+         : _typeAnnotation$membe.initializer;
+     const enumMembersType =
+       !enumInitializer || enumInitializer.type === 'StringLiteral'
+         ? 'StringTypeAnnotation'
+         : enumInitializer.type === 'NumericLiteral'
+-        ? 'NumberTypeAnnotation'
+-        : null;
++          ? 'NumberTypeAnnotation'
++          : null;
+     if (!enumMembersType) {
+       throw new Error(
+         'Enum values must be either blank, number, or string values.',
+@@ -195,17 +202,17 @@ class TypeScriptParser {
+       enumMembersType === 'StringTypeAnnotation'
+         ? 'StringLiteral'
+         : enumMembersType === 'NumberTypeAnnotation'
+-        ? 'NumericLiteral'
+-        : null;
++          ? 'NumericLiteral'
++          : null;
+     typeAnnotation.members.forEach(member => {
+       var _member$initializer$t, _member$initializer;
+       if (
+         ((_member$initializer$t =
+           (_member$initializer = member.initializer) === null ||
+-          _member$initializer === void 0
++            _member$initializer === void 0
+             ? void 0
+             : _member$initializer.type) !== null &&
+-        _member$initializer$t !== void 0
++          _member$initializer$t !== void 0
+           ? _member$initializer$t
+           : 'StringLiteral') !== enumInitializerType
+       ) {
+@@ -223,10 +230,10 @@ class TypeScriptParser {
+         value:
+           (_member$initializer$v =
+             (_member$initializer2 = member.initializer) === null ||
+-            _member$initializer2 === void 0
++              _member$initializer2 === void 0
+               ? void 0
+               : _member$initializer2.value) !== null &&
+-          _member$initializer$v !== void 0
++            _member$initializer$v !== void 0
+             ? _member$initializer$v
+             : member.id.name,
+       };
+@@ -386,7 +393,7 @@ class TypeScriptParser {
+     let typeResolutionStatus = {
+       successful: false,
+     };
+-    for (;;) {
++    for (; ;) {
+       const topLevelType = parseTopLevelType(node);
+       nullable = nullable || topLevelType.optional;
+       node = topLevelType.type;
+@@ -399,10 +406,10 @@ class TypeScriptParser {
+         break;
+       }
+       const _handleGenericTypeAnn = handleGenericTypeAnnotation(
+-          node,
+-          resolvedTypeAnnotation,
+-          this,
+-        ),
++        node,
++        resolvedTypeAnnotation,
++        this,
++      ),
+         typeAnnotationNode = _handleGenericTypeAnn.typeAnnotation,
+         status = _handleGenericTypeAnn.typeResolutionStatus;
+       typeResolutionStatus = status;
+@@ -487,7 +494,7 @@ class TypeScriptParser {
+         var _alias$extends;
+         return [
+           ...((_alias$extends = alias.extends) !== null &&
+-          _alias$extends !== void 0
++            _alias$extends !== void 0
+             ? _alias$extends
+             : []),
+           ...alias.body.body,

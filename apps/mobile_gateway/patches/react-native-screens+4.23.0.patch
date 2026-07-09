@@ -1,0 +1,200 @@
+diff --git a/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/PointerEventsBoxNoneImpl.kt b/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/PointerEventsBoxNoneImpl.kt
+index 08ce7d4..1f15aee 100644
+--- a/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/PointerEventsBoxNoneImpl.kt
++++ b/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/PointerEventsBoxNoneImpl.kt
+@@ -7,5 +7,5 @@ internal class PointerEventsBoxNoneImpl : ReactPointerEventsView {
+     // We set pointer events to BOX_NONE, because we don't want the ScreensCoordinatorLayout
+     // to be target of react gestures and effectively prevent interaction with screens
+     // underneath the current screen (useful in `modal` & `formSheet` presentation).
+-    override val pointerEvents: PointerEvents = PointerEvents.BOX_NONE
++    override fun getPointerEvents(): PointerEvents = PointerEvents.BOX_NONE
+ }
+diff --git a/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/DimmingViewPointerEvents.kt b/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/DimmingViewPointerEvents.kt
+index 064c881..044be7f 100644
+--- a/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/DimmingViewPointerEvents.kt
++++ b/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/DimmingViewPointerEvents.kt
+@@ -6,13 +6,13 @@ import com.facebook.react.uimanager.ReactPointerEventsView
+ internal class DimmingViewPointerEventsImpl(
+     val dimmingView: DimmingView,
+ ) : ReactPointerEventsView {
+-    override val pointerEvents: PointerEvents
+-        get() = if (dimmingView.blockGestures) PointerEvents.AUTO else PointerEvents.NONE
++    override fun getPointerEvents(): PointerEvents =
++        if (dimmingView.blockGestures) PointerEvents.AUTO else PointerEvents.NONE
+ }
+ 
+ internal class DimmingViewPointerEventsProxy(
+     var pointerEventsImpl: DimmingViewPointerEventsImpl?,
+ ) : ReactPointerEventsView {
+-    override val pointerEvents: PointerEvents
+-        get() = pointerEventsImpl?.pointerEvents ?: PointerEvents.NONE
++    override fun getPointerEvents(): PointerEvents =
++        pointerEventsImpl?.getPointerEvents() ?: PointerEvents.NONE
+ }
+diff --git a/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/SheetDelegate.kt b/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/SheetDelegate.kt
+index 972de61..451b80a 100644
+--- a/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/SheetDelegate.kt
++++ b/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/SheetDelegate.kt
+@@ -389,6 +389,7 @@ class SheetDelegate(
+                 } else if (keyboardState != KeyboardNotVisible) {
+                     this.configureBottomSheetBehaviour(it, KeyboardNotVisible)
+                 }
++                Unit
+             }
+ 
+             keyboardState = KeyboardNotVisible
+diff --git a/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/TabScreenViewManager.kt b/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/TabScreenViewManager.kt
+index 9fd445d..3ee2caa 100644
+--- a/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/TabScreenViewManager.kt
++++ b/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/TabScreenViewManager.kt
+@@ -141,7 +141,7 @@ class TabScreenViewManager :
+         var scrollToTop = true
+         var popToRoot = true
+         if (value?.hasKey("repeatedTabSelection") ?: false) {
+-            value.getMap("repeatedTabSelection")?.let { repeatedTabSelectionConfig ->
++            value?.getMap("repeatedTabSelection")?.let { repeatedTabSelectionConfig ->
+                 if (repeatedTabSelectionConfig.hasKey("scrollToTop")) {
+                     scrollToTop =
+                         repeatedTabSelectionConfig.getBoolean("scrollToTop")
+diff --git a/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/safearea/SafeAreaView.kt b/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/safearea/SafeAreaView.kt
+index 89d8df9..f213fd2 100644
+--- a/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/safearea/SafeAreaView.kt
++++ b/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/safearea/SafeAreaView.kt
+@@ -107,7 +107,7 @@ class SafeAreaView(
+         val newSystemInsets =
+             insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+ 
+-        if (newSystemInsets != currentSystemInsets) {
++        if (EdgeInsets.fromInsets(newSystemInsets) != currentSystemInsets) {
+             currentSystemInsets = EdgeInsets.fromInsets(newSystemInsets)
+ 
+             if (insetType.containsSystem()) {
+diff --git a/node_modules/react-native-screens/common/cpp/react/renderer/components/rnscreens/RNSScreenShadowNodeCommitHook.cpp b/node_modules/react-native-screens/common/cpp/react/renderer/components/rnscreens/RNSScreenShadowNodeCommitHook.cpp
+index b0ec6ee..1bb4ae2 100644
+--- a/node_modules/react-native-screens/common/cpp/react/renderer/components/rnscreens/RNSScreenShadowNodeCommitHook.cpp
++++ b/node_modules/react-native-screens/common/cpp/react/renderer/components/rnscreens/RNSScreenShadowNodeCommitHook.cpp
+@@ -25,8 +25,7 @@ RNSScreenShadowNodeCommitHook::~RNSScreenShadowNodeCommitHook() noexcept {
+ RootShadowNode::Unshared RNSScreenShadowNodeCommitHook::shadowTreeWillCommit(
+     const facebook::react::ShadowTree &shadowTree,
+     const RootShadowNode::Shared &oldRootShadowNode,
+-    const RootShadowNode::Unshared &newRootShadowNode,
+-    const ShadowTreeCommitOptions &) noexcept {
++    const RootShadowNode::Unshared &newRootShadowNode) noexcept {
+   auto oldRootProps =
+       std::static_pointer_cast<const RootProps>(oldRootShadowNode->getProps());
+   auto newRootProps =
+diff --git a/node_modules/react-native-screens/common/cpp/react/renderer/components/rnscreens/RNSScreenShadowNodeCommitHook.h b/node_modules/react-native-screens/common/cpp/react/renderer/components/rnscreens/RNSScreenShadowNodeCommitHook.h
+index cf17047..7c118e6 100644
+--- a/node_modules/react-native-screens/common/cpp/react/renderer/components/rnscreens/RNSScreenShadowNodeCommitHook.h
++++ b/node_modules/react-native-screens/common/cpp/react/renderer/components/rnscreens/RNSScreenShadowNodeCommitHook.h
+@@ -1,6 +1,6 @@
+ #pragma once
+ 
+-#include <react/fabric/FabricUIManagerBinding.h>
++#include <react/fabric/Binding.h>
+ #include <react/fabric/JFabricUIManager.h>
+ #include <react/renderer/scheduler/Scheduler.h>
+ #include <react/renderer/uimanager/UIManagerCommitHook.h>
+@@ -25,8 +25,7 @@ class RNSScreenShadowNodeCommitHook : public UIManagerCommitHook {
+   virtual RootShadowNode::Unshared shadowTreeWillCommit(
+       const ShadowTree &shadowTree,
+       const RootShadowNode::Shared &oldRootShadowNode,
+-      const RootShadowNode::Unshared &newRootShadowNode,
+-      const ShadowTreeCommitOptions & /*commitOptions*/) noexcept override;
++      const RootShadowNode::Unshared &newRootShadowNode) noexcept override;
+ 
+  private:
+   static inline bool _screenSizeChanged(
+diff --git a/node_modules/react-native-screens/lib/typescript/components/tabs/TabsAccessory.types.d.ts b/node_modules/react-native-screens/lib/typescript/components/tabs/TabsAccessory.types.d.ts
+index ad79c8d..56d58cd 100644
+--- a/node_modules/react-native-screens/lib/typescript/components/tabs/TabsAccessory.types.d.ts
++++ b/node_modules/react-native-screens/lib/typescript/components/tabs/TabsAccessory.types.d.ts
+@@ -1,5 +1,5 @@
+ import { NativeSyntheticEvent, ViewProps } from 'react-native';
+-export type TabsAccessoryEnvironment = 'regular' | 'inline';
++export type TabsAccessoryEnvironment = string;
+ export type EnvironmentChangeEvent = {
+     environment: TabsAccessoryEnvironment;
+ };
+diff --git a/node_modules/react-native-screens/lib/typescript/fabric/bottom-tabs/BottomTabsAccessoryContentNativeComponent.d.ts b/node_modules/react-native-screens/lib/typescript/fabric/bottom-tabs/BottomTabsAccessoryContentNativeComponent.d.ts
+index 92c0d8f..4fa003a 100644
+--- a/node_modules/react-native-screens/lib/typescript/fabric/bottom-tabs/BottomTabsAccessoryContentNativeComponent.d.ts
++++ b/node_modules/react-native-screens/lib/typescript/fabric/bottom-tabs/BottomTabsAccessoryContentNativeComponent.d.ts
+@@ -1,7 +1,7 @@
+ import type { CodegenTypes as CT, ViewProps } from 'react-native';
+-type BottomAccessoryEnvironment = 'regular' | 'inline';
++type BottomAccessoryEnvironment = string;
+ export interface NativeProps extends ViewProps {
+-    environment?: CT.WithDefault<BottomAccessoryEnvironment, 'regular'>;
++    environment?: CT.WithDefault<string, 'regular'>;
+ }
+ declare const _default: import("react-native").HostComponent<NativeProps>;
+ export default _default;
+diff --git a/node_modules/react-native-screens/lib/typescript/fabric/bottom-tabs/BottomTabsAccessoryNativeComponent.d.ts b/node_modules/react-native-screens/lib/typescript/fabric/bottom-tabs/BottomTabsAccessoryNativeComponent.d.ts
+index ea4f78c..13857b2 100644
+--- a/node_modules/react-native-screens/lib/typescript/fabric/bottom-tabs/BottomTabsAccessoryNativeComponent.d.ts
++++ b/node_modules/react-native-screens/lib/typescript/fabric/bottom-tabs/BottomTabsAccessoryNativeComponent.d.ts
+@@ -1,9 +1,9 @@
+-import type { CodegenTypes as CT, ViewProps } from 'react-native';
++import type { DirectEventHandler, CodegenTypes as CT, ViewProps } from 'react-native';
+ type EnvironmentChangeEvent = {
+-    environment: 'regular' | 'inline';
++    environment: string;
+ };
+ export interface NativeProps extends ViewProps {
+-    onEnvironmentChange?: CT.DirectEventHandler<EnvironmentChangeEvent>;
++    onEnvironmentChange?: DirectEventHandler<EnvironmentChangeEvent>;
+ }
+ declare const _default: import("react-native").HostComponent<NativeProps>;
+ export default _default;
+diff --git a/node_modules/react-native-screens/src/components/tabs/TabsAccessory.types.ts b/node_modules/react-native-screens/src/components/tabs/TabsAccessory.types.ts
+index 74cd339..df137cc 100644
+--- a/node_modules/react-native-screens/src/components/tabs/TabsAccessory.types.ts
++++ b/node_modules/react-native-screens/src/components/tabs/TabsAccessory.types.ts
+@@ -1,6 +1,6 @@
+ import { NativeSyntheticEvent, ViewProps } from 'react-native';
+ 
+-export type TabsAccessoryEnvironment = 'regular' | 'inline';
++export type TabsAccessoryEnvironment = string;
+ 
+ export type EnvironmentChangeEvent = {
+   environment: TabsAccessoryEnvironment;
+diff --git a/node_modules/react-native-screens/src/fabric/bottom-tabs/BottomTabsAccessoryContentNativeComponent.ts b/node_modules/react-native-screens/src/fabric/bottom-tabs/BottomTabsAccessoryContentNativeComponent.ts
+index a77f0e2..5f3ed66 100644
+--- a/node_modules/react-native-screens/src/fabric/bottom-tabs/BottomTabsAccessoryContentNativeComponent.ts
++++ b/node_modules/react-native-screens/src/fabric/bottom-tabs/BottomTabsAccessoryContentNativeComponent.ts
+@@ -3,10 +3,10 @@
+ import { codegenNativeComponent } from 'react-native';
+ import type { CodegenTypes as CT, ViewProps } from 'react-native';
+ 
+-type BottomAccessoryEnvironment = 'regular' | 'inline';
++type BottomAccessoryEnvironment = string;
+ 
+ export interface NativeProps extends ViewProps {
+-  environment?: CT.WithDefault<BottomAccessoryEnvironment, 'regular'>;
++  // environment?: CT.WithDefault<string, 'regular'>;
+ }
+ 
+ export default codegenNativeComponent<NativeProps>(
+diff --git a/node_modules/react-native-screens/src/fabric/bottom-tabs/BottomTabsAccessoryNativeComponent.ts b/node_modules/react-native-screens/src/fabric/bottom-tabs/BottomTabsAccessoryNativeComponent.ts
+index df58f96..2c69c68 100644
+--- a/node_modules/react-native-screens/src/fabric/bottom-tabs/BottomTabsAccessoryNativeComponent.ts
++++ b/node_modules/react-native-screens/src/fabric/bottom-tabs/BottomTabsAccessoryNativeComponent.ts
+@@ -1,14 +1,14 @@
+ 'use client';
+ 
+ import { codegenNativeComponent } from 'react-native';
+-import type { CodegenTypes as CT, ViewProps } from 'react-native';
++import type { DirectEventHandler, CodegenTypes as CT, ViewProps } from 'react-native';
+ 
+ type EnvironmentChangeEvent = {
+-  environment: 'regular' | 'inline';
++  environment: string;
+ };
+ 
+ export interface NativeProps extends ViewProps {
+-  onEnvironmentChange?: CT.DirectEventHandler<EnvironmentChangeEvent>;
++  onEnvironmentChange?: DirectEventHandler<EnvironmentChangeEvent>;
+ }
+ 
+ export default codegenNativeComponent<NativeProps>('RNSBottomTabsAccessory', {

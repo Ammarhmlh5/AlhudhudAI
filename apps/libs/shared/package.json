@@ -1,0 +1,31 @@
+{
+  "name": "@alhudhud/shared",
+  "version": "1.0.0",
+  "description": "Shared utilities for ALHudhudAI applications",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./api": {
+      "import": "./dist/api/axios.js",
+      "require": "./dist/api/axios.js",
+      "types": "./dist/api/axios.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc && tsc -p tsconfig.build.json",
+    "dev": "tsc --watch"
+  },
+  "peerDependencies": {
+    "axios": ">=1.0.0"
+  },
+  "devDependencies": {
+    "axios": "^1.6.0",
+    "typescript": "^5.0.0"
+  }
+}

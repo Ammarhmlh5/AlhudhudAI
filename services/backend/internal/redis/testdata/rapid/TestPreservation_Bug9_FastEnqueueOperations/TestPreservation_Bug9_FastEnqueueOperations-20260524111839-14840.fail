@@ -1,0 +1,41 @@
+# 2026/05/24 11:18:39.805371 [TestPreservation_Bug9_FastEnqueueOperations] [rapid] draw priority: 2
+# 2026/05/24 11:18:39.805371 [TestPreservation_Bug9_FastEnqueueOperations] [rapid] draw messageCount: 1
+# 2026/05/24 11:18:39.805371 [TestPreservation_Bug9_FastEnqueueOperations] [rapid] draw content: "?\u2007Ⱥ&<Ⅼ"
+# 2026/05/24 11:18:39.815163 [TestPreservation_Bug9_FastEnqueueOperations] ✓ Preservation verified: Enqueued 1 messages in 9.792ms (avg: 9.792ms per message)
+# 
+v0.4.8#5624568131492286659
+0x158737d15aca06
+0x6cfb277364556
+0x1
+0x12daf5ce01e57a
+0xc5c428d75be5f
+0x0
+0x1c396db355c97c
+0x38
+0x6
+0x8d784de199104
+0x2
+0x1893bed33cbfb1
+0x24
+0x1920a6dcb049f2
+0x19
+0xa
+0xcffb724474f5b
+0x2d
+0xa
+0x1f671c67c3ec94
+0xffffffffffffffff
+0x19b2c85cdd6bcd
+0x3e
+0xf
+0x19720d8842d3b7
+0xa
+0x1a98efa4275e5b
+0x1d
+0x14288ea0e4eb2
+0x1
+0x7f927a4410c1c
+0x1a
+0xd66a1127328a0
+0xf
+0x290f7201a5645

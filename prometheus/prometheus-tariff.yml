@@ -1,0 +1,81 @@
+# Prometheus Configuration for Tariff Pricing System
+# Task 35.5: Monitoring Setup
+# Requirements: 29.1, 29.9, 29.10, 29.12
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'tariff-pricing-system'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - 'alertmanager:9093'
+
+# Load alert rules
+rule_files:
+  - 'tariff_alert_rules.yml'
+  - 'alert_rules.yml'
+
+# Scrape configurations
+scrape_configs:
+  # Tariff Backend Service
+  - job_name: 'tariff-backend'
+    static_configs:
+      - targets: ['backend:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # PostgreSQL Exporter
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+
+  # Redis Exporter
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+
+  # Node Exporter (System Metrics)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+
+  # cAdvisor (Container Metrics)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s
+
+# Remote write configuration (optional - for long-term storage)
+# remote_write:
+#   - url: 'http://thanos-receiver:19291/api/v1/receive'
+#     queue_config:
+#       capacity: 10000
+#       max_shards: 50
+#       min_shards: 1
+#       max_samples_per_send: 5000
+#       batch_send_deadline: 5s
+#       min_backoff: 30ms
+#       max_backoff: 100ms
+
+# Storage configuration
+storage:
+  tsdb:
+    path: /prometheus
+    retention:
+      time: 30d
+      size: 50GB

@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+apps/*/node_modules/
+services/*/node_modules/
+
+# Build outputs
+*.exe
+*.dll
+*.so
+*.dylib
+dist/
+build/
+.next/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+test_output.txt
+
+# Go
+vendor/
+
+# Generated migration test
+migrations/*.go
+
+# Temp
+tmp/
+temp/
+
+# Backup/swap files
+*.exe~
+
+# Prometheus data
+monitoring/prometheus/**/data/
+prometheus/data/

@@ -1,0 +1,61 @@
+buildscript {
+    ext {
+        buildToolsVersion = "35.0.0"
+        minSdkVersion = 24
+        compileSdkVersion = 35
+        targetSdkVersion = 34
+        ndkVersion = "26.1.10909125"
+        kotlinVersion = "1.9.24"
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.6.0")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24")
+    }
+}
+
+plugins {
+    id("com.facebook.react.rootproject")
+}
+
+ext {
+    buildToolsVersion = "35.0.0"
+    minSdkVersion = 24
+    compileSdkVersion = 35
+    targetSdkVersion = 34
+    ndkVersion = "26.1.10909125"
+    kotlinVersion = "1.9.24"
+}
+
+subprojects {
+    configurations.all {
+        resolutionStrategy {
+            force 'androidx.core:core-ktx:1.15.0'
+        }
+    }
+
+    def dummyTask = project.tasks.register("createDummyTypedefs") {
+        outputs.file("${project.buildDir}/intermediates/annotations_typedef_file/release/extractReleaseAnnotations/typedefs.txt")
+        outputs.file("${project.buildDir}/intermediates/annotations_typedef_file/debug/extractDebugAnnotations/typedefs.txt")
+        doLast {
+            def releaseFile = project.file("${project.buildDir}/intermediates/annotations_typedef_file/release/extractReleaseAnnotations/typedefs.txt")
+            releaseFile.parentFile.mkdirs()
+            releaseFile.text = ""
+            def debugFile = project.file("${project.buildDir}/intermediates/annotations_typedef_file/debug/extractDebugAnnotations/typedefs.txt")
+            debugFile.parentFile.mkdirs()
+            debugFile.text = ""
+        }
+    }
+
+    tasks.configureEach { task ->
+        if (task.name.contains("lint") || task.name.contains("Lint") || task.name.contains("extractReleaseAnnotations") || task.name.contains("extractDebugAnnotations")) {
+            task.enabled = false
+        }
+        if (task.name.contains("syncReleaseLibJars") || task.name.contains("syncDebugLibJars")) {
+            task.dependsOn(dummyTask)
+        }
+    }
+}

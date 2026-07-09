@@ -1,0 +1,15 @@
+diff --git a/node_modules/@react-native/community-cli-plugin/dist/utils/isDevServerRunning.js b/node_modules/@react-native/community-cli-plugin/dist/utils/isDevServerRunning.js
+index 553e851..5d233b2 100644
+--- a/node_modules/@react-native/community-cli-plugin/dist/utils/isDevServerRunning.js
++++ b/node_modules/@react-native/community-cli-plugin/dist/utils/isDevServerRunning.js
+@@ -19,8 +19,9 @@ async function isDevServerRunning(devServerUrl, projectRoot) {
+       `${devServerUrl}/status`
+     );
+     const body = await statusResponse.text();
++    const sanitizedProjectRoot = projectRoot.replace(/[^\x00-\x7F]/g, '');
+     return body === "packager-status:running" &&
+-      statusResponse.headers.get("X-React-Native-Project-Root") === projectRoot
++      statusResponse.headers.get("X-React-Native-Project-Root") === sanitizedProjectRoot
+       ? "matched_server_running"
+       : "port_taken";
+   } catch (e) {

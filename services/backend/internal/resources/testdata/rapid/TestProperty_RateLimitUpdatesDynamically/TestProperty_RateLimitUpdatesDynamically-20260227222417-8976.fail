@@ -1,0 +1,26 @@
+# 2026/02/27 22:24:17.462149 [TestProperty_RateLimitUpdatesDynamically] [rapid] draw gatewayID: 48
+# 2026/02/27 22:24:17.462149 [TestProperty_RateLimitUpdatesDynamically] [rapid] draw initialAPIRate: 40
+# 2026/02/27 22:24:17.462149 [TestProperty_RateLimitUpdatesDynamically] [rapid] draw updatedAPIRate: 89
+# 2026/02/27 22:24:17.462149 [TestProperty_RateLimitUpdatesDynamically] 
+# 	Error Trace:	D:/ALHudhudAI/services/backend/internal/resources/limiter_property_test.go:522
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:371
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:380
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:205
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:120
+# 	            				D:/ALHudhudAI/services/backend/internal/resources/limiter_property_test.go:473
+# 	Error:      	"0" is not greater than "0"
+# 	Test:       	TestProperty_RateLimitUpdatesDynamically
+# 	Messages:   	Should have some capacity after updating to higher rate limit
+# 
+v0.4.8#7579216057466879953
+0x13c8117ee044ee
+0xfb4e77059e7a6
+0x2f
+0x143c1318c3f989
+0x14ddb9e26909a0
+0x2e
+0x31
+0x1e
+0xdc7a950592f80
+0x159caa7e3acba4
+0x26

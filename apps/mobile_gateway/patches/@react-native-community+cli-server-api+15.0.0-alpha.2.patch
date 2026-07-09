@@ -1,0 +1,58 @@
+diff --git a/node_modules/@react-native-community/cli-server-api/build/index.js b/node_modules/@react-native-community/cli-server-api/build/index.js
+index ae4935a..deda5bf 100644
+--- a/node_modules/@react-native-community/cli-server-api/build/index.js
++++ b/node_modules/@react-native-community/cli-server-api/build/index.js
+@@ -112,16 +112,27 @@ function createDevServerMiddleware(options) {
+   const messageSocketEndpoint = (0, _createMessageSocketEndpoint.default)();
+   const broadcast = messageSocketEndpoint.broadcast;
+   const eventsSocketEndpoint = (0, _createEventsSocketEndpoint.default)(broadcast);
+-  const middleware = (0, _connect().default)().use((0, _securityHeadersMiddleware.default)(options))
+-  // @ts-ignore compression and connect types mismatch
+-  .use((0, _compression().default)()).use((0, _nocache().default)()).use('/debugger-ui', (0, _cliDebuggerUi().debuggerUIMiddleware)()).use('/launch-js-devtools', (0, _devToolsMiddleware.default)(options, isDebuggerConnected)).use('/open-stack-frame', (0, _openStackFrameInEditorMiddleware.default)(options)).use('/open-url', _openURLMiddleware.default).use('/status', _statusPageMiddleware.default).use('/symbolicate', _rawBodyMiddleware.default)
+-  // @ts-ignore mismatch
+-  .use('/systrace', _systraceProfileMiddleware.default).use('/reload', (_req, res) => {
+-    broadcast('reload');
+-    res.end('OK');
+-  })
+-  // @ts-ignore mismatch
+-  .use((0, _errorhandler().default)());
++  const middleware = (0, _connect().default)().use((req, res, next) => {
++    const originalSetHeader = res.setHeader;
++    res.setHeader = function (name, value) {
++      let sanitizedValue = value;
++      if (typeof value === 'string') {
++        // Strip non-ASCII characters to avoid ERR_INVALID_CHAR
++        sanitizedValue = value.replace(/[^\x00-\x7F]/g, '');
++      }
++      return originalSetHeader.apply(this, [name, sanitizedValue]);
++    };
++    next();
++  }).use((0, _securityHeadersMiddleware.default)(options))
++    // @ts-ignore compression and connect types mismatch
++    .use((0, _compression().default)()).use((0, _nocache().default)()).use('/debugger-ui', (0, _cliDebuggerUi().debuggerUIMiddleware)()).use('/launch-js-devtools', (0, _devToolsMiddleware.default)(options, isDebuggerConnected)).use('/open-stack-frame', (0, _openStackFrameInEditorMiddleware.default)(options)).use('/open-url', _openURLMiddleware.default).use('/status', _statusPageMiddleware.default).use('/symbolicate', _rawBodyMiddleware.default)
++    // @ts-ignore mismatch
++    .use('/systrace', _systraceProfileMiddleware.default).use('/reload', (_req, res) => {
++      broadcast('reload');
++      res.end('OK');
++    })
++    // @ts-ignore mismatch
++    .use((0, _errorhandler().default)());
+   options.watchFolders.forEach(folder => {
+     // @ts-ignore mismatch between express and connect middleware types
+     middleware.use((0, _serveStatic().default)(folder));
+diff --git a/node_modules/@react-native-community/cli-server-api/build/statusPageMiddleware.js b/node_modules/@react-native-community/cli-server-api/build/statusPageMiddleware.js
+index 1c8e372..395815a 100644
+--- a/node_modules/@react-native-community/cli-server-api/build/statusPageMiddleware.js
++++ b/node_modules/@react-native-community/cli-server-api/build/statusPageMiddleware.js
+@@ -16,7 +16,10 @@ exports.default = statusPageMiddleware;
+  * running on 8081 and not another program / service.
+  */
+ function statusPageMiddleware(_req, res) {
+-  res.setHeader('X-React-Native-Project-Root', process.cwd());
++  const projectRoot = process.cwd();
++  // Sanitize path to ASCII-only for header safety (stripping non-ASCII characters)
++  const sanitizedRoot = projectRoot.replace(/[^\x00-\x7F]/g, '');
++  res.setHeader('X-React-Native-Project-Root', sanitizedRoot);
+   res.end('packager-status:running');
+ }
+ 

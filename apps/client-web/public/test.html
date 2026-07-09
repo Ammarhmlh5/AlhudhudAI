@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>أداة محاكاة إرسال الرسائل (API Tester)</title>
+    <style>
+        body { font-family: Tahoma, Arial, sans-serif; background-color: #f4f4f9; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h2 { color: #333; text-align: center; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background-color: #2196F3; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; }
+        button:hover { background-color: #0b7dda; }
+        .log-box { margin-top: 20px; background: #222; color: #0f0; padding: 15px; border-radius: 5px; font-family: monospace; white-space: pre-wrap; word-wrap: break-word; min-height: 100px;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>أداة محاكاة العميل (API Tester)</h2>
+        <p style="text-align:center; color:#666;">تقوم هذه الأداة بمحاكاة إرسال رسالة باستخدام مفتاح API الخاص بك لضمان تطابق العملية مع الواقع.</p>
+        
+        <div class="form-group">
+            <label for="apiKey">مفتاح الربط البرمجي (API Key):</label>
+            <input type="text" id="apiKey" placeholder="أدخل مفتاح الـ API الخاص بالمستأجر...">
+        </div>
+        
+        <div class="form-group">
+            <label for="phone">رقم الهاتف المستقبل (مثال: +967777217167):</label>
+            <input type="text" id="phone" value="+967777217167">
+        </div>
+        
+        <div class="form-group">
+            <label for="message">نص الرسالة:</label>
+            <textarea id="message" rows="4">تجربة إرسال رسالة من أداة المحاكاة للتحقق من وصولها للهاتف.</textarea>
+        </div>
+        
+        <button onclick="sendSMS()">إرسال الرسالة الآن</button>
+        
+        <div class="form-group" style="margin-top: 20px;">
+            <label>سجل العمليات (Logs):</label>
+            <div id="logs" class="log-box">جاهز لإرسال الطلب...</div>
+        </div>
+    </div>
+
+    <script>
+        function logMsg(msg, isError = false) {
+            const logsDiv = document.getElementById('logs');
+            const time = new Date().toLocaleTimeString();
+            const color = isError ? '#f44336' : '#4CAF50';
+            logsDiv.innerHTML += `<br><span style="color:${color}">[${time}] ${msg}</span>`;
+        }
+
+        async function sendSMS() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const message = document.getElementById('message').value.trim();
+
+            if (!apiKey || !phone || !message) {
+                alert("يرجى تعبئة كافة الحقول!");
+                return;
+            }
+
+            document.getElementById('logs').innerHTML = "جاري إرسال الطلب إلى السيرفر...";
+
+            try {
+                // نستخدم المنفذ 8085 الخاص بالسيرفر
+                const response = await fetch('http://localhost:8085/api/v1/messaging/send', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey,
+                        'X-Idempotency-Key': 'sim_' + Date.now()
+                    },
+                    body: JSON.stringify({
+                        phone_number: phone,
+                        content: message
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    logMsg(`نجاح الإرسال! الرد: ${JSON.stringify(data, null, 2)}`);
+                    logMsg("الرسالة الآن يفترض أن تظهر في تطبيق الهاتف!");
+                } else {
+                    logMsg(`فشل الإرسال (رمز ${response.status}): ${JSON.stringify(data, null, 2)}`, true);
+                }
+            } catch (error) {
+                logMsg(`حدث خطأ أثناء الاتصال بالسيرفر: ${error.message}`, true);
+            }
+        }
+    </script>
+</body>
+</html>

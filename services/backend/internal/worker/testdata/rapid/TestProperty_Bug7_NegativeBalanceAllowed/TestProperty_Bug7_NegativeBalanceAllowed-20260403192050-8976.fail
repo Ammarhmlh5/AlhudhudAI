@@ -1,0 +1,22 @@
+# 2026/04/03 19:20:50.166374 [TestProperty_Bug7_NegativeBalanceAllowed] [rapid] draw initialBalance: 1
+# 2026/04/03 19:20:50.166374 [TestProperty_Bug7_NegativeBalanceAllowed] [rapid] draw excessAmount: 7
+# 2026/04/03 19:20:50.166374 [TestProperty_Bug7_NegativeBalanceAllowed] 
+# 	Error Trace:	D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug7_test.go:105
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:371
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:380
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:205
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:120
+# 	            				D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug7_test.go:68
+# 	            				C:/Program Files/Go/src/runtime/asm_amd64.s:1771
+# 	Error:      	An error is expected but got nil.
+# 	Test:       	TestProperty_Bug7_NegativeBalanceAllowed
+# 	Messages:   	Bug Condition: DeductBalanceTx() should return error when balance (1) < deduction (8). On UNFIXED code, this assertion FAILS because deduction succeeds. This failure confirms Bug 7 exists: No Balance Verification Before Deduction.
+# 
+v0.4.8#15191119669066517195
+0x1a7e827a0e4561
+0x28f091410554e
+0x0
+0x38e1f3a81b548
+0x16d88bbad170e1
+0x3e
+0x6

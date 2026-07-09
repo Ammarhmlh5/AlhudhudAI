@@ -1,0 +1,19 @@
+{
+  "scenarios": {
+    "high_load": {
+      "executor": "constant-arrival-rate",
+      "rate": 100,
+      "timeUnit": "1s",
+      "duration": "5m",
+      "preAllocatedVUs": 50,
+      "maxVUs": 150
+    }
+  },
+  "thresholds": {
+    "http_req_duration": ["p(95)<20"],
+    "http_req_failed": ["rate<0.02"],
+    "http_reqs": ["rate>80"]
+  },
+  "summaryTrendStats": ["avg", "min", "med", "max", "p(90)", "p(95)", "p(99)"],
+  "summaryTimeUnit": "ms"
+}

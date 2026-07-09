@@ -1,0 +1,19 @@
+# 2026/03/21 08:20:45.838096 [TestProperty_CalculateRemainingMessages_Idempotency] [rapid] draw messages_remaining: 1
+# 2026/03/21 08:20:46.842738 [TestProperty_CalculateRemainingMessages_Idempotency] 
+# 	Error Trace:	D:/ALHudhudAI/services/backend/internal/rollover/manager_property_test.go:202
+# 	            				D:/ALHudhudAI/services/backend/internal/rollover/manager_property_test.go:102
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:371
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:380
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:205
+# 	            				C:/Users/Admin73/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:120
+# 	            				D:/ALHudhudAI/services/backend/internal/rollover/manager_property_test.go:94
+# 	Error:      	Received unexpected error:
+# 	            	failed to connect to `user=postgres database=sms_gateway_test`:
+# 	            		[::1]:5432 (localhost): dial error: dial tcp [::1]:5432: connectex: No connection could be made because the target machine actively refused it.
+# 	            		127.0.0.1:5432 (localhost): dial error: dial tcp 127.0.0.1:5432: connectex: No connection could be made because the target machine actively refused it.
+# 	Test:       	TestProperty_CalculateRemainingMessages_Idempotency
+# 
+v0.4.8#2164608434749231232
+0x0
+0x0
+0x0

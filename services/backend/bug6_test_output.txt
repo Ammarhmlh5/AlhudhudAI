@@ -1,0 +1,75 @@
+=== RUN   TestBug6_Preservation_Simple_TransactionCommit
+{"level":"info","ts":"2026-04-03T19:06:47.690+0300","caller":"db/gorm.go:63","msg":"Connection to PostgreSQL established successfully via GORM"}
+{"level":"info","ts":"2026-04-03T19:06:47.739+0300","caller":"db/gorm.go:84","msg":"PgxPool initialized successfully","max_conns":50,"min_conns":10}
+{"level":"info","ts":"2026-04-03T19:06:47.739+0300","caller":"db/gorm.go:94","msg":"Running auto-migrations for Global Standard models..."}
+
+2026/04/03 19:06:52 [32mD:/ALHudhudAI/services/backend/internal/db/gorm.go:96 [33mSLOW SQL >= 200ms
+[0m[31;1m[4292.825ms] [33m[rows:-][35m SELECT constraint_name FROM information_schema.table_constraints tc JOIN information_schema.constraint_column_usage AS ccu USING (constraint_schema, constraint_catalog, table_name, constraint_name) JOIN information_schema.columns AS c ON c.table_schema = tc.constraint_schema AND tc.table_name = c.table_name AND ccu.column_name = c.column_name WHERE constraint_type IN ('PRIMARY KEY', 'UNIQUE') AND c.table_catalog = 'al_hudhud_new' AND c.table_schema = CURRENT_SCHEMA() AND c.table_name = 'users' AND constraint_type = 'UNIQUE'[0m
+
+2026/04/03 19:06:55 [32mD:/ALHudhudAI/services/backend/internal/db/gorm.go:96 [33mSLOW SQL >= 200ms
+[0m[31;1m[2981.128ms] [33m[rows:-][35m SELECT c.column_name, constraint_name, constraint_type FROM information_schema.table_constraints tc JOIN information_schema.constraint_column_usage AS ccu USING (constraint_schema, constraint_catalog, table_name, constraint_name) JOIN information_schema.columns AS c ON c.table_schema = tc.constraint_schema AND tc.table_name = c.table_name AND ccu.column_name = c.column_name WHERE constraint_type IN ('PRIMARY KEY', 'UNIQUE') AND c.table_catalog = 'al_hudhud_new' AND c.table_schema = CURRENT_SCHEMA() AND c.table_name = 'users'[0m
+
+2026/04/03 19:06:59 [32mD:/ALHudhudAI/services/backend/internal/db/gorm.go:96 [33mSLOW SQL >= 200ms
+[0m[31;1m[4019.053ms] [33m[rows:-][35m SELECT constraint_name FROM information_schema.table_constraints tc JOIN information_schema.constraint_column_usage AS ccu USING (constraint_schema, constraint_catalog, table_name, constraint_name) JOIN information_schema.columns AS c ON c.table_schema = tc.constraint_schema AND tc.table_name = c.table_name AND ccu.column_name = c.column_name WHERE constraint_type IN ('PRIMARY KEY', 'UNIQUE') AND c.table_catalog = 'al_hudhud_new' AND c.table_schema = CURRENT_SCHEMA() AND c.table_name = 'tenants' AND constraint_type = 'UNIQUE'[0m
+
+2026/04/03 19:07:04 [32mD:/ALHudhudAI/services/backend/internal/db/gorm.go:96 [33mSLOW SQL >= 200ms
+[0m[31;1m[4865.941ms] [33m[rows:-][35m SELECT c.column_name, constraint_name, constraint_type FROM information_schema.table_constraints tc JOIN information_schema.constraint_column_usage AS ccu USING (constraint_schema, constraint_catalog, table_name, constraint_name) JOIN information_schema.columns AS c ON c.table_schema = tc.constraint_schema AND tc.table_name = c.table_name AND ccu.column_name = c.column_name WHERE constraint_type IN ('PRIMARY KEY', 'UNIQUE') AND c.table_catalog = 'al_hudhud_new' AND c.table_schema = CURRENT_SCHEMA() AND c.table_name = 'tenants'[0m
+
+2026/04/03 19:07:08 [32m [33mSLOW SQL >= 200ms
+[0m[31;1m[3745.858ms] [33m[rows:-][35m SELECT constraint_name FROM information_schema.table_constraints tc JOIN information_schema.constraint_column_usage AS ccu USING (constraint_schema, constraint_catalog, table_name, constraint_name) JOIN information_schema.columns AS c ON c.table_schema = tc.constraint_schema AND tc.table_name = c.table_name AND ccu.column_name = c.column_name WHERE constraint_type IN ('PRIMARY KEY', 'UNIQUE') AND c.table_catalog = 'al_hudhud_new' AND c.table_schema = CURRENT_SCHEMA() AND c.table_name = 'tenants' AND constraint_type = 'UNIQUE'[0m
+
+2026/04/03 19:07:13 [32m [33mSLOW SQL >= 200ms
+[0m[31;1m[5571.538ms] [33m[rows:-][35m SELECT c.column_name, constraint_name, constraint_type FROM information_schema.table_constraints tc JOIN information_schema.constraint_column_usage AS ccu USING (constraint_schema, constraint_catalog, table_name, constraint_name) JOIN information_schema.columns AS c ON c.table_schema = tc.constraint_schema AND tc.table_name = c.table_name AND ccu.column_name = c.column_name WHERE constraint_type IN ('PRIMARY KEY', 'UNIQUE') AND c.table_catalog = 'al_hudhud_new' AND c.table_schema = CURRENT_SCHEMA() AND c.table_name = 'tenants'[0m
+
+2026/04/03 19:07:46 [32mD:/ALHudhudAI/services/backend/internal/db/gorm.go:96 [33mSLOW SQL >= 200ms
+[0m[31;1m[31704.071ms] [33m[rows:-][35m SELECT constraint_name FROM information_schema.table_constraints tc JOIN information_schema.constraint_column_usage AS ccu USING (constraint_schema, constraint_catalog, table_name, constraint_name) JOIN information_schema.columns AS c ON c.table_schema = tc.constraint_schema AND tc.table_name = c.table_name AND ccu.column_name = c.column_name WHERE constraint_type IN ('PRIMARY KEY', 'UNIQUE') AND c.table_catalog = 'al_hudhud_new' AND c.table_schema = CURRENT_SCHEMA() AND c.table_name = 'dispatch_channels' AND constraint_type = 'UNIQUE'[0m
+
+2026/04/03 19:08:18 [32mD:/ALHudhudAI/services/backend/internal/db/gorm.go:96 [33mSLOW SQL >= 200ms
+[0m[31;1m[31552.215ms] [33m[rows:-][35m SELECT c.column_name, constraint_name, constraint_type FROM information_schema.table_constraints tc JOIN information_schema.constraint_column_usage AS ccu USING (constraint_schema, constraint_catalog, table_name, constraint_name) JOIN information_schema.columns AS c ON c.table_schema = tc.constraint_schema AND tc.table_name = c.table_name AND ccu.column_name = c.column_name WHERE constraint_type IN ('PRIMARY KEY', 'UNIQUE') AND c.table_catalog = 'al_hudhud_new' AND c.table_schema = CURRENT_SCHEMA() AND c.table_name = 'dispatch_channels'[0m
+
+2026/04/03 19:08:18 [31;1m [35;1mERROR: cannot alter type of a column used by a view or rule (SQLSTATE 0A000)
+[0m[33m[1.003ms] [34;1m[rows:0][0m ALTER TABLE "global_incoming_events" ALTER COLUMN "custom_id" TYPE varchar(20) USING "custom_id"::varchar(20)
+{"level":"error","ts":"2026-04-03T19:08:18.488+0300","caller":"db/gorm.go:99","msg":"Auto-migration encountered an error (continuing startup)","error":"ERROR: cannot alter type of a column used by a view or rule (SQLSTATE 0A000)"}
+{"level":"info","ts":"2026-04-03T19:08:18.488+0300","caller":"db/gorm.go:102","msg":"Auto-migrations completed"}
+    fast_processor_bug6_preservation_test.go:288: 
+        	Error Trace:	D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug6_preservation_test.go:288
+        	Error:      	Received unexpected error:
+        	            	ERROR: INSERT has more target columns than expressions (SQLSTATE 42601)
+        	Test:       	TestBug6_Preservation_Simple_TransactionCommit
+        	Messages:   	Setup: Should be able to create tenant
+--- FAIL: TestBug6_Preservation_Simple_TransactionCommit (90.94s)
+=== RUN   TestBug6_Preservation_Simple_MultipleOperations
+    fast_processor_bug6_preservation_test.go:346: 
+        	Error Trace:	D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug6_preservation_test.go:346
+        	Error:      	Received unexpected error:
+        	            	ERROR: INSERT has more target columns than expressions (SQLSTATE 42601)
+        	Test:       	TestBug6_Preservation_Simple_MultipleOperations
+        	Messages:   	Setup: Should be able to create tenant
+--- FAIL: TestBug6_Preservation_Simple_MultipleOperations (0.00s)
+=== RUN   TestBug6_Preservation_Simple_BatchOperations
+    fast_processor_bug6_preservation_test.go:414: 
+        	Error Trace:	D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug6_preservation_test.go:414
+        	Error:      	Received unexpected error:
+        	            	ERROR: INSERT has more target columns than expressions (SQLSTATE 42601)
+        	Test:       	TestBug6_Preservation_Simple_BatchOperations
+        	Messages:   	Setup: Should be able to create tenant
+--- FAIL: TestBug6_Preservation_Simple_BatchOperations (0.00s)
+=== RUN   TestBug6_Preservation_Simple_RollbackOnError
+    fast_processor_bug6_preservation_test.go:495: 
+        	Error Trace:	D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug6_preservation_test.go:495
+        	Error:      	Received unexpected error:
+        	            	ERROR: INSERT has more target columns than expressions (SQLSTATE 42601)
+        	Test:       	TestBug6_Preservation_Simple_RollbackOnError
+        	Messages:   	Setup: Should be able to create tenant
+--- FAIL: TestBug6_Preservation_Simple_RollbackOnError (0.00s)
+=== RUN   TestBug6_Preservation_Simple_NestedOperations
+    fast_processor_bug6_preservation_test.go:552: 
+        	Error Trace:	D:/ALHudhudAI/services/backend/internal/worker/fast_processor_bug6_preservation_test.go:552
+        	Error:      	Received unexpected error:
+        	            	ERROR: INSERT has more target columns than expressions (SQLSTATE 42601)
+        	Test:       	TestBug6_Preservation_Simple_NestedOperations
+        	Messages:   	Setup: Should be able to create tenant
+--- FAIL: TestBug6_Preservation_Simple_NestedOperations (0.00s)
+FAIL
+FAIL	github.com/al-hudhud/backend/internal/worker	90.979s
+FAIL

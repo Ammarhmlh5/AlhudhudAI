@@ -1,0 +1,9 @@
+# 2026/05/24 11:18:45.463487 [TestPreservation_Bug9_BatchOperationsPerformance] [rapid] draw batchSize: 12
+# 2026/05/24 11:18:45.467978 [TestPreservation_Bug9_BatchOperationsPerformance] ✓ Preservation verified: Batch operations for 12 messages
+# 2026/05/24 11:18:45.467978 [TestPreservation_Bug9_BatchOperationsPerformance]   Enqueue: 3.6934ms total, 307.783µs per message
+# 2026/05/24 11:18:45.467978 [TestPreservation_Bug9_BatchOperationsPerformance]   Dequeue: 797.3µs total, 66.441µs per message
+# 
+v0.4.8#4032019333156218217
+0x1d5450fe691789
+0xc0c0338326239
+0x2

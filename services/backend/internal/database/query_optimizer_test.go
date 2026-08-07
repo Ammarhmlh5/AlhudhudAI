@@ -9,6 +9,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -209,29 +210,30 @@ func TestOptimizedQueries_GetActiveSubscription(t *testing.T) {
 	defer oq.Close()
 
 	tenantID := uuid.New()
-	userID := uuid.New()
 
 	t.Run("get active subscription successfully", func(t *testing.T) {
 		mock.ExpectPrepare("SELECT id, tenant_id").
 			ExpectQuery().
-			WithArgs(tenantID, userID).
+			WithArgs(tenantID).
 			WillReturnRows(sqlmock.NewRows([]string{
-				"id", "tenant_id", "user_id", "package_id", "status",
-				"start_date", "end_date", "messages_included", "messages_used",
-				"messages_remaining", "overage_messages", "overage_cost",
-				"auto_renewal", "next_renewal_date", "created_at", "updated_at",
+				"id", "tenant_id", "package_id", "status",
+				"start_date", "end_date", "messages_used", "messages_remaining",
+				"overage_messages", "overage_cost",
+				"auto_renew", "next_renewal_date", "created_at", "updated_at",
 			}).AddRow(
-				1, tenantID, userID, 1, "active",
-				time.Now(), time.Now().AddDate(0, 1, 0), 1000, 100,
-				900, 0, 0.0,
+				1, tenantID, 1, "active",
+				time.Now(), time.Now().AddDate(0, 1, 0), 100, 900,
+				0, decimal.NewFromInt(0),
 				true, time.Now().AddDate(0, 1, 0), time.Now(), time.Now(),
 			))
 
-		subscription, err := oq.GetActiveSubscription(context.Background(), tenantID, userID)
+		subscription, err := oq.GetActiveSubscription(context.Background(), tenantID)
 		require.NoError(t, err)
 		assert.NotNil(t, subscription)
 		assert.Equal(t, "active", subscription.Status)
-		assert.Equal(t, 1000, subscription.MessagesIncluded)
+		require.NotNil(t, subscription.MessagesRemaining)
+		assert.Equal(t, 900, *subscription.MessagesRemaining)
+		assert.True(t, subscription.AutoRenew)
 	})
 }
 

@@ -3,6 +3,7 @@ package routing
 import (
 	"context"
 	"errors"
+	"math"
 	"sort"
 
 	"github.com/google/uuid"
@@ -108,15 +109,15 @@ func (r *Router) GetRouteStats(ctx context.Context, tenantID uuid.UUID) (map[str
 	}
 
 	var totalRequests int
-	var totalSuccessRate float64
+	var weightedSuccess float64
 	for _, route := range routes {
 		totalRequests += route.TotalRequests
-		totalSuccessRate += route.SuccessRate
+		weightedSuccess += route.SuccessRate * float64(route.TotalRequests)
 	}
 
 	avgSuccessRate := float64(0)
-	if len(routes) > 0 {
-		avgSuccessRate = totalSuccessRate / float64(len(routes))
+	if totalRequests > 0 {
+		avgSuccessRate = math.Round(weightedSuccess/float64(totalRequests)*100) / 100
 	}
 
 	return map[string]interface{}{

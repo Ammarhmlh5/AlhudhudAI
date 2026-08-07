@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/shopspring/decimal"
 )
 
 // QueryOptimizer provides query optimization and analysis capabilities
@@ -198,16 +199,15 @@ func (oq *OptimizedQueries) GetActiveTariff(ctx context.Context, tenantID uuid.U
 }
 
 // GetActiveSubscription retrieves active subscription with optimized query
-func (oq *OptimizedQueries) GetActiveSubscription(ctx context.Context, tenantID, userID uuid.UUID) (*Subscription, error) {
+func (oq *OptimizedQueries) GetActiveSubscription(ctx context.Context, tenantID uuid.UUID) (*Subscription, error) {
 	// Optimized query with index hints
 	query := `
-		SELECT id, tenant_id, user_id, package_id, status, 
-		       start_date, end_date, messages_included, messages_used, 
-		       messages_remaining, overage_messages, overage_cost, 
-		       auto_renewal, next_renewal_date, created_at, updated_at
+		SELECT id, tenant_id, package_id, status, 
+		       start_date, end_date, messages_used, messages_remaining, 
+		       overage_messages, overage_cost, auto_renew, next_renewal_date,
+		       created_at, updated_at
 		FROM subscriptions
 		WHERE tenant_id = $1 
-		  AND user_id = $2 
 		  AND status IN ('active', 'grace_period')
 		  AND end_date >= CURRENT_DATE
 		ORDER BY end_date DESC
@@ -220,7 +220,7 @@ func (oq *OptimizedQueries) GetActiveSubscription(ctx context.Context, tenantID,
 	}
 
 	var subscription Subscription
-	err = stmt.GetContext(ctx, &subscription, tenantID, userID)
+	err = stmt.GetContext(ctx, &subscription, tenantID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("no active subscription found")
@@ -368,22 +368,20 @@ type Tariff struct {
 }
 
 type Subscription struct {
-	ID               int       `db:"id"`
-	TenantID         uuid.UUID `db:"tenant_id"`
-	UserID           uuid.UUID `db:"user_id"`
-	PackageID        int       `db:"package_id"`
-	Status           string    `db:"status"`
-	StartDate        time.Time `db:"start_date"`
-	EndDate          time.Time `db:"end_date"`
-	MessagesIncluded int       `db:"messages_included"`
-	MessagesUsed     int       `db:"messages_used"`
-	MessagesRemaining int      `db:"messages_remaining"`
-	OverageMessages  int       `db:"overage_messages"`
-	OverageCost      float64   `db:"overage_cost"`
-	AutoRenewal      bool      `db:"auto_renewal"`
-	NextRenewalDate  *time.Time `db:"next_renewal_date"`
-	CreatedAt        time.Time `db:"created_at"`
-	UpdatedAt        time.Time `db:"updated_at"`
+	ID                int             `db:"id"`
+	TenantID          uuid.UUID       `db:"tenant_id"`
+	PackageID         int             `db:"package_id"`
+	Status            string          `db:"status"`
+	StartDate         time.Time       `db:"start_date"`
+	EndDate           time.Time       `db:"end_date"`
+	MessagesUsed      int             `db:"messages_used"`
+	MessagesRemaining *int            `db:"messages_remaining"` // NULL for unlimited
+	OverageMessages   int             `db:"overage_messages"`
+	OverageCost       decimal.Decimal `db:"overage_cost"`
+	AutoRenew         bool            `db:"auto_renew"`
+	NextRenewalDate   *time.Time      `db:"next_renewal_date"`
+	CreatedAt         time.Time       `db:"created_at"`
+	UpdatedAt         time.Time       `db:"updated_at"`
 }
 
 type RolloverMessage struct {

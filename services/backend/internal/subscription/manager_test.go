@@ -26,7 +26,7 @@ func createTestSubscription(t *testing.T, pool *pgxpool.Pool, tenantID uuid.UUID
 	ctx := context.Background()
 
 	// Set tenant context
-	_, err := pool.Exec(ctx, "SET app.current_tenant = $1", tenantID)
+	_, err := pool.Exec(ctx, "SELECT set_config('app.current_tenant', $1, false)", tenantID.String())
 	require.NoError(t, err)
 
 	// Create subscription
@@ -319,7 +319,7 @@ func TestGetUsage(t *testing.T) {
 	assert.Equal(t, int64(1000), *usage.IncludedMessages)
 	assert.Equal(t, int64(0), usage.OverageMessages)
 	assert.True(t, usage.OverageCost.IsZero())
-	assert.Equal(t, decimal.NewFromFloat(0.01), usage.OverageRate)
+	assert.True(t, decimal.NewFromFloat(0.01).Equal(usage.OverageRate))
 	assert.Equal(t, StatusActive, usage.Status)
 	assert.NotNil(t, usage.NextRenewalDate)
 }
@@ -388,7 +388,7 @@ func TestGetUsage_WithOverage(t *testing.T) {
 	// Calculate overage for 3 messages
 	overageCost, err := manager.CalculateOverageCost(ctx, subscribeResult.SubscriptionID, 3)
 	require.NoError(t, err)
-	assert.Equal(t, decimal.NewFromFloat(1.5), overageCost) // 3 * 0.5
+	assert.True(t, decimal.NewFromFloat(1.5).Equal(overageCost)) // 3 * 0.5
 
 	// Test GetUsage
 	usage, err := manager.GetUsage(ctx, tenantID)
@@ -400,7 +400,7 @@ func TestGetUsage_WithOverage(t *testing.T) {
 	assert.NotNil(t, usage.MessagesRemaining)
 	assert.Equal(t, int64(0), *usage.MessagesRemaining)
 	assert.Equal(t, int64(3), usage.OverageMessages)
-	assert.Equal(t, decimal.NewFromFloat(1.5), usage.OverageCost)
+	assert.True(t, decimal.NewFromFloat(1.5).Equal(usage.OverageCost))
 }
 
 // TestGetUsage_UnlimitedPackage tests GetUsage with unlimited package
@@ -458,8 +458,8 @@ func TestGetUsage_UnlimitedPackage(t *testing.T) {
 func createTestTenant(t *testing.T, pool *pgxpool.Pool, name string, balance decimal.Decimal) uuid.UUID {
 	tenantID := uuid.New()
 	query := `
-		INSERT INTO tenants (id, business_name, email, balance, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, 'ACTIVE', NOW(), NOW())
+		INSERT INTO tenants (id, business_name, contact_name, email, balance, status, created_at, updated_at)
+		VALUES ($1, $2, $2, $3, $4, 'ACTIVE', NOW(), NOW())
 	`
 	_, err := pool.Exec(context.Background(), query, tenantID, name, fmt.Sprintf("%s@example.com", name), balance)
 	require.NoError(t, err)
@@ -469,8 +469,8 @@ func createTestTenant(t *testing.T, pool *pgxpool.Pool, name string, balance dec
 func createTestService(t *testing.T, pool *pgxpool.Pool, tenantID uuid.UUID, name string) int64 {
 	var id int64
 	query := `
-		INSERT INTO services (tenant_id, name, type, provider, status, created_at, updated_at)
-		VALUES ($1, $2, 'sms', 'test', 'active', NOW(), NOW())
+		INSERT INTO services (tenant_id, name, code, type, created_at, updated_at)
+		VALUES ($1, $2, $2, 'sms', NOW(), NOW())
 		RETURNING id
 	`
 	err := pool.QueryRow(context.Background(), query, tenantID, name).Scan(&id)

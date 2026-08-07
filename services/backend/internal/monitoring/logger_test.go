@@ -80,6 +80,9 @@ func TestLogGatewayMetrics(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock INSERT into resource_usage
 	mock.ExpectExec("INSERT INTO resource_usage").
@@ -171,6 +174,9 @@ func TestGetRecentUsage(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock SELECT query
 	rows := sqlmock.NewRows([]string{
@@ -254,6 +260,9 @@ func TestGetRecentUsage_WithNullValues(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock SELECT query with NULL values
 	rows := sqlmock.NewRows([]string{

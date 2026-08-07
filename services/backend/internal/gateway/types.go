@@ -93,7 +93,7 @@ type DedicatedGateway struct {
 	ServerType               string                 `gorm:"size:50;not null;default:shared" json:"server_type"`
 	ServerIP                 string                 `gorm:"size:45" json:"server_ip"`
 	ServerHostname           string                 `gorm:"size:255" json:"server_hostname"`
-	ServerSpecs              map[string]interface{} `gorm:"type:jsonb" json:"server_specs"`
+	ServerSpecs              map[string]interface{} `gorm:"type:jsonb;serializer:json" json:"server_specs"`
 	MaxThroughput            int                    `gorm:"default:100" json:"max_throughput"`
 	DailyLimit               *int                   `json:"daily_limit"`
 	MonthlyLimit             *int                   `json:"monthly_limit"`

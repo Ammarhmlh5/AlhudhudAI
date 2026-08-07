@@ -60,6 +60,9 @@ func (s *Service) ListTenants(page, pageSize int, search, status, sector string,
 
 	query := db.GormDB.Model(&models.Tenant{})
 
+	// Exclude reseller companies from the regular companies list (G8)
+	query = query.Where("is_reseller = ? OR is_reseller IS NULL", false)
+
 	if search != "" {
 		searchTerm := "%" + search + "%"
 		query = query.Where("business_name ILIKE ? OR contact_name ILIKE ? OR email ILIKE ?", searchTerm, searchTerm, searchTerm)
@@ -88,6 +91,28 @@ func (s *Service) ListTenants(page, pageSize int, search, status, sector string,
 		return nil, err
 	}
 
+	// Resolve the active subscription plan per tenant from the real subscription
+	// system instead of the legacy tenants.subscription_plan column.
+	planByTenant := map[uuid.UUID]string{}
+	rows, err := db.DB.Query(`
+		SELECT s.tenant_id::text, p.name
+		FROM subscriptions s
+		JOIN packages p ON p.id = s.package_id
+		WHERE s.status IN ('active', 'grace_period')
+		  AND s.end_date >= CURRENT_DATE
+	`)
+	if err == nil {
+		for rows.Next() {
+			var tenantIDStr, planName string
+			if err := rows.Scan(&tenantIDStr, &planName); err == nil {
+				if tid, perr := uuid.Parse(tenantIDStr); perr == nil {
+					planByTenant[tid] = planName
+				}
+			}
+		}
+		rows.Close()
+	}
+
 	var summaries []TenantSummary
 	for _, t := range tenants {
 		var deviceCount int64
@@ -100,7 +125,7 @@ func (s *Service) ListTenants(page, pageSize int, search, status, sector string,
 			Email:        t.Email,
 			Phone:        t.Phone,
 			Status:       string(t.Status),
-			Plan:         t.SubscriptionPlan,
+			Plan:         planByTenant[t.ID],
 			Balance:      t.Balance,
 			Devices:      int(deviceCount),
 			Joined:       t.CreatedAt.Format("2006-01-02"),
@@ -417,6 +442,10 @@ func (s *Service) AdminCreateTenant(req AdminCreateTenantRequest) (*models.Tenan
 			IsVerified:   true,
 		}
 
+		if req.IsReseller {
+			user.UserType = models.ResellerType
+		}
+
 		if err := tx.Create(user).Error; err != nil {
 			log.Error("Failed to create user in transaction", zap.Error(err))
 			return err
@@ -434,6 +463,7 @@ func (s *Service) AdminCreateTenant(req AdminCreateTenantRequest) (*models.Tenan
 			CountryCode:   req.CountryCode,
 			Status:        models.TenantActive,
 			IsActive:      true,
+			IsReseller:    req.IsReseller,
 			CompanySerial: s.generateCompanySerial(),
 		}
 
@@ -634,6 +664,7 @@ type AdminCreateTenantRequest struct {
 	Phone        string `json:"phone" binding:"required"`
 	CountryCode  string `json:"country_code" binding:"required"`
 	Password     string `json:"password" binding:"required,min=8"`
+	IsReseller   bool   `json:"is_reseller"`
 }
 
 

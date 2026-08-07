@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -18,6 +18,13 @@ import (
 func setupAPIKeyTestDB(t *testing.T) *gorm.DB {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
+
+	// :memory: sqlite is per-connection; pin the pool to a single connection
+	// so tables created by AutoMigrate are visible to later queries.
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
 
 	// Create tables
 	err = db.AutoMigrate(&GatewayAPIKey{}, &DedicatedGateway{})
@@ -61,6 +68,16 @@ func createTestGateway(t *testing.T, db *gorm.DB, tenantID uuid.UUID) uuid.UUID 
 	return gateway.ID
 }
 
+// skipIfNonPostgresAllowedIPs skips tests that depend on AllowedIPs round-tripping
+// through a Postgres text[] array. SQLite has no array type, so these tests can
+// only run against a real Postgres database.
+func skipIfNonPostgresAllowedIPs(t *testing.T, db *gorm.DB) {
+	t.Helper()
+	if db.Dialector.Name() != "postgres" {
+		t.Skip("AllowedIPs relies on Postgres text[] arrays; requires Postgres driver")
+	}
+}
+
 // TestCreateAPIKey tests the CreateAPIKey function
 func TestCreateAPIKey(t *testing.T) {
 	db := setupAPIKeyTestDB(t)
@@ -92,6 +109,8 @@ func TestCreateAPIKey(t *testing.T) {
 	})
 
 	t.Run("Success - Create API key with custom settings", func(t *testing.T) {
+		skipIfNonPostgresAllowedIPs(t, db)
+
 		expiresAt := time.Now().Add(30 * 24 * time.Hour)
 		req := &CreateAPIKeyRequest{
 			TenantID:    tenantID,
@@ -297,6 +316,7 @@ func TestSetRateLimit(t *testing.T) {
 // TestIPWhitelisting tests AddAllowedIP and RemoveAllowedIP functions
 func TestIPWhitelisting(t *testing.T) {
 	db := setupAPIKeyTestDB(t)
+	skipIfNonPostgresAllowedIPs(t, db)
 	manager := NewAPIKeyManager(db)
 	ctx := context.Background()
 
@@ -469,6 +489,7 @@ func TestSetExpiry(t *testing.T) {
 // TestValidateAPIKey tests the ValidateAPIKey function
 func TestValidateAPIKey(t *testing.T) {
 	db := setupAPIKeyTestDB(t)
+	skipIfNonPostgresAllowedIPs(t, db)
 	manager := NewAPIKeyManager(db)
 	ctx := context.Background()
 

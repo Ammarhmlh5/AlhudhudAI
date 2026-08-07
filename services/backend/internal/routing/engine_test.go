@@ -19,7 +19,7 @@ import (
 // setupTestDB creates a test database connection
 func setupTestDB(t *testing.T) *sql.DB {
 	// Use test database connection
-	dsn := "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable"
+	dsn := "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable"
 	db, err := sql.Open("postgres", dsn)
 	require.NoError(t, err)
 	
@@ -36,6 +36,29 @@ func cleanupTestData(t *testing.T, db *sql.DB, tenantID uuid.UUID) {
 	require.NoError(t, err)
 	
 	_, err = db.Exec("DELETE FROM dispatch_channels WHERE tenant_id = $1", tenantID)
+	require.NoError(t, err)
+
+	_, err = db.Exec("DELETE FROM tenants WHERE id = $1", tenantID)
+	require.NoError(t, err)
+}
+
+// createTestTenant creates a test tenant (and its user) in the database
+// Required because messages.tenant_id has a foreign key to tenants(id)
+func createTestTenant(t *testing.T, db *sql.DB, tenantID uuid.UUID) {
+	t.Helper()
+	userID := uuid.New()
+	_, err := db.Exec(`
+		INSERT INTO users (id, email, password_hash, user_type, is_active, is_verified, created_at, updated_at)
+		VALUES ($1, $2, 'x', 'ADMIN', true, true, NOW(), NOW())
+	`, userID, fmt.Sprintf("user-%s@test.local", userID.String()))
+	require.NoError(t, err)
+
+	_, err = db.Exec(`
+		INSERT INTO tenants (id, user_id, business_name, contact_name, email, company_serial,
+			api_key_accounting, api_key_phone, api_key_web, balance, status, is_active, created_at, updated_at)
+		VALUES ($1, $2, 'Test Business', 'Test Contact', $3, $4, $5, $6, $7, 1000, 'ACTIVE', true, NOW(), NOW())
+	`, tenantID, userID, fmt.Sprintf("tenant-%s@test.local", tenantID.String()),
+		"COMPANY-"+tenantID.String(), "acc-"+tenantID.String(), "phone-"+tenantID.String(), "web-"+tenantID.String())
 	require.NoError(t, err)
 }
 
@@ -133,17 +156,15 @@ func TestSelectChannel_LoadBalancing(t *testing.T) {
 	
 	tenantID := uuid.New()
 	defer cleanupTestData(t, db, tenantID)
+	createTestTenant(t, db, tenantID)
 	
 	// Create channels with same priority
 	channel1ID := createTestChannel(t, db, tenantID, "PHONE", ChannelStatusOnline, 5)
 	channel2ID := createTestChannel(t, db, tenantID, "PHONE", ChannelStatusOnline, 5)
 	
-	// Create messages to simulate load on channel1
-	messageID := uuid.New()
-	_, err := db.Exec(`
-		INSERT INTO messages (id, tenant_id, channel_id, phone_number, content, status, cost, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	`, messageID, tenantID, channel1ID, "+1234567890", "Test", "PROCESSING", 1.0, time.Now(), time.Now())
+	// Simulate load on channel1 (engine selects by the current_load column,
+	// Requirement 5.4 — not by counting messages)
+	_, err := db.Exec(`UPDATE dispatch_channels SET current_load = 1 WHERE id = $1`, channel1ID)
 	require.NoError(t, err)
 	
 	// Select channel
@@ -352,7 +373,7 @@ func TestSelectChannel_CacheHit(t *testing.T) {
 	defer cleanupTestData(t, db, tenantID)
 	
 	// Clear cache before test
-	cacheKey := fmt.Sprintf("channels:cache:%s", tenantID.String())
+	cacheKey := engine.channelCacheKey(tenantID)
 	redisClient.Del(ctx, cacheKey)
 	
 	// Create test channel
@@ -410,7 +431,7 @@ func TestGetAvailableChannels_CacheHit(t *testing.T) {
 	defer cleanupTestData(t, db, tenantID)
 	
 	// Clear cache before test
-	cacheKey := fmt.Sprintf("channels:cache:%s", tenantID.String())
+	cacheKey := engine.channelCacheKey(tenantID)
 	redisClient.Del(ctx, cacheKey)
 	
 	// Create test channels
@@ -465,7 +486,7 @@ func TestSelectChannel_CacheMiss(t *testing.T) {
 	defer cleanupTestData(t, db, tenantID)
 	
 	// Clear cache to ensure miss
-	cacheKey := fmt.Sprintf("channels:cache:%s", tenantID.String())
+	cacheKey := engine.channelCacheKey(tenantID)
 	redisClient.Del(ctx, cacheKey)
 	
 	// Create test channel
@@ -513,8 +534,8 @@ func TestSelectChannel_CacheIsolation(t *testing.T) {
 	defer cleanupTestData(t, db, tenant2ID)
 	
 	// Clear caches
-	cache1Key := fmt.Sprintf("channels:cache:%s", tenant1ID.String())
-	cache2Key := fmt.Sprintf("channels:cache:%s", tenant2ID.String())
+	cache1Key := engine.channelCacheKey(tenant1ID)
+	cache2Key := engine.channelCacheKey(tenant2ID)
 	redisClient.Del(ctx, cache1Key)
 	redisClient.Del(ctx, cache2Key)
 	
@@ -799,7 +820,7 @@ func TestLoadBalancing_CacheInvalidation(t *testing.T) {
 	defer cleanupTestData(t, db, tenantID)
 
 	// Clear cache
-	cacheKey := fmt.Sprintf("channels:cache:%s", tenantID.String())
+	cacheKey := engine.channelCacheKey(tenantID)
 	redisClient.Del(ctx, cacheKey)
 
 	// Create test channel
@@ -990,6 +1011,7 @@ func TestSetMessageWaiting_Success(t *testing.T) {
 	
 	tenantID := uuid.New()
 	defer cleanupTestData(t, db, tenantID)
+	createTestTenant(t, db, tenantID)
 	
 	// Create a message with PENDING status
 	messageID := createTestMessage(t, db, tenantID, "PENDING")
@@ -1015,6 +1037,7 @@ func TestSetMessageWaiting_ProcessingStatus(t *testing.T) {
 	
 	tenantID := uuid.New()
 	defer cleanupTestData(t, db, tenantID)
+	createTestTenant(t, db, tenantID)
 	
 	// Create a message with PROCESSING status
 	messageID := createTestMessage(t, db, tenantID, "PROCESSING")
@@ -1042,6 +1065,8 @@ func TestSetMessageWaiting_TenantIsolation(t *testing.T) {
 	tenant2ID := uuid.New()
 	defer cleanupTestData(t, db, tenant1ID)
 	defer cleanupTestData(t, db, tenant2ID)
+	createTestTenant(t, db, tenant1ID)
+	createTestTenant(t, db, tenant2ID)
 	
 	// Create a message for tenant1
 	messageID := createTestMessage(t, db, tenant1ID, "PENDING")
@@ -1070,6 +1095,7 @@ func TestSetMessageWaiting_InvalidStatus(t *testing.T) {
 	
 	tenantID := uuid.New()
 	defer cleanupTestData(t, db, tenantID)
+	createTestTenant(t, db, tenantID)
 	
 	// Create a message with SENT status (should not be updatable to WAITING)
 	messageID := createTestMessage(t, db, tenantID, "SENT")
@@ -1119,6 +1145,7 @@ func TestSelectChannel_NoChannelAvailable_Integration(t *testing.T) {
 	
 	tenantID := uuid.New()
 	defer cleanupTestData(t, db, tenantID)
+	createTestTenant(t, db, tenantID)
 	
 	// Create only OFFLINE channels
 	createTestChannel(t, db, tenantID, "PHONE", ChannelStatusOffline, 10)

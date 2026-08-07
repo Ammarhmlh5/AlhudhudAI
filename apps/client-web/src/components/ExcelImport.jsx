@@ -2,14 +2,12 @@ import React, { useState, useRef } from 'react';
 import { FileSpreadsheet, Upload, AlertCircle, CheckCircle, X, ChevronRight, Settings } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import apiClient from '../api/axios';
-import { useAuth } from '../contexts/AuthContext';
 
 const ExcelImport = () => {
     const [dragActive, setDragActive] = useState(false);
     const [file, setFile] = useState(null);
     const [uploading, setUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState(null); // success, error
-    const { tenant } = useAuth();
     const inputRef = useRef(null);
 
     // Excel Parsing State
@@ -95,11 +93,10 @@ const ExcelImport = () => {
         setUploading(true);
         setUploadStatus(null);
 
-        // Create the Ingestion Formula: URL + Key + Sender + Type + Messages
+        // Create the Ingestion Payload for the bulk Excel endpoint
         const ingestionPayload = {
-            api_key: tenant?.api_key_accounting || '',
             sender_name: "Web-Excel-Import",
-            send_type: "BULK",
+            message_type: "",
             messages: excelData.map(row => ({
                 phone_number: row[mapping.phone] ? String(row[mapping.phone]) : '',
                 content: row[mapping.message] ? String(row[mapping.message]) : '',
@@ -114,7 +111,7 @@ const ExcelImport = () => {
         }
 
         try {
-            await apiClient.post('/api/v1/messaging/ingest', ingestionPayload);
+            await apiClient.post('/api/v1/messaging/excel-ingest', ingestionPayload);
             setUploadStatus('success');
         } catch (error) {
             console.error(error);

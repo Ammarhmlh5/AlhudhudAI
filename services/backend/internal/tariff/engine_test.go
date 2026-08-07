@@ -246,7 +246,7 @@ func TestCacheKeyGeneration(t *testing.T) {
 		{
 			name: "full request",
 			req: TariffRequest{
-				TenantID:        uuid.New(),
+				TenantID:        testTenantID,
 				ServiceID:       1,
 				CountryCode:     "YE",
 				NetworkOperator: "Yemen Mobile",

@@ -35,6 +35,7 @@ type Connection struct {
 	Send             chan []byte
 	Hub              *Hub
 	Status           ConnectionStatus // Current connection status
+	IsMobile         bool             // True for connections established via /ws/pair (mobile apps)
 	LastConnectedAt  time.Time        // Last successful connection time
 	LastDisconnectAt time.Time        // Last disconnection time
 	ReconnectCount   int              // Number of reconnection attempts

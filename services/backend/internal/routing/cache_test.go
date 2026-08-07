@@ -2,6 +2,7 @@ package routing
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -28,13 +29,23 @@ func TestCacheKeyGeneration(t *testing.T) {
 	// Keys should contain tenant ID
 	assert.Contains(t, key1, tenantID1.String())
 	assert.Contains(t, key2, tenantID2.String())
-	
-	// Keys should follow the format: channels:cache:{tenant_id}
-	expectedKey1 := "channels:cache:" + tenantID1.String()
-	expectedKey2 := "channels:cache:" + tenantID2.String()
-	
-	assert.Equal(t, expectedKey1, key1)
-	assert.Equal(t, expectedKey2, key2)
+
+	// Keys follow the signed, versioned format: v1:channels:cache:{tenant_id}:{signature}
+	// (Requirement 16.9: HMAC-SHA256 signing prevents tenant guessing via Redis keys)
+	prefix1 := "v1:channels:cache:" + tenantID1.String() + ":"
+	prefix2 := "v1:channels:cache:" + tenantID2.String() + ":"
+	assert.True(t, strings.HasPrefix(key1, prefix1), "key1 should have versioned, signed prefix")
+	assert.True(t, strings.HasPrefix(key2, prefix2), "key2 should have versioned, signed prefix")
+
+	sig1 := strings.TrimPrefix(key1, prefix1)
+	sig2 := strings.TrimPrefix(key2, prefix2)
+
+	// Signature is 16 hex chars (first 16 of HMAC-SHA256)
+	assert.Len(t, sig1, 16)
+	assert.Len(t, sig2, 16)
+
+	// Different tenants must produce different signatures
+	assert.NotEqual(t, sig1, sig2, "HMAC signatures should differ across tenants")
 }
 
 // TestCacheTTL tests that cache TTL is set correctly

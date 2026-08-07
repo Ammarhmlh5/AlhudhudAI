@@ -1,22 +1,21 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+import { API_BASE_URL } from '../config';
 
 interface Package {
   id: string;
   tenant_id: string;
-  service_id: string;
   name: string;
-  description: string;
-  price: number;
-  currency: string;
-  messages_included: number;
-  overage_rate: number;
+  code: string;
+  price_usd: number;
+  included_messages: number | null;
+  is_unlimited: boolean;
+  billing_cycle: string;
   rollover_enabled: boolean;
-  rollover_limit: number;
-  rollover_expiry_months: number;
+  rollover_limit: number | null;
+  rollover_expiry_months: number | null;
   is_active: boolean;
+  display_order: number;
   created_at: string;
   updated_at: string;
 }
@@ -27,27 +26,33 @@ interface PackageFilters {
 }
 
 interface CreatePackageData {
-  service_id: string;
+  service_id: number;
   name: string;
-  description: string;
-  price: number;
-  currency: string;
-  messages_included: number;
-  overage_rate: number;
+  code: string;
+  price_usd: number;
+  included_messages?: number | null;
+  overage_rate?: number;
+  is_unlimited?: boolean;
+  billing_cycle: 'monthly' | 'yearly';
   rollover_enabled?: boolean;
-  rollover_limit?: number;
-  rollover_expiry_months?: number;
+  rollover_limit?: number | null;
+  rollover_expiry_months?: number | null;
+  display_order?: number;
 }
 
 interface UpdatePackageData {
   name?: string;
-  description?: string;
-  price?: number;
+  code?: string;
+  price_usd?: number;
+  included_messages?: number | null;
   overage_rate?: number;
+  is_unlimited?: boolean;
+  billing_cycle?: 'monthly' | 'yearly';
   rollover_enabled?: boolean;
-  rollover_limit?: number;
-  rollover_expiry_months?: number;
+  rollover_limit?: number | null;
+  rollover_expiry_months?: number | null;
   is_active?: boolean;
+  display_order?: number;
 }
 
 // Hook لجلب جميع الباقات
@@ -65,11 +70,11 @@ export const usePackages = (filters?: PackageFilters) => {
         if (filters?.service_id) params.append('service_id', filters.service_id);
         if (filters?.is_active !== undefined) params.append('is_active', String(filters.is_active));
 
-        const response = await axios.get(`${API_URL}/api/packages?${params.toString()}`, {
+        const response = await axios.get(`${API_BASE_URL}/api/v1/admin/packages?${params.toString()}`, {
           withCredentials: true,
         });
 
-        setPackages(response.data.packages || []);
+        setPackages(response.data || []);
         setError(null);
       } catch (err: any) {
         setError(err.response?.data?.error || 'فشل في جلب الباقات');
@@ -102,11 +107,11 @@ export const usePackage = (packageId: string | null) => {
     const fetchPackage = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${API_URL}/api/packages/${packageId}`, {
+        const response = await axios.get(`${API_BASE_URL}/api/v1/admin/packages/${packageId}`, {
           withCredentials: true,
         });
 
-        setPackageData(response.data.package);
+        setPackageData(response.data);
         setError(null);
       } catch (err: any) {
         setError(err.response?.data?.error || 'فشل في جلب الباقة');
@@ -132,14 +137,14 @@ export const useCreatePackage = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.post(`${API_URL}/api/packages`, data, {
+      const response = await axios.post(`${API_BASE_URL}/api/v1/admin/packages`, data, {
         withCredentials: true,
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
-      return response.data.package;
+      return response.data;
     } catch (err: any) {
       const errorMsg = err.response?.data?.error || 'فشل في إنشاء الباقة';
       setError(errorMsg);
@@ -163,14 +168,14 @@ export const useUpdatePackage = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.put(`${API_URL}/api/packages/${packageId}`, data, {
+      const response = await axios.put(`${API_BASE_URL}/api/v1/admin/packages/${packageId}`, data, {
         withCredentials: true,
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
-      return response.data.package;
+      return response.data;
     } catch (err: any) {
       const errorMsg = err.response?.data?.error || 'فشل في تحديث الباقة';
       setError(errorMsg);
@@ -194,7 +199,7 @@ export const useDeletePackage = () => {
     try {
       setLoading(true);
       setError(null);
-      await axios.delete(`${API_URL}/api/packages/${packageId}`, {
+      await axios.delete(`${API_BASE_URL}/api/v1/admin/packages/${packageId}`, {
         withCredentials: true,
       });
 

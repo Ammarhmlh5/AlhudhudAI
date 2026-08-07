@@ -91,7 +91,7 @@ func (gbc *GatewayBillingCron) SendBillingReminders(ctx context.Context, daysAhe
 		daysUntil := int(time.Until(billing.NextBillingDate).Hours() / 24)
 		
 		gbc.logger.Info("Upcoming billing",
-			zap.Int64("gateway_id", billing.GatewayID),
+			zap.String("gateway_id", billing.GatewayID.String()),
 			zap.String("gateway_name", billing.GatewayName),
 			zap.String("tenant_id", billing.TenantID.String()),
 			zap.Int("days_until", daysUntil),

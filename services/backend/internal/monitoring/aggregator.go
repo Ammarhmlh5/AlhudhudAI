@@ -147,9 +147,13 @@ func (a *Aggregator) calculateMessageStatistics(ctx context.Context, gatewayID u
 		  AND DATE(created_at) = $2
 	`
 	stats := &MessageStatistics{}
-	err := tx.QueryRowContext(ctx, query, gatewayID, date.Format("2006-01-02")).Scan(
-		&stats.Sent, &stats.Delivered, &stats.Failed, &stats.Pending,
-	)
+	var row *sql.Row
+	if tx != nil {
+		row = tx.QueryRowContext(ctx, query, gatewayID, date.Format("2006-01-02"))
+	} else {
+		row = a.db.QueryRowContext(ctx, query, gatewayID, date.Format("2006-01-02"))
+	}
+	err := row.Scan(&stats.Sent, &stats.Delivered, &stats.Failed, &stats.Pending)
 	return stats, err
 }
 
@@ -172,7 +176,13 @@ func (a *Aggregator) calculatePerformanceStatistics(ctx context.Context, gateway
 	`
 	stats := &PerformanceStatistics{}
 	var avg, max, min sql.NullInt64
-	err := tx.QueryRowContext(ctx, query, gatewayID, date.Format("2006-01-02")).Scan(&avg, &max, &min)
+	var row *sql.Row
+	if tx != nil {
+		row = tx.QueryRowContext(ctx, query, gatewayID, date.Format("2006-01-02"))
+	} else {
+		row = a.db.QueryRowContext(ctx, query, gatewayID, date.Format("2006-01-02"))
+	}
+	err := row.Scan(&avg, &max, &min)
 	if err == nil {
 		if avg.Valid { v := int(avg.Int64); stats.AvgResponseTime = &v }
 		if max.Valid { v := int(max.Int64); stats.MaxResponseTime = &v }
@@ -215,7 +225,13 @@ func (a *Aggregator) calculateFinancialStatistics(ctx context.Context, gatewayID
 		  AND DATE(created_at) = $2
 	`
 	stats := &FinancialStatistics{}
-	err := tx.QueryRowContext(ctx, query, gatewayID, date.Format("2006-01-02")).Scan(&stats.TotalCost, &stats.TotalRevenue)
+	var row *sql.Row
+	if tx != nil {
+		row = tx.QueryRowContext(ctx, query, gatewayID, date.Format("2006-01-02"))
+	} else {
+		row = a.db.QueryRowContext(ctx, query, gatewayID, date.Format("2006-01-02"))
+	}
+	err := row.Scan(&stats.TotalCost, &stats.TotalRevenue)
 	return stats, err
 }
 

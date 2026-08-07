@@ -36,7 +36,7 @@ func NewGatewayBillingService(pool *pgxpool.Pool, logger *zap.Logger) *GatewayBi
 
 // GatewayBillingInfo contains billing information for a gateway
 type GatewayBillingInfo struct {
-	GatewayID          int64
+	GatewayID          uuid.UUID
 	TenantID           uuid.UUID
 	GatewayName        string
 	GatewayCode        string
@@ -108,7 +108,7 @@ func (gbs *GatewayBillingService) CheckDueGateways(ctx context.Context) error {
 		}
 
 		gbs.logger.Info("Processing gateway billing",
-			zap.Int64("gateway_id", info.GatewayID),
+			zap.String("gateway_id", info.GatewayID.String()),
 			zap.String("tenant_id", info.TenantID.String()),
 			zap.String("gateway_code", info.GatewayCode),
 		)
@@ -116,7 +116,7 @@ func (gbs *GatewayBillingService) CheckDueGateways(ctx context.Context) error {
 		// Bill the gateway
 		if err := gbs.BillGatewaySubscription(ctx, &info); err != nil {
 			gbs.logger.Error("Failed to bill gateway",
-				zap.Int64("gateway_id", info.GatewayID),
+				zap.String("gateway_id", info.GatewayID.String()),
 				zap.Error(err),
 			)
 			failureCount++
@@ -145,7 +145,7 @@ func (gbs *GatewayBillingService) CheckDueGateways(ctx context.Context) error {
 // الشركة تدفع مباشرة لشركة الاتصالات لتكلفة الرسائل
 func (gbs *GatewayBillingService) BillGatewaySubscription(ctx context.Context, info *GatewayBillingInfo) error {
 	gbs.logger.Info("Billing gateway subscription",
-		zap.Int64("gateway_id", info.GatewayID),
+		zap.String("gateway_id", info.GatewayID.String()),
 		zap.String("tenant_id", info.TenantID.String()),
 		zap.String("subscription_type", info.SubscriptionType),
 	)
@@ -164,7 +164,7 @@ func (gbs *GatewayBillingService) BillGatewaySubscription(ctx context.Context, i
 	// Check if balance is sufficient
 	if info.TenantBalance.LessThan(totalAmount) {
 		gbs.logger.Warn("Insufficient balance for gateway billing",
-			zap.Int64("gateway_id", info.GatewayID),
+			zap.String("gateway_id", info.GatewayID.String()),
 			zap.String("required", totalAmount.String()),
 			zap.String("available", info.TenantBalance.String()),
 		)
@@ -180,7 +180,7 @@ func (gbs *GatewayBillingService) BillGatewaySubscription(ctx context.Context, i
 	defer tx.Rollback(ctx)
 
 	// Set tenant context for RLS
-	if _, err := tx.Exec(ctx, "SET LOCAL app.current_tenant = $1", info.TenantID.String()); err != nil {
+	if _, err := tx.Exec(ctx, "SELECT set_config('app.current_tenant', $1, true)", info.TenantID.String()); err != nil {
 		return fmt.Errorf("failed to set tenant context: %w", err)
 	}
 
@@ -248,7 +248,7 @@ func (gbs *GatewayBillingService) BillGatewaySubscription(ctx context.Context, i
 			info.ServerRentalFee.String(),
 		),
 		"dedicated_gateway",
-		info.GatewayID,
+		info.GatewayID.String(),
 		now,
 	)
 	if err != nil {
@@ -256,7 +256,7 @@ func (gbs *GatewayBillingService) BillGatewaySubscription(ctx context.Context, i
 	}
 
 	// Generate invoice
-	invoiceNumber := fmt.Sprintf("GW-INV-%s-%d", time.Now().Format("20060102"), info.GatewayID)
+	invoiceNumber := fmt.Sprintf("GW-INV-%s-%s", time.Now().Format("20060102"), info.GatewayID.String())
 	_, err = tx.Exec(ctx, `
 		INSERT INTO billing_invoices (
 			tenant_id,
@@ -291,7 +291,7 @@ func (gbs *GatewayBillingService) BillGatewaySubscription(ctx context.Context, i
 			info.BillingCycle,
 		),
 		"dedicated_gateway",
-		info.GatewayID,
+		info.GatewayID.String(),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create invoice: %w", err)
@@ -303,7 +303,7 @@ func (gbs *GatewayBillingService) BillGatewaySubscription(ctx context.Context, i
 	}
 
 	gbs.logger.Info("Gateway subscription billed successfully",
-		zap.Int64("gateway_id", info.GatewayID),
+		zap.String("gateway_id", info.GatewayID.String()),
 		zap.String("tenant_id", info.TenantID.String()),
 		zap.String("invoice_number", invoiceNumber),
 		zap.String("total_amount", totalAmount.String()),
@@ -317,7 +317,7 @@ func (gbs *GatewayBillingService) BillGatewaySubscription(ctx context.Context, i
 }
 
 // GetGatewayBillingInfo retrieves billing information for a specific gateway
-func (gbs *GatewayBillingService) GetGatewayBillingInfo(ctx context.Context, tenantID uuid.UUID, gatewayID int64) (*GatewayBillingInfo, error) {
+func (gbs *GatewayBillingService) GetGatewayBillingInfo(ctx context.Context, tenantID uuid.UUID, gatewayID uuid.UUID) (*GatewayBillingInfo, error) {
 	query := `
 		SELECT 
 			dg.id,
@@ -378,7 +378,7 @@ func (gbs *GatewayBillingService) GetUpcomingBillings(ctx context.Context, daysA
 		FROM dedicated_gateways dg
 		JOIN tenants t ON dg.tenant_id = t.id
 		WHERE dg.status = 'active'
-		  AND dg.next_billing_date <= CURRENT_DATE + $1
+		  AND dg.next_billing_date <= CURRENT_DATE + $1::integer
 		ORDER BY dg.next_billing_date ASC
 	`
 

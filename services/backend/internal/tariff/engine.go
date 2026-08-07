@@ -202,6 +202,12 @@ func (e *engine) CalculateSegments(ctx context.Context, messageLength int, encod
 
 // calculateSegmentsFromRules calculates segments based on segmentation rules
 func calculateSegmentsFromRules(messageLength int, rule models.SegmentationRule) int {
+	// Zero/negative lengths are invalid; they are rejected by validation
+	// before this helper is reached.
+	if messageLength <= 0 {
+		return 0
+	}
+
 	// Single segment
 	if messageLength <= rule.Segment1Chars {
 		return 1

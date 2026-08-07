@@ -43,9 +43,10 @@ Write-Host "=======================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "تعليمات الاستخدام:" -ForegroundColor Yellow
 Write-Host "  1. أدخل مفتاح الـ API الخاص بالمستأجر (API Key)" -ForegroundColor White
-Write-Host "  2. أدخل رقم الهاتف المستقبل" -ForegroundColor White
-Write-Host "  3. اكتب نص الرسالة" -ForegroundColor White
-Write-Host "  4. اضغط 'إرسال الرسالة الآن'" -ForegroundColor White
+Write-Host "  2. حدد وضع الإرسال: فردي (رسالة لكل طلب) أو جماعي (صفيف واحد)" -ForegroundColor White
+Write-Host "  3. حدد عدد الرسائل، التزامن/التأخير (فردي) أو حجم الدفعة الفرعية (جماعي)" -ForegroundColor White
+Write-Host "  4. اكتب قالب الرسالة (يدعم {i} و {phone}) واضغط 'بدء الإرسال'" -ForegroundColor White
+Write-Host "  5. تابع التقدم ويمكنك الإيقاف أو تصدير النتائج (CSV)" -ForegroundColor White
 Write-Host ""
 Write-Host "رابط الأداة المباشر:" -ForegroundColor Gray
 Write-Host "  $htmlPath" -ForegroundColor Gray

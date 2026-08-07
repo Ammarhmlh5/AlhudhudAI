@@ -113,7 +113,7 @@ func (h *Handler) ReportStatusHandler(c *gin.Context) {
 
 	var req struct {
 		MessageID   uuid.UUID  `json:"message_id" binding:"required"`
-		Status      string     `json:"status" binding:"required"` // DELIVERED, FAILED
+		Status      string     `json:"status" binding:"required"` // SENT, DELIVERED, FAILED
 		DeliveredAt *time.Time `json:"delivered_at"`
 	}
 

@@ -44,7 +44,7 @@ export default function Login() {
             if (err.isRateLimitError) {
                 setError(`تم تجاوز الحد المسموح من الطلبات. يرجى المحاولة بعد ${err.retryAfter} ثانية.`);
             } else {
-                setError(err.message || 'Invalid email or password');
+                setError(err.response?.data?.error || err.message || 'Invalid email or password');
             }
             setLoading(false);
         }

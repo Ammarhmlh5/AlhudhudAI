@@ -161,8 +161,14 @@ func (h *Handler) IngestMessageHandler(c *gin.Context) {
 		return
 	}
 
-	// Sender Name from Query or Default
+	// Sender Name from Query (fallback) or Body
 	senderName := c.DefaultQuery("sender_name", "Accounting System")
+	var body struct {
+		SenderName string `json:"sender_name"`
+	}
+	if err := json.Unmarshal(rawData, &body); err == nil && body.SenderName != "" {
+		senderName = body.SenderName
+	}
 
 	msg, err := h.service.IngestIncomingMessage(c, tenantID.String(), senderName, string(rawData))
 	if err != nil {
@@ -200,6 +206,7 @@ func (h *Handler) BulkIngestExcelHandler(c *gin.Context) {
 	var req struct {
 		Messages    []BulkMessageItem      `json:"messages" binding:"required,dive"`
 		MessageType models.MessageCategory `json:"message_type"`
+		SenderName  string                 `json:"sender_name"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -208,9 +215,13 @@ func (h *Handler) BulkIngestExcelHandler(c *gin.Context) {
 	}
 
 	// 2. Map to BulkMessagePayload for Unified Ingestion
+	senderName := req.SenderName
+	if senderName == "" {
+		senderName = "Excel Import"
+	}
 	payload := queue.BulkMessagePayload{
 		MessageType: string(req.MessageType),
-		SenderName:  "Excel Import",
+		SenderName:  senderName,
 	}
 
 	if payload.MessageType == "" {

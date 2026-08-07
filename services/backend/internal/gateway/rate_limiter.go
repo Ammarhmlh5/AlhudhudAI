@@ -78,7 +78,7 @@ func (rl *RedisRateLimiter) GetLimit(ctx context.Context, tenantID uuid.UUID) (i
 
 // Reset resets rate limit counter for tenant (for testing)
 func (rl *RedisRateLimiter) Reset(ctx context.Context, tenantID uuid.UUID) error {
-	key := redis.RateLimitKey(tenantID)
+	key := fmt.Sprintf("rate_limit:%s", tenantID.String())
 	return rl.redis.Client.Del(ctx, key).Err()
 }
 

@@ -48,7 +48,8 @@ func (b *MessageBuffer) Push(ctx context.Context, tenantID uuid.UUID, msg gatewa
 
 	// Create context with short timeout for fast response
 	// We want to fail fast if Redis is slow
-	pushCtx, cancel := context.WithTimeout(ctx, 5*time.Millisecond)
+	// (500ms tolerates cold connection-pool dials while still failing fast under load)
+	pushCtx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
 	defer cancel()
 
 	// Use pipeline for atomic operations
@@ -61,7 +62,7 @@ func (b *MessageBuffer) Push(ctx context.Context, tenantID uuid.UUID, msg gatewa
 	pipe.Incr(pushCtx, countKey)
 
 	// 3. Add tenant to active set (non-critical, for batch processor)
-	pipe.SAdd(pushCtx, activeTenantsKey, tenantID)
+	pipe.SAdd(pushCtx, activeTenantsKey, tenantID.String())
 
 	// Execute pipeline - this is the main blocking operation
 	// Pipeline batches all commands into single network round-trip

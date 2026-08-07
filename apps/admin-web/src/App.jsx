@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { Menu, X, Building2, Globe, Activity, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './contexts/AuthContext';
-import apiClient, { initializeCSRF } from './api/axios';
+import apiClient, { initializeAppCSRF } from './api/axios';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import Login from './components/Login';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -18,6 +18,8 @@ import AuditLogManager from './components/AuditLogManager';
 import RoleManager from './components/RoleManager';
 import Overview from './pages/Overview';
 import CompaniesList from './pages/Companies/CompaniesList';
+import ResellersList from './pages/Resellers/ResellersList';
+import ResellerDetails from './pages/Resellers/ResellerDetails';
 import CompanyDetails from './pages/Companies/CompanyDetails';
 import ServersList from './pages/Servers/ServersList';
 import AlertsList from './pages/Alerts/AlertsList';
@@ -220,6 +222,8 @@ function MainLayout({ children }) {
           <NavItem id="staff" label={t('nav.staff')} />
           <NavItem id="roles" label={t('nav.roles')} />
           <NavItem id="audit" label={t('nav.audit')} />
+          <div className="pt-4 pb-2 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Partners</div>
+          <NavItem id="resellers" label={t('nav.resellers')} />
           <div className="pt-4 pb-2 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">System</div>
           <NavItem id="tariffs" label={t('nav.tariffs')} />
           <NavItem id="support" label={t('nav.support')} />
@@ -254,7 +258,7 @@ function App() {
 
   // Initialize CSRF protection on app mount
   useEffect(() => {
-    initializeCSRF().catch(error => {
+    initializeAppCSRF().catch(error => {
       console.error('Failed to initialize CSRF protection:', error);
     });
   }, []);
@@ -275,6 +279,8 @@ function App() {
                   <Route path="/overview" element={<Overview />} />
                   <Route path="/companies" element={<CompaniesList />} />
                   <Route path="/companies/:tenantId" element={<CompanyDetails />} />
+                  <Route path="/resellers" element={<ResellersList />} />
+                  <Route path="/resellers/:id" element={<ResellerDetails />} />
                   <Route path="/servers" element={<ServersList />} />
                   <Route path="/alerts" element={<AlertsList />} />
                   <Route path="/alerts/config" element={<AlertConfig />} />

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/google/uuid"
@@ -26,7 +27,7 @@ func TestSubscribe_Success(t *testing.T) {
 
 	// Setup
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable")
+	pool, err := pgxpool.New(ctx, "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable")
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -41,8 +42,8 @@ func TestSubscribe_Success(t *testing.T) {
 
 	// Create test tenant with sufficient balance
 	_, err = pool.Exec(ctx, `
-		INSERT INTO tenants (id, name, email, balance, created_at, updated_at)
-		VALUES ($1, 'Test Tenant', 'test@example.com', 100.00, NOW(), NOW())
+		INSERT INTO tenants (id, business_name, contact_name, email, balance, created_at, updated_at)
+		VALUES ($1, 'Test Tenant', 'Test Contact', 'test@example.com', 100.00, NOW(), NOW())
 	`, tenantID)
 	require.NoError(t, err)
 
@@ -98,7 +99,7 @@ func TestSubscribe_InsufficientBalance(t *testing.T) {
 
 	// Setup
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable")
+	pool, err := pgxpool.New(ctx, "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable")
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -113,8 +114,8 @@ func TestSubscribe_InsufficientBalance(t *testing.T) {
 
 	// Create test tenant with insufficient balance
 	_, err = pool.Exec(ctx, `
-		INSERT INTO tenants (id, name, email, balance, created_at, updated_at)
-		VALUES ($1, 'Test Tenant', 'test@example.com', 5.00, NOW(), NOW())
+		INSERT INTO tenants (id, business_name, contact_name, email, balance, created_at, updated_at)
+		VALUES ($1, 'Test Tenant', 'Test Contact', 'test@example.com', 5.00, NOW(), NOW())
 	`, tenantID)
 	require.NoError(t, err)
 
@@ -168,7 +169,7 @@ func TestSubscribe_InactivePackage(t *testing.T) {
 
 	// Setup
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable")
+	pool, err := pgxpool.New(ctx, "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable")
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -183,8 +184,8 @@ func TestSubscribe_InactivePackage(t *testing.T) {
 
 	// Create test tenant
 	_, err = pool.Exec(ctx, `
-		INSERT INTO tenants (id, name, email, balance, created_at, updated_at)
-		VALUES ($1, 'Test Tenant', 'test@example.com', 100.00, NOW(), NOW())
+		INSERT INTO tenants (id, business_name, contact_name, email, balance, created_at, updated_at)
+		VALUES ($1, 'Test Tenant', 'Test Contact', 'test@example.com', 100.00, NOW(), NOW())
 	`, tenantID)
 	require.NoError(t, err)
 
@@ -238,7 +239,7 @@ func TestGetUsage_Success(t *testing.T) {
 
 	// Setup
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable")
+	pool, err := pgxpool.New(ctx, "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable")
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -253,8 +254,8 @@ func TestGetUsage_Success(t *testing.T) {
 
 	// Create test tenant
 	_, err = pool.Exec(ctx, `
-		INSERT INTO tenants (id, name, email, balance, created_at, updated_at)
-		VALUES ($1, 'Test Tenant', 'test@example.com', 100.00, NOW(), NOW())
+		INSERT INTO tenants (id, business_name, contact_name, email, balance, created_at, updated_at)
+		VALUES ($1, 'Test Tenant', 'Test Contact', 'test@example.com', 100.00, NOW(), NOW())
 	`, tenantID)
 	require.NoError(t, err)
 
@@ -320,7 +321,7 @@ func TestGetUsage_NoActiveSubscription(t *testing.T) {
 
 	// Setup
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable")
+	pool, err := pgxpool.New(ctx, "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable")
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -335,8 +336,8 @@ func TestGetUsage_NoActiveSubscription(t *testing.T) {
 
 	// Create test tenant without subscription
 	_, err = pool.Exec(ctx, `
-		INSERT INTO tenants (id, name, email, balance, created_at, updated_at)
-		VALUES ($1, 'Test Tenant', 'test@example.com', 100.00, NOW(), NOW())
+		INSERT INTO tenants (id, business_name, contact_name, email, balance, created_at, updated_at)
+		VALUES ($1, 'Test Tenant', 'Test Contact', 'test@example.com', 100.00, NOW(), NOW())
 	`, tenantID)
 	require.NoError(t, err)
 
@@ -368,7 +369,7 @@ func TestCancelSubscription_Success(t *testing.T) {
 
 	// Setup
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable")
+	pool, err := pgxpool.New(ctx, "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable")
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -383,8 +384,8 @@ func TestCancelSubscription_Success(t *testing.T) {
 
 	// Create test data
 	_, err = pool.Exec(ctx, `
-		INSERT INTO tenants (id, name, email, balance, created_at, updated_at)
-		VALUES ($1, 'Test Tenant', 'test@example.com', 100.00, NOW(), NOW())
+		INSERT INTO tenants (id, business_name, contact_name, email, balance, created_at, updated_at)
+		VALUES ($1, 'Test Tenant', 'Test Contact', 'test@example.com', 100.00, NOW(), NOW())
 	`, tenantID)
 	require.NoError(t, err)
 
@@ -417,7 +418,7 @@ func TestCancelSubscription_Success(t *testing.T) {
 
 	// Execute
 	w := httptest.NewRecorder()
-	httpReq, _ := http.NewRequest("PUT", "/subscriptions/"+string(rune(subscriptionID))+"/cancel", nil)
+	httpReq, _ := http.NewRequest("PUT", "/subscriptions/"+strconv.FormatInt(subscriptionID, 10)+"/cancel", nil)
 
 	router.ServeHTTP(w, httpReq)
 

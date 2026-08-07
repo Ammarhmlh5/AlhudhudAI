@@ -32,15 +32,17 @@ export const useAlerts = (filters = {}, options = {}) => {
       if (filters.dateFrom) params.append('date_from', filters.dateFrom);
       if (filters.dateTo) params.append('date_to', filters.dateTo);
 
-      const response = await axios.get(`/api/admin/alerts?${params.toString()}`);
+      const response = await axios.get(`/api/v1/admin/alerts?${params.toString()}`);
       
-      if (response.data) {
-        setAlerts(response.data.alerts || []);
-        setSummary(response.data.summary || {
-          total: 0,
-          critical: 0,
-          warning: 0,
-          info: 0
+      const result = response.data && response.data.data ? response.data.data : response.data;
+      if (result) {
+        const list = result.alerts || [];
+        setAlerts(list);
+        setSummary(result.summary || {
+          total: list.length,
+          critical: list.filter(a => a.severity === 'critical').length,
+          warning: list.filter(a => a.severity === 'warning').length,
+          info: list.filter(a => a.severity === 'info').length
         });
       }
     } catch (err) {
@@ -87,7 +89,7 @@ export const useAcknowledgeAlert = () => {
       setAcknowledging(true);
       setError(null);
 
-      await axios.put(`/api/admin/alerts/${alertId}/acknowledge`);
+      await axios.put(`/api/v1/admin/alerts/${alertId}/acknowledge`);
       
       return { success: true };
     } catch (err) {
@@ -120,7 +122,7 @@ export const useResolveAlert = () => {
       setResolving(true);
       setError(null);
 
-      await axios.put(`/api/admin/alerts/${alertId}/resolve`);
+      await axios.put(`/api/v1/admin/alerts/${alertId}/resolve`);
       
       return { success: true };
     } catch (err) {
@@ -160,10 +162,10 @@ export const useAlertDetails = (alertId) => {
         setLoading(true);
         setError(null);
 
-        const response = await axios.get(`/api/admin/alerts/${alertId}`);
+        const response = await axios.get(`/api/v1/admin/alerts/${alertId}`);
         
         if (response.data) {
-          setAlert(response.data);
+          setAlert(response.data.data || response.data);
         }
       } catch (err) {
         console.error('Failed to fetch alert details:', err);
@@ -199,10 +201,10 @@ export const useAlertConfig = () => {
       setLoading(true);
       setError(null);
 
-      const response = await axios.get('/api/admin/alerts/config');
+      const response = await axios.get('/api/v1/admin/alerts/config');
       
       if (response.data) {
-        setConfig(response.data);
+        setConfig(response.data.data || response.data);
       }
     } catch (err) {
       console.error('Failed to fetch alert config:', err);
@@ -217,7 +219,7 @@ export const useAlertConfig = () => {
       setSaving(true);
       setError(null);
 
-      await axios.post('/api/admin/alerts/config', newConfig);
+      await axios.post('/api/v1/admin/alerts/config', newConfig);
       setConfig(newConfig);
       
       return { success: true };

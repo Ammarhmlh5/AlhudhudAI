@@ -5,11 +5,16 @@ import (
 	"database/sql"
 	"log"
 	"math/big"
+	"os"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 func generateSecurePassword(length int) string {
+	// In development mode, use a known password from environment or default
+	if devPassword := os.Getenv("ADMIN_PASSWORD"); devPassword != "" {
+		return devPassword
+	}
 	const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
 	result := make([]byte, length)
 	for i := range result {
@@ -270,9 +275,9 @@ func seedTestTenant() {
 	if err == sql.ErrNoRows {
 		log.Println("Creating test tenant profile...")
 		_, err = DB.Exec(`
-			INSERT INTO tenants (user_id, business_name, contact_name, email, phone, balance, subscription_plan, message_limit, is_active)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		`, userID, "Test Company", "John Doe", "tenant@test.sa", "+966500000001", 1000.0, "Premium", 10000, true)
+			INSERT INTO tenants (user_id, business_name, contact_name, email, phone, balance, is_active)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
+		`, userID, "Test Company", "John Doe", "tenant@test.sa", "+966500000001", 1000.0, true)
 
 		if err != nil {
 			log.Printf("Error creating test tenant profile: %v", err)

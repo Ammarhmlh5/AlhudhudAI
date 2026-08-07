@@ -78,7 +78,7 @@ func TestSubscriptionService_CreateSubscription_Success(t *testing.T) {
 	// Assert
 	assert.NoError(t, err)
 	assert.NotNil(t, result.ID)
-	assert.Equal(t, "PENDING", result.Status)
+	assert.Equal(t, subscription.SubscriptionStatus("PENDING"), result.Status)
 	mockRepo.AssertExpectations(t)
 }
 
@@ -122,7 +122,7 @@ func TestSubscriptionService_GetActiveSubscription(t *testing.T) {
 	// Assert
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
-	assert.Equal(t, "ACTIVE", result.Status)
+	assert.Equal(t, subscription.SubscriptionStatus("ACTIVE"), result.Status)
 	mockRepo.AssertExpectations(t)
 }
 
@@ -194,7 +194,7 @@ func TestSubscriptionService_CheckAutoRenewal(t *testing.T) {
 		TenantID:  tenantID,
 		Status:    "ACTIVE",
 		AutoRenew: true,
-		EndDate:   time.Now().Add(7 * 24 * time.Hour), // Expires in 7 days
+		EndDate:   time.Now().Add(6 * 24 * time.Hour), // Expires in 6 days (within the 7-day renewal window)
 		PackageID: 1,
 	}
 
@@ -219,12 +219,6 @@ func TestSubscriptionService_UpgradePackage(t *testing.T) {
 	upgradePrice := decimal.NewFromFloat(50.00)
 
 	mockRepo := new(MockSubscriptionRepository)
-	mockRepo.On("GetSubscriptionByID", mock.Anything, subID).Return(&subscription.Subscription{
-		ID:        1,
-		PackageID: 1,
-		Status:    "ACTIVE",
-		EndDate:   time.Now().Add(20 * 24 * time.Hour),
-	}, nil)
 	mockRepo.On("UpdateSubscriptionStatus", mock.Anything, subID, "ACTIVE").Return(nil)
 
 	service := subscription.NewService(mockRepo)
@@ -282,9 +276,9 @@ func TestSubscriptionService_ValidateSubscription(t *testing.T) {
 
 	// Test cancelled subscription
 	cancelledSub := &subscription.Subscription{
-		Status:    "CANCELLED",
-		StartDate:  time.Now().Add(-15 * 24 * time.Hour),
-		EndDate: time.Now().Add(15 * 24 * time.Hour),
+		Status:    subscription.StatusCancelled,
+		StartDate: time.Now().Add(-15 * 24 * time.Hour),
+		EndDate:   time.Now().Add(15 * 24 * time.Hour),
 	}
 	assert.Error(t, service.ValidateSubscription(cancelledSub))
 }

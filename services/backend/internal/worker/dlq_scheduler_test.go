@@ -5,8 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/al-hudhud/backend/internal/config"
-	"github.com/al-hudhud/backend/internal/database"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,17 +19,8 @@ func TestDLQScheduler_CleanupExecution(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, err := database.NewDatabase(&config.Config{
-		Database: config.DatabaseConfig{
-			Host:     "localhost",
-			Port:     "5432",
-			User:     "postgres",
-			Password: "postgres",
-			Name:     "sms_gateway_test",
-			SSLMode:  "disable",
-		},
-	}, zap.NewNop())
-	require.NoError(t, err)
+	db := newTestDatabase(t)
+	var err error
 	defer db.Close()
 
 	logger := zap.NewNop()
@@ -84,17 +73,8 @@ func TestDLQScheduler_RetentionPeriod(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, err := database.NewDatabase(&config.Config{
-		Database: config.DatabaseConfig{
-			Host:     "localhost",
-			Port:     "5432",
-			User:     "postgres",
-			Password: "postgres",
-			Name:     "sms_gateway_test",
-			SSLMode:  "disable",
-		},
-	}, zap.NewNop())
-	require.NoError(t, err)
+	db := newTestDatabase(t)
+	var err error
 	defer db.Close()
 
 	logger := zap.NewNop()

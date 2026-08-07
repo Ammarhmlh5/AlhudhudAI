@@ -179,8 +179,23 @@ func (hc *HealthChecker) CheckServerHealth(ctx context.Context, server ServerInf
 
 // getActiveServers retrieves all active dedicated servers from the database
 func (hc *HealthChecker) getActiveServers(ctx context.Context) ([]ServerInfo, error) {
-	// dedicated_gateways table not yet provisioned - return empty list
-	return []ServerInfo{}, nil
+	query := `
+		SELECT
+			dg.id,
+			dg.tenant_id,
+			COALESCE(NULLIF(dg.server_hostname, ''), dg.server_ip, '') as server_url,
+			'/health' as health_endpoint,
+			true as is_active
+		FROM dedicated_gateways dg
+		WHERE dg.status = 'active'
+	`
+
+	var servers []ServerInfo
+	if err := hc.db.SelectContext(ctx, &servers, query); err != nil {
+		return nil, fmt.Errorf("failed to get active servers: %w", err)
+	}
+
+	return servers, nil
 }
 
 // calculateRecentErrorRate calculates the error rate from the last 10 health checks
@@ -219,12 +234,12 @@ func (hc *HealthChecker) calculateRecentErrorRate(ctx context.Context, serverID 
 func (hc *HealthChecker) CheckServerHealthOnce(ctx context.Context, serverID uuid.UUID) (*HealthCheckResult, error) {
 	// Get server info
 	query := `
-		SELECT 
+		SELECT
 			dg.id,
 			dg.tenant_id,
-			dg.gateway_url as server_url,
+			COALESCE(NULLIF(dg.server_hostname, ''), dg.server_ip, '') as server_url,
 			'/health' as health_endpoint,
-			dg.is_active
+			dg.status = 'active' as is_active
 		FROM dedicated_gateways dg
 		WHERE dg.id = $1
 	`
@@ -253,5 +268,53 @@ func (hc *HealthChecker) GetAllServers(ctx context.Context, statusFilter *string
 
 // GetServer returns a specific server
 func (hc *HealthChecker) GetServer(ctx context.Context, serverID uuid.UUID) (*ServerInfo, error) {
-	return nil, fmt.Errorf("server not found")
+	query := `
+		SELECT
+			dg.id,
+			dg.tenant_id,
+			COALESCE(NULLIF(dg.server_hostname, ''), dg.server_ip, '') as server_url,
+			'/health' as health_endpoint,
+			dg.status = 'active' as is_active
+		FROM dedicated_gateways dg
+		WHERE dg.id = $1
+	`
+
+	var server ServerInfo
+	err := hc.db.GetContext(ctx, &server, query, serverID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("server not found")
+		}
+		return nil, fmt.Errorf("failed to get server info: %w", err)
+	}
+
+	return &server, nil
+}
+
+// GetServerWithHealth returns a server merged with its latest health check result
+func (hc *HealthChecker) GetServerWithHealth(ctx context.Context, serverID uuid.UUID) (*ServerHealthDetail, error) {
+	server, err := hc.GetServer(ctx, serverID)
+	if err != nil {
+		return nil, err
+	}
+
+	detail := &ServerHealthDetail{
+		ID:             server.ID,
+		TenantID:       server.TenantID,
+		ServerURL:      server.ServerURL,
+		HealthEndpoint: server.HealthEndpoint,
+		IsActive:       server.IsActive,
+		HealthStatus:   "unknown",
+	}
+
+	latest, err := hc.logger.GetLatestHealthCheck(ctx, serverID)
+	if err == nil && latest != nil {
+		detail.HealthStatus = string(latest.HealthStatus)
+		detail.ResponseTimeMs = latest.ResponseTimeMs
+		detail.ErrorRate = latest.ErrorRate
+		detail.LastCheck = &latest.CheckTimestamp
+		detail.IsAvailable = latest.IsAvailable
+	}
+
+	return detail, nil
 }

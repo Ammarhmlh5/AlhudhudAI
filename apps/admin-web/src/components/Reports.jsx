@@ -6,45 +6,60 @@ import {
 import apiClient from '../api/axios';
 import { API_BASE_URL } from '../config';
 
+const REPORTS_DEFAULTS = {
+  revenue: { total: 0, subscriptions: 0, overage: 0, gateways: 0, topups: 0 },
+  costs: { total: 0, messages: 0, infrastructure: 0 },
+  customers: { total: 0, byPackage: [] },
+  subscriptions: { renewals: 0, cancellations: 0, renewalRate: 0 }
+};
+
 export default function Reports() {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [dateRange, setDateRange] = useState('month');
-  const [reports, setReports] = useState({
-    revenue: {
-      total: 0,
-      subscriptions: 0,
-      overage: 0,
-      gateways: 0,
-      topups: 0
-    },
-    costs: {
-      total: 0,
-      messages: 0,
-      infrastructure: 0
-    },
-    customers: {
-      total: 0,
-      byPackage: []
-    },
-    subscriptions: {
-      renewals: 0,
-      cancellations: 0,
-      renewalRate: 0
-    }
-  });
+  const [reports, setReports] = useState(REPORTS_DEFAULTS);
 
   useEffect(() => {
     fetchReports();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange]);
 
+  const normalizeReports = (data) => ({
+    revenue: {
+      total: data?.revenue?.total ?? 0,
+      subscriptions: data?.revenue?.subscriptions ?? 0,
+      overage: data?.revenue?.overage ?? 0,
+      gateways: data?.revenue?.gateways ?? 0,
+      topups: data?.revenue?.topups ?? 0
+    },
+    costs: {
+      total: data?.costs?.total ?? 0,
+      messages: data?.costs?.messages ?? 0,
+      infrastructure: data?.costs?.infrastructure ?? 0
+    },
+    customers: {
+      total: data?.customers?.total ?? 0,
+      byPackage: data?.customers?.byPackage ?? []
+    },
+    subscriptions: {
+      renewals: data?.subscriptions?.renewals ?? 0,
+      cancellations: data?.subscriptions?.cancellations ?? 0,
+      renewalRate: data?.subscriptions?.renewalRate ?? 0
+    }
+  });
+
   const fetchReports = async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await apiClient.get(`/api/v1/admin/reports?range=${dateRange}`);
-      setReports(res.data);
+      setReports(normalizeReports(res.data));
     } catch (err) {
       console.error("Failed to fetch reports", err);
+      setError(err.response?.status === 404
+        ? 'Reports API not found — the endpoint may not be deployed yet.'
+        : err.message || 'Failed to load reports');
+      setReports(REPORTS_DEFAULTS);
     } finally {
       setLoading(false);
     }
@@ -66,6 +81,17 @@ export default function Reports() {
     return (
       <div className="space-y-8">
         <div className="text-center py-12 text-slate-500">Loading reports...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-8">
+        <div className="text-center py-12">
+          <p className="text-rose-400 font-bold mb-2">Failed to load reports</p>
+          <p className="text-slate-500 text-sm">{error}</p>
+        </div>
       </div>
     );
   }

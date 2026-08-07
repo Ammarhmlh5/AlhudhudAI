@@ -189,6 +189,7 @@ func (td *TenantDispatcher) fetchAndQueueMessages() {
 		rows, err := tx.Query(context.Background(), `
 			SELECT id, channel_id FROM messages 
 		WHERE status IN ('PENDING','WAITING') AND scheduled_at <= $1
+		  AND channel_id IS NOT NULL
 		ORDER BY scheduled_at ASC
 		LIMIT $2
 		FOR UPDATE SKIP LOCKED`, time.Now(), limit)

@@ -51,7 +51,8 @@ func TestBug20_Preservation_NormalStartupWorks(t *testing.T) {
 		os.Setenv("DB_SSLMODE", "disable")
 		os.Setenv("REDIS_HOST", "localhost")
 		os.Setenv("REDIS_PORT", "6379")
-		os.Setenv("JWT_SECRET", "this-is-a-secure-jwt-secret-key-with-minimum-32-characters")
+		os.Setenv("REDIS_PASSWORD", "test_redis_password")
+		os.Setenv("JWT_SECRET", "this-is-a-secure-jwt-secret-key-with-minimum-48-characters")
 		os.Setenv("PORT", "8080")
 		os.Setenv("APP_ENV", "test")
 
@@ -73,7 +74,7 @@ func TestBug20_Preservation_NormalStartupWorks(t *testing.T) {
 		if cfg.Redis.Host != "localhost" {
 			t.Errorf("Expected REDIS_HOST=localhost, got %s", cfg.Redis.Host)
 		}
-		if cfg.JWT.Secret != "this-is-a-secure-jwt-secret-key-with-minimum-32-characters" {
+		if cfg.JWT.Secret != "this-is-a-secure-jwt-secret-key-with-minimum-48-characters" {
 			t.Errorf("Expected JWT_SECRET to match, got %s", cfg.JWT.Secret)
 		}
 
@@ -128,7 +129,8 @@ func TestBug20_Preservation_NormalStartupWorks(t *testing.T) {
 		os.Setenv("DB_PASSWORD", "pass")
 		os.Setenv("DB_NAME", "db")
 		os.Setenv("REDIS_HOST", "localhost")
-		os.Setenv("JWT_SECRET", "minimum-32-character-secret-key-for-jwt-tokens")
+		os.Setenv("REDIS_PASSWORD", "test_redis_password")
+		os.Setenv("JWT_SECRET", "minimum-48-character-secure-jwt-secret-key-for-hmac")
 
 		// Unset optional variables to test defaults
 		os.Unsetenv("DB_PORT")
@@ -155,8 +157,8 @@ func TestBug20_Preservation_NormalStartupWorks(t *testing.T) {
 		if cfg.BatchProcess.BatchSize != 100 {
 			t.Errorf("Expected default BATCH_SIZE=100, got %d", cfg.BatchProcess.BatchSize)
 		}
-		if cfg.WorkerPool.WorkerCount != 50 {
-			t.Errorf("Expected default WORKER_COUNT=50, got %d", cfg.WorkerPool.WorkerCount)
+		if cfg.WorkerPool.WorkerCount != 20 {
+			t.Errorf("Expected default WORKER_COUNT=20, got %d", cfg.WorkerPool.WorkerCount)
 		}
 
 		t.Log("✓ Default values applied correctly for optional variables")
@@ -171,7 +173,8 @@ func TestBug20_Preservation_NormalStartupWorks(t *testing.T) {
 		os.Setenv("DB_NAME", "mydb")
 		os.Setenv("DB_SSLMODE", "require")
 		os.Setenv("REDIS_HOST", "localhost")
-		os.Setenv("JWT_SECRET", "secure-jwt-secret-key-with-32-plus-characters")
+		os.Setenv("REDIS_PASSWORD", "test_redis_password")
+		os.Setenv("JWT_SECRET", "secure-jwt-secret-key-with-48-plus-characters-for-hmac")
 
 		cfg, err := Load()
 		if err != nil {
@@ -195,6 +198,7 @@ func TestBug20_Preservation_NormalStartupWorks(t *testing.T) {
 		os.Setenv("DB_NAME", "db")
 		os.Setenv("REDIS_HOST", "redis.example.com")
 		os.Setenv("REDIS_PORT", "6380")
+		os.Setenv("REDIS_PASSWORD", "test_redis_password")
 		os.Setenv("JWT_SECRET", "jwt-secret-key-must-be-at-least-32-characters-long")
 
 		cfg, err := Load()

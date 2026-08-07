@@ -226,6 +226,25 @@ func (s *Service) StageMessage(ctx context.Context, tenantIDStr string, phoneNum
 		return nil, err
 	}
 
+	if cost > 0 {
+		transaction := &models.AccountingTransaction{
+			ID:        uuid.New(),
+			TenantID:  tenantID,
+			MessageID: msg.ID,
+			Amount:    cost,
+			Status:    models.TxPending,
+			Type:      "DEDUCTION",
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+		if err := db.Get(ctx).Create(transaction).Error; err != nil {
+			logger.GetLogger().Warn("Failed to create accounting transaction at staging",
+				zap.String("message_id", msg.ID.String()),
+				zap.Error(err),
+			)
+		}
+	}
+
 	// Enqueue to Redis for standard processing (Fallback or inactive company)
 	if msg.Status == models.MessagePending && s.messageQueue != nil {
 		queueItem := &redis.MessageQueueItem{
@@ -388,12 +407,18 @@ func (s *Service) IngestIncomingMessage(ctx context.Context, tenantIDStr string,
 		return nil, errors.New("invalid tenant id format")
 	}
 
+	// Extract phone_number/content from the raw payload (if present at top level)
+	// so the downstream AnalysisWorker can create a valid Message row.
+	phoneNumber, content := extractRawMessageFields(rawJSON)
+
 	incoming := &models.IncomingMessage{
-		ID:         uuid.New(),
-		TenantID:   tenantID,
-		SenderName: senderName,
-		RawPayload: rawJSON,
-		ReceivedAt: time.Now(),
+		ID:             uuid.New(),
+		TenantID:       tenantID,
+		SenderName:     senderName,
+		RawPayload:     rawJSON,
+		PhoneNumber:    phoneNumber,
+		MessageContent: content,
+		ReceivedAt:     time.Now(),
 	}
 
 	if err := db.Get(ctx).Create(incoming).Error; err != nil {
@@ -404,6 +429,26 @@ func (s *Service) IngestIncomingMessage(ctx context.Context, tenantIDStr string,
 	s.TriggerAnalysis(ctx, tenantID, incoming.ID)
 
 	return incoming, nil
+}
+
+// extractRawMessageFields attempts to read top-level phone_number/content from a raw
+// JSON payload. Used by the legacy single-message ingestion path so that the
+// AnalysisWorker never receives empty values.
+func extractRawMessageFields(rawJSON string) (phoneNumber string, content string) {
+	if rawJSON == "" {
+		return "", ""
+	}
+	var raw map[string]interface{}
+	if err := json.Unmarshal([]byte(rawJSON), &raw); err != nil {
+		return "", ""
+	}
+	if v, ok := raw["phone_number"].(string); ok {
+		phoneNumber = v
+	}
+	if v, ok := raw["content"].(string); ok {
+		content = v
+	}
+	return phoneNumber, content
 }
 
 // IngestBulkIncomingMessages handles bulk ingestion of messages (e.g. from Excel)

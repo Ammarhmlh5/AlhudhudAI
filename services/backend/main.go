@@ -19,20 +19,23 @@ import (
 	adminMetrics "github.com/al-hudhud/backend/internal/admin/metrics"
 	adminRating "github.com/al-hudhud/backend/internal/admin/rating"
 	adminRouting "github.com/al-hudhud/backend/internal/admin/routing"
+	"github.com/al-hudhud/backend/internal/agent"
 
 	"github.com/al-hudhud/backend/internal/alerting"
 	"github.com/al-hudhud/backend/internal/api"
 	"github.com/al-hudhud/backend/internal/audit"
 	"github.com/al-hudhud/backend/internal/auth"
 	"github.com/al-hudhud/backend/internal/balance"
+	"github.com/al-hudhud/backend/internal/billing"
 	"github.com/al-hudhud/backend/internal/cache"
 	"github.com/al-hudhud/backend/internal/channel"
+	"github.com/al-hudhud/backend/internal/config"
 	"github.com/al-hudhud/backend/internal/contact"
 	"github.com/al-hudhud/backend/internal/db"
-	"github.com/al-hudhud/backend/internal/config"
 	"github.com/al-hudhud/backend/internal/device"
 	"github.com/al-hudhud/backend/internal/dispatcher"
 	"github.com/al-hudhud/backend/internal/dlr"
+	"github.com/al-hudhud/backend/internal/excelimport"
 	"github.com/al-hudhud/backend/internal/metrics"
 	"github.com/al-hudhud/backend/internal/middleware"
 	"github.com/al-hudhud/backend/internal/orchestrator"
@@ -42,7 +45,9 @@ import (
 	"github.com/al-hudhud/backend/internal/redis"
 	"github.com/al-hudhud/backend/internal/referral"
 	"github.com/al-hudhud/backend/internal/reseller"
+	"github.com/al-hudhud/backend/internal/rollover"
 	"github.com/al-hudhud/backend/internal/staff"
+	"github.com/al-hudhud/backend/internal/subscription"
 	"github.com/al-hudhud/backend/internal/support"
 	"github.com/al-hudhud/backend/internal/tenant"
 	"github.com/al-hudhud/backend/internal/worker"
@@ -124,12 +129,12 @@ func main() {
 	var messageQueue *redis.MessageQueue
 	var channelCache *redis.ChannelCache
 	var pricingCache *redis.PricingCache
-	
+
 	if redisClient != nil {
 		messageQueue = redis.NewMessageQueue(redisClient)
 		channelCache = redis.NewChannelCache(redisClient)
 		pricingCache = redis.NewPricingCache(redisClient)
-		
+
 		// Warmup pricing cache with common values
 		if err := pricingCache.Warmup(context.Background(), 0.05); err != nil {
 			log.Warn("Failed to warmup pricing cache", zap.Error(err))
@@ -144,6 +149,10 @@ func main() {
 
 	// Initialize WebSocket Global Hub (Phase 3: Hybrid Queue support)
 	ws.InitGlobalHub(cfg.WebSocket, accountingSvc, redisClient)
+
+	// Start the queued-message flusher: re-dispatches stale QUEUED messages
+	// to connected mobile devices so delivery continues as long as a phone is online
+	device.StartQueuedMessageFlusher(context.Background(), 10*time.Second, 30*time.Second)
 
 	// Initialize Metrics Collector
 	var metricsCollector *metrics.Collector
@@ -213,10 +222,10 @@ func main() {
 			MaxReferralsPerUser:    cfg.Referral.MaxUsesPerCode,
 			Enabled:                cfg.Referral.Enabled,
 		}
-		
+
 		sqlxDB := sqlx.NewDb(db.DB, "postgres")
 		referralManager = referral.NewManager(sqlxDB, referralConfig)
-		
+
 		// Set Redis client for caching (if available)
 		if redisClient != nil {
 			referralManager.SetRedisClient(redisClient.Client)
@@ -243,14 +252,13 @@ func main() {
 	auditHandler := audit.NewHandler(auditLogger)
 	staffHandler := staff.NewHandler(staffSvc)
 	receiverHandler := receiver.NewHandler(redisClient)
+	// Excel import from the mobile app — isolated feature (internal/excelimport).
+	excelHandler := excelimport.NewHandler(receiver.NewService(redisClient), excelimport.NewStore())
 	tenantHandler := tenant.NewHandler(tenantSvc)
 	deviceHandler := device.NewHandler()
 	metricsHandler := metrics.NewHandler()
 	// channelHandler already initialized above for health check
 	invoiceHandler := api.NewInvoiceHandler(db.DB, log, "storage/invoices")
-
-	resellerSvc := reseller.NewService(db.GormDB)
-	resellerHandler := reseller.NewHandler(resellerSvc)
 
 	contactService := contact.NewService()
 	contactHandler := contact.NewHandler(contactService)
@@ -264,30 +272,30 @@ func main() {
 
 	// Advanced Admin Modules Initialization
 	sqlxDB := sqlx.NewDb(db.DB, "postgres")
-	
+
 	ratingEngine := adminRating.NewDefaultCalculator()
 	metricsRepo, err := adminMetrics.NewRepository(sqlxDB)
 	if err != nil {
 		log.Fatal("Failed to init admin metrics repo", zap.Error(err))
 	}
-	
+
 	routingConfigManager := adminRouting.NewRoutingConfigManager(sqlxDB)
 	routingMetricsTracker := adminRouting.NewMetricsTracker(sqlxDB)
 	routingMetricsTracker.Start(context.Background())
 	routingEngine := adminRouting.NewRoutingEngine(sqlxDB, routingConfigManager, routingMetricsTracker)
-	
+
 	deviceFailureHandler := adminDist.NewDeviceFailureHandler()
 	poolManager := adminDist.NewDevicePoolManager(db.GormDB, deviceFailureHandler)
-	
+	strategySelector := adminDist.NewStrategySelector(db.GormDB, poolManager, deviceFailureHandler)
+
 	alertManager := adminAlerts.NewManager(sqlxDB, log)
-	
+
 	// Health Checker sub-components
 	healthClassifier := adminHealth.NewStatusClassifier()
 	healthTrigger := adminHealth.NewAlertTrigger(sqlxDB)
 	healthHistory := adminHealth.NewHistoryLogger(sqlxDB)
 	healthChecker := adminHealth.NewHealthChecker(sqlxDB, healthClassifier, healthTrigger, healthHistory)
 	healthChecker.Start(context.Background())
-	
 
 	// Initialize UNIFIED Alerting System (Bridge transient and persistent)
 	systemAlertManager, err := alerting.Initialize(log, alertManager)
@@ -344,14 +352,29 @@ func main() {
 	adminDashboardH := api.NewAdminDashboardHandler(ratingEngine, metricsRepo, routingEngine, poolManager, healthChecker, alertManager)
 	adminHealthH := api.NewAdminHealthHandler(healthChecker)
 	adminMetricsH := api.NewAdminMetricsHandler(metricsRepo)
-	adminDistH := api.NewAdminDistributionHandler(poolManager)
+	adminDistH := api.NewAdminDistributionHandler(poolManager, strategySelector)
 	adminRatingH := api.NewAdminRatingHandler(ratingEngine)
 	adminRoutingH := api.NewAdminRoutingHandler(routingEngine, routingConfigManager)
 
 	adminTariffH := api.NewAdminTariffHandler(db.GormDB)
 	adminGatewayH := api.NewAdminGatewayHandler(alertManager)
 	adminReportH := api.NewAdminReportHandler()
-	adminPackageH := api.NewAdminPackageHandler()
+
+	// Subscription & Package Management (Requirements 3.6, 4.x, 18.x, 21.x)
+	subscriptionManager := subscription.NewManager(db.PgxPool, log)
+	rolloverManager := rollover.NewManager(db.PgxPool, log)
+	packageHandler := api.NewPackageHandler(db.PgxPool, log)
+	subscriptionHandler := api.NewSubscriptionHandler(subscriptionManager, rolloverManager, db.PgxPool, log)
+	adminPackageH := api.NewAdminPackageHandler(db.PgxPool, log, packageHandler)
+	adminSubscriptionH := api.NewAdminSubscriptionHandler(subscriptionManager, db.PgxPool, log)
+
+	resellerSvc := reseller.NewService(db.GormDB, db.PgxPool, balanceManager, subscriptionManager, log)
+	resellerHandler := reseller.NewHandler(resellerSvc)
+
+	// Auto-renewal service (Requirement 14.x): periodic check of expired subscriptions.
+	// River is not initialized in this process, so the client is nil (unused by the service).
+	autoRenewalSvc := billing.NewAutoRenewalService(db.PgxPool, nil, log)
+	go startAutoRenewalChecker(context.Background(), autoRenewalSvc, log)
 
 	ticketManager := support.NewTicketManager(db.DB)
 	supportHandler := support.NewHandler(ticketManager)
@@ -388,7 +411,7 @@ func main() {
 	// CORS Configuration
 	r.Use(cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {
-			// Allow all origins dynamically to support local file testing (like test.html) 
+			// Allow all origins dynamically to support local file testing (like test.html)
 			// and web dashboard, while working properly with AllowCredentials: true
 			return true
 		},
@@ -438,7 +461,7 @@ func main() {
 			return
 		}
 
-		ws.ServeWs(ws.GlobalHub, c.Writer, c.Request, tenantID, "")
+		ws.ServeWs(ws.GlobalHub, c.Writer, c.Request, tenantID, uuid.Nil, "", false)
 
 		// Trigger Wakeup for Wait Mode
 		uid, _ := uuid.Parse(tenantID)
@@ -450,15 +473,29 @@ func main() {
 	r.GET("/ws/pair", func(c *gin.Context) {
 		apiKey := c.Query("api_key")
 		deviceID := c.Query("device_id")
+		if deviceID == "" {
+			// Mobile app's reconnect path uses camelCase deviceId without api_key
+			deviceID = c.Query("deviceId")
+		}
 
-		if apiKey == "" || deviceID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "api_key and device_id are required"})
+		if deviceID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "device_id and api_key are required"})
 			return
 		}
 
-		// Validate API key and get tenant ID
+		// Validate device credentials and get tenant ID
 		deviceSvc := device.NewService()
-		tenantID, deviceUUID, err := deviceSvc.GetTenantIDByAPIKey(context.Background(), apiKey, deviceID)
+		var tenantID uuid.UUID
+		var deviceUUID uuid.UUID
+		var err error
+
+		if apiKey != "" {
+			tenantID, deviceUUID, err = deviceSvc.GetTenantIDByAPIKey(context.Background(), apiKey, deviceID)
+		} else {
+			// Previously paired device reconnecting without api_key
+			tenantID, deviceUUID, err = deviceSvc.GetTenantByDeviceID(context.Background(), deviceID)
+		}
+
 		if err != nil {
 			log.Error("Failed to validate device credentials",
 				zap.String("device_id", deviceID),
@@ -469,12 +506,23 @@ func main() {
 
 		log.Info("Device connecting via WebSocket",
 			zap.String("tenant_id", tenantID.String()),
-			zap.String("device_id", deviceUUID.String()))
+			zap.String("channel_id", deviceUUID.String()),
+			zap.String("device_id", deviceID))
 
-		ws.ServeWs(ws.GlobalHub, c.Writer, c.Request, tenantID.String(), deviceUUID.String())
+		ws.ServeWs(ws.GlobalHub, c.Writer, c.Request, tenantID.String(), deviceUUID, deviceID, true)
 
 		// Trigger Wakeup for Wait Mode
 		go deviceSvc.WakeUpTenant(context.Background(), tenantID)
+
+		// Redeliver any QUEUED messages to the freshly connected device(s)
+		go func(tenant uuid.UUID) {
+			time.Sleep(2 * time.Second)
+			if err := deviceSvc.RedeliverQueuedMessages(context.Background(), tenant, 0); err != nil {
+				log.Warn("Failed to redeliver queued messages after device connect",
+					zap.String("tenant_id", tenant.String()),
+					zap.Error(err))
+			}
+		}(tenantID)
 	})
 
 	// Reconnection and Monitoring for WS is now handled inside InitGlobalHub
@@ -485,19 +533,19 @@ func main() {
 	var rateLimiter gin.HandlerFunc
 	if redisClient != nil {
 		rateLimiter = middleware.NewRateLimiter(redisClient.Client, 100, time.Minute, log)
-		log.Info("Rate limiting enabled for API routes (Redis-based)", 
-			zap.Int("limit", 100), 
+		log.Info("Rate limiting enabled for API routes (Redis-based)",
+			zap.Int("limit", 100),
 			zap.String("window", "1 minute"),
 			zap.String("mode", "redis"))
 	} else {
 		// If Redis is not available, use in-memory rate limiter fallback (Requirement 2.5)
 		rateLimiter = middleware.NewMemoryRateLimiter(100, log)
-		log.Warn("Rate limiting enabled with in-memory fallback (Redis unavailable)", 
-			zap.Int("limit", 100), 
+		log.Warn("Rate limiting enabled with in-memory fallback (Redis unavailable)",
+			zap.Int("limit", 100),
 			zap.String("window", "1 minute"),
 			zap.String("mode", "in-memory"))
 	}
-	
+
 	api := r.Group("/api/v1")
 	api.Use(rateLimiter) // Apply rate limiting to all API routes
 	{
@@ -514,14 +562,13 @@ func main() {
 		// This endpoint provides CSRF tokens to authenticated clients
 		api.GET("/csrf-token", csrfHandler.GetCSRFToken)
 
-
 		// Metrics & Monitoring (Tenant Isolated)
 		authenticated := api.Group("/")
 		authenticated.Use(auth.AuthMiddleware())
 		{
 			authenticated.GET("/metrics", metricsHandler.GetMetricsHandler)
 			authenticated.GET("/system/health", metricsHandler.GetHealthHandler)
-			
+
 			// Audit Logs (Only for staff with permission)
 			authenticated.GET("/audit", auth.RequireUserType("SUPER_ADMIN", "STAFF"), auditHandler.GetAuditLogs)
 		}
@@ -603,6 +650,7 @@ func main() {
 			deviceGroup.GET("/list", deviceHandler.List)
 			deviceGroup.GET("/fetch", deviceHandler.FetchMessagesHandler)
 			deviceGroup.POST("/report", deviceHandler.ReportStatusHandler)
+			deviceGroup.POST("/contacts", contactHandler.SyncContactsHandler)
 			deviceGroup.DELETE("/:id", deviceHandler.Delete)
 			deviceGroup.GET("/:id/ping", deviceHandler.Ping)
 		}
@@ -637,6 +685,28 @@ func main() {
 			financeGroup.GET("/balance", tenantHandler.GetBalance)
 		}
 
+		// Packages (Tenant and Super Admin) - Requirements 3.6, 18.5, 18.6
+		packagesGroup := api.Group("/packages")
+		packagesGroup.Use(auth.AuthMiddleware(), auth.RequireUserType("TENANT", "SUPER_ADMIN"), auth.TenantIsolationMiddleware(), middleware.PreventCrossTenantAccess(db.GormDB), middleware.CSRFProtection())
+		{
+			packagesGroup.GET("/", packageHandler.ListPackages)
+			packagesGroup.GET("/:id", packageHandler.GetPackage)
+			packagesGroup.POST("/", packageHandler.CreatePackage)
+			packagesGroup.PUT("/:id", packageHandler.UpdatePackage)
+			packagesGroup.DELETE("/:id", packageHandler.DeletePackage)
+		}
+
+		// Subscriptions (Tenant and Super Admin) - Requirements 4.x, 21.x
+		subscriptionsGroup := api.Group("/subscriptions")
+		subscriptionsGroup.Use(auth.AuthMiddleware(), auth.RequireUserType("TENANT", "SUPER_ADMIN"), auth.TenantIsolationMiddleware(), middleware.PreventCrossTenantAccess(db.GormDB), middleware.CSRFProtection())
+		{
+			subscriptionsGroup.POST("/", subscriptionHandler.Subscribe)
+			subscriptionsGroup.GET("/usage", subscriptionHandler.GetUsage)
+			subscriptionsGroup.GET("/active", subscriptionHandler.GetSubscription)
+			subscriptionsGroup.PUT("/:id/cancel", subscriptionHandler.CancelSubscription)
+			subscriptionsGroup.PUT("/:id/enable-auto-renew", subscriptionHandler.EnableAutoRenew)
+		}
+
 		supportTenantGroup := api.Group("/support")
 		supportTenantGroup.Use(auth.AuthMiddleware(), auth.RequireUserType("TENANT", "SUPER_ADMIN"), auth.TenantIsolationMiddleware(), middleware.PreventCrossTenantAccess(db.GormDB))
 		{
@@ -653,6 +723,9 @@ func main() {
 			messagingGroup.POST("/bulk-send", receiverHandler.BulkSendMessageHandler)
 			messagingGroup.GET("/bulk/:id/progress", receiverHandler.BulkProgressHandler)
 			messagingGroup.POST("/ingest", receiverHandler.IngestMessageHandler)
+			messagingGroup.POST("/excel-ingest", receiverHandler.BulkIngestExcelHandler)
+			messagingGroup.POST("/excel-upload", excelHandler.Upload)
+			messagingGroup.POST("/excel-upload/confirm", excelHandler.Confirm)
 			messagingGroup.GET("/list", receiverHandler.ListMessagesHandler)
 			messagingGroup.POST("/bulk-delete", receiverHandler.BulkDeleteMessagesHandler)
 			messagingGroup.POST("/bulk-resend", receiverHandler.BulkResendMessagesHandler)
@@ -684,59 +757,74 @@ func main() {
 			adminGroup.GET("/tenants", tenantHandler.ListTenants)
 			adminGroup.POST("/tenants", tenantHandler.AdminCreateTenant)
 			adminGroup.GET("/tenants/:id/subscription", tenantHandler.GetTenantSubscription)
+			adminGroup.POST("/tenants/:id/subscribe", adminSubscriptionH.Subscribe)
+			adminGroup.PUT("/tenants/:id/subscription/auto-renew", adminSubscriptionH.SetAutoRenew)
 			adminGroup.GET("/tenants/:id/transactions", tenantHandler.GetTenantTransactions)
 			adminGroup.GET("/tenants/:id/impersonate", tenantHandler.ImpersonateTenant)
 			adminGroup.POST("/tenants/bulk-update", tenantHandler.BulkUpdateTenants)
 			adminGroup.POST("/tenants/bulk-delete", tenantHandler.BulkDeleteTenants)
-			
+			adminGroup.GET("/resellers", resellerHandler.ListResellers)
+			adminGroup.GET("/resellers/:id", resellerHandler.GetResellerDetail)
+			adminGroup.POST("/resellers/:id/credit", resellerHandler.CreditReseller)
+
 			// Dashboard & Stats
 			adminGroup.GET("/stats", adminDashboardH.GetDashboardOverview)
 			adminGroup.GET("/dashboard", adminDashboardH.GetDashboardOverview)
 			adminGroup.GET("/metrics/:tenant_id", adminMetricsH.GetCompanyMetrics)
 			adminGroup.GET("/companies/:tenant_id/rating", adminRatingH.GetCompanyRating)
-			
+
 			// Infrastructure & Health
 			adminGroup.GET("/health", adminHealthH.GetServers)
 			adminGroup.GET("/health/servers", adminHealthH.GetServers)
 			adminGroup.GET("/health/servers/:server_id", adminHealthH.GetServerDetails)
-			
+
 			// Tariffs
 			adminGroup.GET("/tariffs", adminTariffH.ListTariffs)
 			adminGroup.POST("/tariffs", adminTariffH.CreateTariff)
 			adminGroup.GET("/tariffs/:id", adminTariffH.GetTariff)
 			adminGroup.PUT("/tariffs/:id", adminTariffH.UpdateTariff)
 			adminGroup.DELETE("/tariffs/:id", adminTariffH.DeleteTariff)
-			
+
 			// Packages
 			adminGroup.GET("/packages", adminPackageH.ListPackages)
 			adminGroup.POST("/packages", adminPackageH.CreatePackage)
 			adminGroup.GET("/packages/:id", adminPackageH.GetPackage)
 			adminGroup.PUT("/packages/:id", adminPackageH.UpdatePackage)
 			adminGroup.DELETE("/packages/:id", adminPackageH.DeletePackage)
-			
+
 			// Gateways (Dispatch Channels)
 			adminGroup.GET("/gateways", adminGatewayH.ListGateways)
 			adminGroup.GET("/gateways/alerts", adminGatewayH.GetGatewayAlerts)
 			adminGroup.POST("/gateways", adminGatewayH.CreateGateway)
 			adminGroup.GET("/gateways/:id/usage", adminGatewayH.GetGatewayUsage)
-			
+
 			// Alerts
 			adminGroup.GET("/alerts", adminAlertsH.GetAlerts)
-			adminGroup.PUT("/alerts/:id/acknowledge", adminAlertsH.AcknowledgeAlert)
-			
+			adminGroup.GET("/alerts/:alert_id", adminAlertsH.GetAlert)
+			adminGroup.PUT("/alerts/:alert_id/acknowledge", adminAlertsH.AcknowledgeAlert)
+			adminGroup.PUT("/alerts/:alert_id/resolve", adminAlertsH.ResolveAlert)
+			adminGroup.GET("/alerts/config", adminAlertsH.ConfigureAlerts)
+			adminGroup.POST("/alerts/config", adminAlertsH.ConfigureAlerts)
+
 			// Reports
 			adminGroup.GET("/reports", adminReportH.GetReports)
 			adminGroup.GET("/reports/export", adminReportH.ExportReport)
-			
+
 			// Routing
 			adminGroup.GET("/routing/stats", adminRoutingH.GetRoutingStats)
 			adminGroup.PUT("/routing/config", adminRoutingH.UpdateRoutingConfig)
-			
-			
+			adminGroup.GET("/routing/:tenant_id", adminRoutingH.GetRoutingConfigByTenant)
+			adminGroup.PUT("/routing/:tenant_id", adminRoutingH.UpdateRoutingConfigByTenant)
+			adminGroup.GET("/routing/:tenant_id/metrics", adminRoutingH.GetRoutingMetricsByTenant)
+
 			// Distribution (Pools)
 			adminGroup.GET("/distribution/pools", adminDistH.GetPools)
 			adminGroup.GET("/distribution/pools/:pool_id", adminDistH.GetPoolDetails)
-			
+			adminGroup.GET("/distribution/:tenant_id", adminDistH.GetConfig)
+			adminGroup.PUT("/distribution/:tenant_id", adminDistH.UpdateConfig)
+			adminGroup.GET("/distribution/:tenant_id/devices", adminDistH.GetDevices)
+			adminGroup.GET("/distribution/:tenant_id/metrics", adminDistH.GetMetrics)
+
 			// Support
 			adminGroup.GET("/support/tickets", supportHandler.GetAllTickets)
 		}
@@ -780,14 +868,31 @@ func main() {
 		{
 			resellerGroup.GET("/tenants", resellerHandler.GetTenants)
 			resellerGroup.POST("/tenants", resellerHandler.CreateTenant)
+			resellerGroup.GET("/balance", resellerHandler.GetWalletBalance)
+			resellerGroup.GET("/tenants/:id/balance", resellerHandler.GetTenantBalance)
+			resellerGroup.POST("/tenants/:id/transfer", resellerHandler.TransferToTenant)
+			resellerGroup.POST("/tenants/:id/subscribe", resellerHandler.SubscribeTenant)
 			resellerGroup.POST("/tenants/:id/api-key", resellerHandler.UpdateAPIKey)
 			resellerGroup.GET("/staff", resellerHandler.GetStaff)
+
+			// Packages & Subscriptions (reseller's own tenant scope) - Requirement 3.3
+			resellerGroup.GET("/packages", packageHandler.ListPackages)
+			resellerGroup.GET("/packages/:id", packageHandler.GetPackage)
+			resellerGroup.POST("/subscriptions", subscriptionHandler.Subscribe)
+			resellerGroup.GET("/subscriptions/active", subscriptionHandler.GetSubscription)
+			resellerGroup.GET("/subscriptions/usage", subscriptionHandler.GetUsage)
+			resellerGroup.PUT("/subscriptions/:id/cancel", subscriptionHandler.CancelSubscription)
+			resellerGroup.PUT("/subscriptions/:id/enable-auto-renew", subscriptionHandler.EnableAutoRenew)
 		}
+
+		// Agent Routes (Reseller Companies - مستقل عن reseller الحالي)
+		agent.RegisterRoutes(r, db.GormDB)
 	}
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8081"
+		// 8085 matches the Android SMS gateway app defaults and the plan docs
+		port = "8085"
 	}
 
 	srv := &http.Server{
@@ -809,7 +914,7 @@ func main() {
 	log.Info("Shutting down server...")
 	dispatcherManager.Stop()
 	msgOrchestrator.Stop()
-	
+
 	// Stop alert manager gracefully (Bug 24)
 	if systemAlertManager != nil {
 		systemAlertManager.Stop()
@@ -834,13 +939,41 @@ func main() {
 	log.Info("Server exiting")
 }
 
+// startAutoRenewalChecker runs the auto-renewal check on startup and then on a
+// 6-hour ticker. CheckExpiredSubscriptions is safe to re-run: renewed
+// subscriptions move to next period and are no longer matched.
+func startAutoRenewalChecker(ctx context.Context, svc *billing.AutoRenewalService, logger *zap.Logger) {
+	logger.Info("Auto-renewal checker started")
+	runAutoRenewalCheck(ctx, svc, logger)
+
+	ticker := time.NewTicker(6 * time.Hour)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Info("Auto-renewal checker stopped")
+			return
+		case <-ticker.C:
+			runAutoRenewalCheck(ctx, svc, logger)
+		}
+	}
+}
+
+// runAutoRenewalCheck performs a single pass over expired subscriptions.
+func runAutoRenewalCheck(ctx context.Context, svc *billing.AutoRenewalService, logger *zap.Logger) {
+	if err := svc.CheckExpiredSubscriptions(ctx); err != nil {
+		logger.Error("Auto-renewal check failed", zap.Error(err))
+	}
+}
+
 // monitorLowBalance monitors tenant balances and sends alerts when low
 func monitorLowBalance(ctx context.Context, balanceManager balance.Manager, alertManager *alerting.Manager, logger *zap.Logger) {
 	ticker := time.NewTicker(5 * time.Minute) // Check every 5 minutes
 	defer ticker.Stop()
-	
+
 	logger.Info("Low balance monitoring started")
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -860,27 +993,27 @@ func checkLowBalances(ctx context.Context, balanceManager balance.Manager, alert
 		FROM tenants 
 		WHERE balance < 100.00 AND balance > 0 AND deleted_at IS NULL
 	`
-	
+
 	rows, err := db.PgxPool.Query(ctx, query)
 	if err != nil {
 		logger.Error("Failed to query tenant balances", zap.Error(err))
 		return
 	}
 	defer rows.Close()
-	
+
 	for rows.Next() {
 		var tenantID uuid.UUID
 		var balance decimal.Decimal
-		
+
 		if err := rows.Scan(&tenantID, &balance); err != nil {
 			logger.Error("Failed to scan balance row", zap.Error(err))
 			continue
 		}
-		
+
 		// Determine alert level based on balance
 		var level alerting.AlertLevel
 		var title string
-		
+
 		if balance.LessThan(decimal.NewFromFloat(10.0)) {
 			level = alerting.AlertLevelCritical
 			title = "Critical: Very Low Balance"
@@ -891,7 +1024,7 @@ func checkLowBalances(ctx context.Context, balanceManager balance.Manager, alert
 			level = alerting.AlertLevelInfo
 			title = "Info: Balance Below Threshold"
 		}
-		
+
 		alert := alerting.NewAlert(
 			alerting.AlertTypeLowBalance,
 			level,
@@ -901,9 +1034,9 @@ func checkLowBalances(ctx context.Context, balanceManager balance.Manager, alert
 		).WithTenantID(tenantID).
 			WithMetadata("balance", balance.String()).
 			WithMetadata("threshold", "100.00")
-		
+
 		alertManager.SendAlertAsync(alert)
-		
+
 		logger.Info("Low balance alert sent",
 			zap.String("tenant_id", tenantID.String()),
 			zap.String("balance", balance.String()),

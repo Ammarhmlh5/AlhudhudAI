@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/al-hudhud/backend/internal/notifications"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -218,9 +219,10 @@ func (m *manager) RolloverMessages(ctx context.Context, subscriptionID int64, re
 			subscription_id,
 			tenant_id,
 			messages_count,
+			messages_remaining,
 			source_month,
 			expiry_date
-		) VALUES ($1, $2, $3, $4, $5)
+		) VALUES ($1, $2, $3, $3, $4, $5)
 		RETURNING id
 	`
 
@@ -598,8 +600,20 @@ func (m *manager) ForfeitRolloverOnPaymentFailure(ctx context.Context, subscript
 		zap.Int64("total_messages_lost", totalMessages),
 		zap.String("reason", reason))
 
-	// TODO: Send notification to customer about forfeited messages
-	// This should be integrated with the notification service
+	// Notify the customer about forfeited rollover messages
+	var tenantID uuid.UUID
+	err = m.pool.QueryRow(ctx,
+		"SELECT tenant_id FROM subscriptions WHERE id = $1", subscriptionID).Scan(&tenantID)
+	if err == nil && totalMessages > 0 {
+		notifications.SendTenantNotification(ctx, m.pool, tenantID, "alert",
+			"ترحيل رسائل منتهي",
+			fmt.Sprintf("تم إلغاء %d رسالة مُرحّلة لعدم اكتمال الدفع (%s).", totalMessages, reason),
+			map[string]any{
+				"subscription_id":    subscriptionID,
+				"messages_forfeited": totalMessages,
+				"reason":             reason,
+			}, m.logger)
+	}
 
 	return nil
 }

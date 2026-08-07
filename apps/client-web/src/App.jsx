@@ -4,7 +4,7 @@ import { Menu, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './contexts/AuthContext';
 import { useSocket } from './contexts/SocketContext';
-import { initializeCSRF } from './api/axios';
+import { initializeAppCSRF } from './api/axios';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import Login from './components/Login';
 import Register from './components/Register';
@@ -126,7 +126,7 @@ function App() {
   // Initialize CSRF protection on app mount (only once)
   useEffect(() => {
     if (!csrfInitialized) {
-      initializeCSRF()
+      initializeAppCSRF()
         .catch(error => {
           console.error('Failed to initialize CSRF protection:', error);
           // Continue anyway - CSRF will be fetched on first request

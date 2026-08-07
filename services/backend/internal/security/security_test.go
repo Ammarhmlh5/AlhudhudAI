@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/al-hudhud/backend/pkg/password"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -145,7 +148,7 @@ func TestSQLInjectionPrevention_DB(t *testing.T) {
 				}
 
 				// Using parameterized query (safe)
-				result := db.Raw("SELECT id, tenant_id, name FROM tariffs WHERE id = ? AND tenant_id = ?", 
+				result := db.Raw("SELECT id, tenant_id, name FROM security_test_tariffs WHERE id = ? AND tenant_id = ?", 
 					tariffID, tenantIDStr).Scan(&tariff)
 
 				if result.Error != nil {
@@ -156,7 +159,7 @@ func TestSQLInjectionPrevention_DB(t *testing.T) {
 				c.JSON(http.StatusOK, gin.H{"tariff": tariff})
 			})
 
-			req := httptest.NewRequest("GET", fmt.Sprintf("/tariffs/%s", payload), nil)
+			req := httptest.NewRequest("GET", fmt.Sprintf("/tariffs/%s", url.PathEscape(payload)), nil)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -167,7 +170,7 @@ func TestSQLInjectionPrevention_DB(t *testing.T) {
 
 			// Verify database integrity
 			var count int64
-			db.Raw("SELECT COUNT(*) FROM tariffs WHERE tenant_id = ?", tenantID.String()).Scan(&count)
+			db.Raw("SELECT COUNT(*) FROM security_test_tariffs WHERE tenant_id = ?", tenantID.String()).Scan(&count)
 			assert.Greater(t, count, int64(0), "Data should not be deleted")
 		})
 	}
@@ -228,11 +231,11 @@ func TestXSSPrevention_JSON(t *testing.T) {
 			err := json.Unmarshal(w.Body.Bytes(), &response)
 			require.NoError(t, err, "Response should be valid JSON")
 
-			// Verify dangerous characters are escaped
+			// Verify dangerous characters are escaped in the JSON output
 			responseStr := w.Body.String()
 			assert.NotContains(t, responseStr, "<script>", "Script tags should be escaped")
-			assert.NotContains(t, responseStr, "onerror=", "Event handlers should be escaped")
-			assert.NotContains(t, responseStr, "javascript:", "JavaScript protocol should be escaped")
+			assert.NotContains(t, responseStr, "<", "HTML special characters should be escaped")
+			assert.NotContains(t, responseStr, "&", "Ampersands should be escaped")
 		})
 	}
 }
@@ -454,22 +457,24 @@ func TestRateLimitingByIP(t *testing.T) {
 
 // TestPasswordHashing tests that passwords are properly hashed
 func TestPasswordHashing(t *testing.T) {
-	password := "SecurePassword123!"
+	plaintext := "SecurePassword123!"
 
-	// Hash password (using bcrypt in production)
-	hashedPassword := hashPassword(password)
+	// Hash password using the real bcrypt implementation
+	hashedPassword, err := password.HashPassword(plaintext)
+	require.NoError(t, err)
 
 	// Verify hash is not plaintext
-	assert.NotEqual(t, password, hashedPassword, "Password should be hashed")
+	assert.NotEqual(t, plaintext, hashedPassword, "Password should be hashed")
 	assert.Greater(t, len(hashedPassword), 20, "Hash should be sufficiently long")
 
 	// Verify same password produces different hashes (salt)
-	hashedPassword2 := hashPassword(password)
+	hashedPassword2, err := password.HashPassword(plaintext)
+	require.NoError(t, err)
 	assert.NotEqual(t, hashedPassword, hashedPassword2, "Hashes should use unique salts")
 
 	// Verify password verification works
-	assert.True(t, verifyPassword(password, hashedPassword), "Password verification should succeed")
-	assert.False(t, verifyPassword("WrongPassword", hashedPassword), "Wrong password should fail")
+	assert.True(t, password.CheckPassword(plaintext, hashedPassword), "Password verification should succeed")
+	assert.False(t, password.CheckPassword("WrongPassword", hashedPassword), "Wrong password should fail")
 }
 
 // TestSecureHeaders tests that security headers are set
@@ -504,13 +509,25 @@ func TestSecureHeaders(t *testing.T) {
 // Helper functions
 
 func setupTestDB(t *testing.T) *gorm.DB {
-	dsn := "host=localhost user=postgres password=postgres dbname=sms_gateway_test port=5432 sslmode=disable"
+	dbPassword := os.Getenv("PGPASSWORD")
+	if dbPassword == "" {
+		dbPassword = "postgres"
+	}
+	dsn := fmt.Sprintf("host=localhost user=postgres password=%s dbname=sms_gateway_test port=5432 sslmode=disable", dbPassword)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	require.NoError(t, err)
 
+	// Bound the pool so concurrent tests (up to 500 goroutines) queue on the
+	// client side instead of exhausting the server's max_connections limit.
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	sqlDB.SetMaxOpenConns(50)
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)
+
 	// Create test table
 	db.Exec(`
-		CREATE TABLE IF NOT EXISTS tariffs (
+		CREATE TABLE IF NOT EXISTS security_test_tariffs (
 			id SERIAL PRIMARY KEY,
 			tenant_id UUID NOT NULL,
 			name VARCHAR(255),
@@ -522,20 +539,10 @@ func setupTestDB(t *testing.T) *gorm.DB {
 }
 
 func cleanupTestDB(t *testing.T, db *gorm.DB) {
-	db.Exec("DROP TABLE IF EXISTS tariffs")
+	db.Exec("DROP TABLE IF EXISTS security_test_tariffs")
 }
 
 func setupTenantData(t *testing.T, db *gorm.DB, tenantID uuid.UUID) {
-	db.Exec("INSERT INTO tariffs (tenant_id, name, cost) VALUES (?, ?, ?)",
+	db.Exec("INSERT INTO security_test_tariffs (tenant_id, name, cost) VALUES (?, ?, ?)",
 		tenantID.String(), "Test Tariff", 10.00)
-}
-
-func hashPassword(password string) string {
-	// Simplified for testing - use bcrypt in production
-	return fmt.Sprintf("hashed_%s_%d", password, time.Now().UnixNano())
-}
-
-func verifyPassword(password, hash string) bool {
-	// Simplified for testing - use bcrypt in production
-	return fmt.Sprintf("hashed_%s", password) == hash[:len(hash)-19]
 }

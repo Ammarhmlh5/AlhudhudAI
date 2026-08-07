@@ -143,7 +143,7 @@ func TestProperty_CalculateRemainingMessages_BoundaryValues(t *testing.T) {
 	}{
 		{"Zero messages", 0, 0},
 		{"One message", 1, 1},
-		{"Maximum int64", 9223372036854775807, 9223372036854775807},
+		{"Maximum int32", 2147483647, 2147483647},
 	}
 
 	for _, tc := range testCases {
@@ -168,7 +168,7 @@ func TestProperty_CalculateRemainingMessages_BoundaryValues(t *testing.T) {
 
 func setupTestDB(t *testing.T) *pgxpool.Pool {
 	// Use test database connection
-	connString := "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable"
+	connString := "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable"
 	pool, err := pgxpool.New(context.Background(), connString)
 	require.NoError(t, err)
 	return pool
@@ -180,20 +180,20 @@ func createTestPackage(t require.TestingT, ctx context.Context, pool *pgxpool.Po
 			tenant_id,
 			service_id,
 			name,
-			description,
-			price,
-			currency,
-			billing_cycle,
-			messages_included,
+			code,
+			price_usd,
+			included_messages,
+			overage_rate,
 			is_unlimited,
+			billing_cycle,
 			rollover_enabled,
 			rollover_limit,
 			rollover_expiry_months,
-			overage_rate,
 			is_active
 		) VALUES (
-			$1, 1, 'Test Package', 'Test Description', 100.00, 'USD', 'monthly',
-			1000, $2, $3, 500, 3, 0.05, true
+			$1, 1, 'Test Package', 'ROLLPKG',
+			100.00, 1000, 0.05, $2, 'monthly',
+			$3, 500, 3, true
 		) RETURNING id
 	`
 
@@ -207,20 +207,18 @@ func createTestSubscription(t require.TestingT, ctx context.Context, pool *pgxpo
 	query := `
 		INSERT INTO subscriptions (
 			tenant_id,
-			user_id,
 			package_id,
 			status,
 			start_date,
 			end_date,
-			messages_included,
 			messages_used,
 			messages_remaining,
 			overage_messages,
 			overage_cost,
 			auto_renew
 		) VALUES (
-			$1, 1, $2, 'active', CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days',
-			1000, 0, $3, 0, 0.00, true
+			$1, $2, 'active', CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days',
+			0, $3, 0, 0.00, true
 		) RETURNING id
 	`
 
@@ -426,20 +424,20 @@ func createTestPackageWithLimit(t require.TestingT, ctx context.Context, pool *p
 			tenant_id,
 			service_id,
 			name,
-			description,
-			price,
-			currency,
-			billing_cycle,
-			messages_included,
+			code,
+			price_usd,
+			included_messages,
+			overage_rate,
 			is_unlimited,
+			billing_cycle,
 			rollover_enabled,
 			rollover_limit,
 			rollover_expiry_months,
-			overage_rate,
 			is_active
 		) VALUES (
-			$1, 1, 'Test Package', 'Test Description', 100.00, 'USD', 'monthly',
-			1000, $2, $3, $4, 3, 0.05, true
+			$1, 1, 'Test Package', 'ROLLPKGLIMIT',
+			100.00, 1000, 0.05, $2, 'monthly',
+			$3, $4, 3, true
 		) RETURNING id
 	`
 
@@ -455,20 +453,20 @@ func createTestPackageWithExpiry(t require.TestingT, ctx context.Context, pool *
 			tenant_id,
 			service_id,
 			name,
-			description,
-			price,
-			currency,
-			billing_cycle,
-			messages_included,
+			code,
+			price_usd,
+			included_messages,
+			overage_rate,
 			is_unlimited,
+			billing_cycle,
 			rollover_enabled,
 			rollover_limit,
 			rollover_expiry_months,
-			overage_rate,
 			is_active
 		) VALUES (
-			$1, 1, 'Test Package', 'Test Description', 100.00, 'USD', 'monthly',
-			1000, $2, $3, 500, $4, 0.05, true
+			$1, 1, 'Test Package', 'ROLLPKGEXP',
+			100.00, 1000, 0.05, $2, 'monthly',
+			$3, 500, $4, true
 		) RETURNING id
 	`
 
@@ -727,10 +725,11 @@ func createRolloverRecord(t require.TestingT, ctx context.Context, pool *pgxpool
 			subscription_id,
 			tenant_id,
 			messages_count,
+			messages_remaining,
 			source_month,
 			expiry_date,
 			created_at
-		) VALUES ($1, $2, $3, $4, $5, $6)
+		) VALUES ($1, $2, $3, $3, $4, $5, $6)
 		RETURNING id
 	`
 

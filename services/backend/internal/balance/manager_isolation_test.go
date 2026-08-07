@@ -276,6 +276,13 @@ func TestBalanceIsolation_RefundDoesNotAffectOtherTenants(t *testing.T) {
 		CreatedBy: "test",
 	}
 
+	// Refund requires an existing COMMITTED accounting transaction
+	_, err := pool.Exec(ctx, `
+		INSERT INTO accounting_transactions (tenant_id, message_id, amount, status, type, created_at, updated_at)
+		VALUES ($1, $2, $3, 'COMMITTED', 'DEDUCT', NOW(), NOW())
+	`, tenant1ID, *refundOp.MessageID, refundAmount)
+	require.NoError(t, err)
+
 	result, err := manager.RefundBalance(ctx, refundOp)
 	require.NoError(t, err)
 	require.True(t, result.Success)

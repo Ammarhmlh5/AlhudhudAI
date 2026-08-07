@@ -21,7 +21,7 @@ export const useRoutingConfig = (tenantId) => {
       setLoading(true);
       setError(null);
 
-      const response = await axios.get(`/api/admin/routing/${tenantId}`);
+      const response = await axios.get(`/api/v1/admin/routing/${tenantId}`);
       
       if (response.data) {
         setConfig(response.data);
@@ -60,7 +60,7 @@ export const useUpdateRoutingConfig = () => {
       setUpdating(true);
       setError(null);
 
-      await axios.put(`/api/admin/routing/${tenantId}`, newConfig);
+      await axios.put(`/api/v1/admin/routing/${tenantId}`, newConfig);
       
       return { success: true };
     } catch (err) {
@@ -106,7 +106,7 @@ export const useRoutingMetrics = (tenantId, options = {}) => {
       setLoading(true);
       setError(null);
 
-      const response = await axios.get(`/api/admin/routing/${tenantId}/metrics`);
+      const response = await axios.get(`/api/v1/admin/routing/${tenantId}/metrics`);
       
       if (response.data) {
         setMetrics(response.data);
@@ -161,14 +161,15 @@ export const useRoutingHealth = (tenantId, serverId) => {
       setLoading(true);
       setError(null);
 
-      const response = await axios.get(`/api/admin/servers/${serverId}`);
+      const response = await axios.get(`/api/v1/admin/health/servers/${serverId}`);
       
-      if (response.data) {
+      const result = response.data && response.data.data ? response.data.data : response.data;
+      if (result) {
         setHealth({
-          status: response.data.health_status || 'unknown',
-          response_time_ms: response.data.response_time_ms || 0,
-          error_rate: response.data.error_rate || 0,
-          last_check: response.data.last_check || null
+          status: result.health_status || 'unknown',
+          response_time_ms: result.response_time_ms || 0,
+          error_rate: result.error_rate || 0,
+          last_check: result.last_check || null
         });
       }
     } catch (err) {

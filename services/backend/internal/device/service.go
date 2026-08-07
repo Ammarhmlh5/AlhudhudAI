@@ -10,7 +10,9 @@ import (
 	"github.com/al-hudhud/backend/internal/db"
 	"github.com/al-hudhud/backend/internal/models"
 	"github.com/al-hudhud/backend/internal/ws"
+	"github.com/al-hudhud/backend/pkg/logger"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -134,6 +136,13 @@ func (s *Service) PairDevice(ctx context.Context, tenantID uuid.UUID, req PairDe
 		return "", err
 	}
 
+	// Ensure the tenant has a routing config so messages use the PHONES fast path
+	if err := s.EnsureCompanyStatus(ctx, tenantID); err != nil {
+		logger.GetLogger().Warn("Failed to ensure company status for tenant",
+			zap.String("tenant_id", tenantID.String()),
+			zap.Error(err))
+	}
+
 	return pairKey, nil
 }
 
@@ -166,21 +175,39 @@ func (s *Service) FetchMessages(ctx context.Context, tenantID uuid.UUID, deviceI
 
 	var messages []models.Message
 
+	// Resolve this device's dispatch channel(s) so messages bound by channel id
+	// (the mobile routing convention) are found too, not only by hardware id.
+	deviceMatchIDs := []string{deviceID.String()}
+	var device models.PairedDevice
+	if err := db.Get(ctx).
+		Where("hardware_id = ? OR id = ?", deviceID, deviceID).
+		First(&device).Error; err == nil {
+		if device.ChannelID != nil {
+			deviceMatchIDs = append(deviceMatchIDs, device.ChannelID.String())
+		} else {
+			deviceMatchIDs = append(deviceMatchIDs, device.ID.String())
+		}
+	}
+
 	// Use a raw SQL transaction for SELECT FOR UPDATE SKIP LOCKED (GORM doesn't support it natively)
 	err := db.Get(ctx).Transaction(func(tx *gorm.DB) error {
-		// 1. Lock eligible QUEUED messages for this tenant, skipping any already locked
-		//    by another concurrent fetch (e.g., second device or retry).
-		if err := tx.Raw(`
+	// 1. Lock eligible unsent messages for this tenant: QUEUED (ready for a
+	//    device pull), WAITING and FAILED (unsent messages that a mobile gateway
+	//    device should retry), plus messages already claimed by THIS device but
+	//    stuck in PROCESSING (e.g. fetched while offline and never acknowledged).
+	//    Skip any already locked.
+	if err := tx.Raw(`
 			SELECT id, tenant_id, phone_number, content, message_type,
 			       char_count, parts_count, encoding, cost, status,
 			       sender_name, scheduled_at, created_at
 			FROM   messages
 			WHERE  tenant_id = ?
-			  AND  status    = 'QUEUED'
+			  AND  ( status IN ('QUEUED', 'WAITING', 'FAILED')
+			     OR ( status = 'PROCESSING' AND device_id IN ? ) )
 			ORDER  BY scheduled_at ASC
 			LIMIT  ?
 			FOR UPDATE SKIP LOCKED
-		`, tenantID, batchSize).Scan(&messages).Error; err != nil {
+		`, tenantID, deviceMatchIDs, batchSize).Scan(&messages).Error; err != nil {
 			return err
 		}
 
@@ -196,7 +223,7 @@ func (s *Service) FetchMessages(ctx context.Context, tenantID uuid.UUID, deviceI
 
 		now := time.Now()
 		if err := tx.Model(&models.Message{}).
-			Where("id IN ? AND status = 'QUEUED'", messageIDs).
+			Where("id IN ? AND status IN ?", messageIDs, []string{"QUEUED", "WAITING", "PROCESSING", "FAILED"}).
 			Updates(map[string]interface{}{
 				"status":     models.MessageProcessing,
 				"device_id":  deviceID,
@@ -240,6 +267,8 @@ func (s *Service) ReportStatus(ctx context.Context, tenantID uuid.UUID, messageI
 
 		var msgStatus models.MessageStatus
 		switch status {
+		case "SENT":
+			msgStatus = models.MessageSent
 		case "DELIVERED":
 			msgStatus = models.MessageDelivered
 		case "FAILED":
@@ -251,7 +280,7 @@ func (s *Service) ReportStatus(ctx context.Context, tenantID uuid.UUID, messageI
 		// ACCOUNTING PHASE 2: Settlement or Refund
 		var transaction models.AccountingTransaction
 		if err := tx.Where("message_id = ? AND status = ?", messageID, models.TxPending).First(&transaction).Error; err == nil {
-			if status == "DELIVERED" {
+			if status == "SENT" || status == "DELIVERED" {
 				// Settlement: Just commit the transaction
 				tx.Model(&transaction).Update("status", models.TxCommitted)
 			} else if status == "FAILED" {
@@ -267,15 +296,18 @@ func (s *Service) ReportStatus(ctx context.Context, tenantID uuid.UUID, messageI
 		updates := map[string]interface{}{
 			"status": msgStatus,
 		}
+		now := time.Now()
+		if status == "SENT" || status == "DELIVERED" {
+			updates["sent_at"] = &now
+		}
 		if deliveredAt != nil {
 			updates["delivered_at"] = deliveredAt
 		} else if status == "DELIVERED" {
-			now := time.Now()
 			updates["delivered_at"] = &now
 		}
 
 		if err := tx.Model(&msg).
-			Where("id = ? AND status NOT IN (?, ?)", messageID, models.MessageDelivered, models.MessageFailed).
+			Where("id = ? AND status <> ?", messageID, models.MessageDelivered).
 			Updates(updates).Error; err != nil {
 			return err
 		}
@@ -319,6 +351,132 @@ func (s *Service) WakeUpTenant(ctx context.Context, tenantID uuid.UUID) error {
 	})
 }
 
+// RedeliverQueuedMessages re-broadcasts QUEUED messages to connected mobile devices.
+// Called when a mobile device (re)connects via /ws/pair so messages that were
+// activated while the device was offline are still delivered. When staleThreshold
+// is greater than zero, only messages that have been QUEUED for longer than the
+// threshold are re-dispatched (used by the periodic flusher).
+func (s *Service) RedeliverQueuedMessages(ctx context.Context, tenantID uuid.UUID, staleThreshold time.Duration) error {
+	query := db.Get(ctx).
+		Where("tenant_id = ? AND status = ?", tenantID, models.MessageQueued)
+	if staleThreshold > 0 {
+		query = query.Where("updated_at < ?", time.Now().Add(-staleThreshold))
+	}
+
+	var messages []models.Message
+	if err := query.Order("created_at ASC").Limit(1000).Find(&messages).Error; err != nil {
+		return err
+	}
+
+	if len(messages) == 0 || ws.GlobalHub == nil {
+		return nil
+	}
+
+	log := logger.GetLogger()
+	log.Info("Redelivering queued messages to mobile devices",
+		zap.String("tenant_id", tenantID.String()),
+		zap.Int("message_count", len(messages)))
+
+	for i := range messages {
+		msg := &messages[i]
+		wsMsg := ws.WebSocketMessage{
+			Type:      "MESSAGE_DELIVERY",
+			MessageID: msg.ID.String(),
+			TenantID:  tenantID,
+			Payload: map[string]interface{}{
+				"message_id":     msg.ID.String(),
+				"content":        msg.Content,
+				"sender_name":    msg.SenderName,
+				"phone_number":   msg.PhoneNumber,
+				"message_type":   string(msg.MessageType),
+				"sender_user_id": msg.SenderUserID,
+				"timestamp":      time.Now(),
+			},
+			Timestamp: time.Now(),
+		}
+
+		if msg.ChannelID != nil {
+			// Target a specific device channel
+			wsMsg.ChannelID = *msg.ChannelID
+			if err := ws.GlobalHub.SendMessage(ctx, wsMsg); err != nil {
+				log.Warn("Failed to redeliver queued message to device",
+					zap.String("msg_id", msg.ID.String()),
+					zap.String("channel_id", msg.ChannelID.String()),
+					zap.Error(err))
+			}
+			continue
+		}
+
+		if err := ws.GlobalHub.SendMessageToTenant(ctx, tenantID, wsMsg); err != nil {
+			log.Warn("Failed to redeliver queued message to mobile devices",
+				zap.String("msg_id", msg.ID.String()),
+				zap.Error(err))
+		}
+	}
+
+	return nil
+}
+
+// FlushStaleQueuedMessages re-dispatches stale QUEUED messages for every tenant
+// that currently has connected mobile devices. This keeps delivery working as
+// long as a phone is online, without depending on the exact connect moment.
+func (s *Service) FlushStaleQueuedMessages(ctx context.Context, staleThreshold time.Duration) error {
+	if ws.GlobalHub == nil {
+		return nil
+	}
+
+	var tenantIDs []uuid.UUID
+	if err := db.Get(ctx).
+		Model(&models.Message{}).
+		Where("status = ? AND updated_at < ?", models.MessageQueued, time.Now().Add(-staleThreshold)).
+		Distinct().
+		Pluck("tenant_id", &tenantIDs).Error; err != nil {
+		return err
+	}
+
+	if len(tenantIDs) == 0 {
+		return nil
+	}
+
+	for _, tenantID := range tenantIDs {
+		if len(ws.GlobalHub.GetMobileConnectionsByTenant(tenantID)) == 0 {
+			continue
+		}
+		if err := s.RedeliverQueuedMessages(ctx, tenantID, staleThreshold); err != nil {
+			logger.GetLogger().Warn("Failed to flush stale queued messages",
+				zap.String("tenant_id", tenantID.String()),
+				zap.Error(err))
+		}
+	}
+
+	return nil
+}
+
+// StartQueuedMessageFlusher runs a background loop that periodically re-dispatches
+// stale QUEUED messages to connected mobile devices.
+func StartQueuedMessageFlusher(ctx context.Context, interval, staleThreshold time.Duration) {
+	log := logger.GetLogger()
+	go func() {
+		svc := NewService()
+		log.Info("Queued message flusher started",
+			zap.Duration("interval", interval),
+			zap.Duration("stale_threshold", staleThreshold))
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				log.Info("Queued message flusher stopped")
+				return
+			case <-ticker.C:
+				if err := svc.FlushStaleQueuedMessages(ctx, staleThreshold); err != nil {
+					log.Warn("Queued message flusher iteration failed", zap.Error(err))
+				}
+			}
+		}
+	}()
+}
+
 // GetTenantIDByAPIKey validates API key and returns tenant ID and device ID
 func (s *Service) GetTenantIDByAPIKey(ctx context.Context, apiKey string, deviceUUID string) (uuid.UUID, uuid.UUID, error) {
 	var device models.PairedDevice
@@ -339,6 +497,39 @@ func (s *Service) GetTenantIDByAPIKey(ctx context.Context, apiKey string, device
 		channelID = *device.ChannelID
 	}
 
+	// Ensure the tenant has a PHONES routing config so dispatched messages
+	// actually flow through the mobile fast path
+	if err := s.EnsureCompanyStatus(ctx, device.TenantID); err != nil {
+		logger.GetLogger().Warn("Failed to ensure company status during WS pairing",
+			zap.String("tenant_id", device.TenantID.String()),
+			zap.Error(err))
+	}
+
+	return device.TenantID, channelID, nil
+}
+
+// GetTenantByDeviceID identifies a previously paired device by its id OR
+// hardware_id (the mobile app's reconnection path sends deviceId without an
+// api_key). Returns the tenant and the device's dispatch channel id.
+func (s *Service) GetTenantByDeviceID(ctx context.Context, deviceID string) (uuid.UUID, uuid.UUID, error) {
+	var device models.PairedDevice
+	if err := db.Get(ctx).
+		Where("hardware_id = ? OR id = ?", deviceID, deviceID).
+		First(&device).Error; err != nil {
+		return uuid.Nil, uuid.Nil, gorm.ErrRecordNotFound
+	}
+
+	channelID := device.ID
+	if device.ChannelID != nil {
+		channelID = *device.ChannelID
+	}
+
+	if err := s.EnsureCompanyStatus(ctx, device.TenantID); err != nil {
+		logger.GetLogger().Warn("Failed to ensure company status during WS pairing",
+			zap.String("tenant_id", device.TenantID.String()),
+			zap.Error(err))
+	}
+
 	return device.TenantID, channelID, nil
 }
 
@@ -347,6 +538,23 @@ func generatePairKey() string {
 	b := make([]byte, 16)
 	rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+// EnsureCompanyStatus creates a default PHONES routing config for a tenant if none exists.
+// Without a company_statuses row, messages bypass the mobile dispatch fast path entirely.
+func (s *Service) EnsureCompanyStatus(ctx context.Context, tenantID uuid.UUID) error {
+	var count int64
+	if err := db.Get(ctx).Model(&models.CompanyStatus{}).Where("tenant_id = ?", tenantID).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+	return db.Get(ctx).Create(&models.CompanyStatus{
+		TenantID:    tenantID,
+		IsActive:    true,
+		ChannelType: "PHONES",
+	}).Error
 }
 
 // DeleteDevice removes a device by its UUID

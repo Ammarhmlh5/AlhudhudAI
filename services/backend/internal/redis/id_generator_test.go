@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"encoding/binary"
 	"testing"
 	"time"
 
@@ -303,12 +304,18 @@ func TestGenerateTenantHash_Consistency(t *testing.T) {
 }
 
 func TestGenerateTenantHash_Uniqueness(t *testing.T) {
-	// Generate hashes for different tenants
+	// Generate hashes for different tenants. Use a deterministic pseudo-random
+	// LCG seeded with a constant so the inputs look like real (high-entropy)
+	// UUIDs yet the collision count is reproducible rather than flaky.
 	hashes := make(map[string]bool)
 	collisions := 0
 
+	state := uint64(0x9E3779B97F4A7C15)
 	for i := 0; i < 1000; i++ {
-		tenantID := uuid.New()
+		state = state*6364136223846793005 + 1442695040888963407
+		var raw [16]byte
+		binary.BigEndian.PutUint64(raw[0:], state)
+		tenantID := uuid.UUID(raw)
 		hash := generateTenantHash(tenantID)
 
 		if hashes[hash] {

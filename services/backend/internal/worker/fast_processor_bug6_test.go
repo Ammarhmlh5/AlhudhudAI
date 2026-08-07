@@ -1,25 +1,23 @@
 package worker
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// Bug 6 Exploration Test: Transaction Rollback After Commit
+// Bug 6 Verification Test: Transaction Rollback After Commit (FIXED)
 // **Validates: Requirements 1.6, 2.6**
 //
 // **Property 1: Bug Condition** - Rollback After Commit
 //
-// This test MUST FAIL on unfixed code - failure confirms the bug exists.
-// The bug: defer tx.Rollback() executes after successful tx.Commit() in processBatchWithTransaction()
+// The bug was: defer tx.Rollback() executed after successful tx.Commit()
+// in processBatchWithTransaction(). This has been FIXED by using a
+// committed flag so rollback only runs when commit was not called.
 //
-// CRITICAL: This test encodes the EXPECTED behavior (what SHOULD happen).
-// On UNFIXED code: Test FAILS (rollback pattern is incorrect - unconditional defer)
-// On FIXED code: Test PASSES (rollback is conditional using committed flag)
-//
-// DO NOT attempt to fix the test or the code when it fails.
-// Document the failure as proof of the bug.
+// On FIXED code: This test PASSES (rollback is conditional using committed flag).
 //
 // NOTE: This test verifies the CODE PATTERN rather than runtime behavior,
 // because pgx v5 silently ignores rollback after commit without logging warnings.
@@ -28,21 +26,46 @@ func TestProperty_Bug6_RollbackAfterCommit(t *testing.T) {
 		t.Skip("Skipping property test in short mode")
 	}
 
-	// This test documents the bug by verifying the transaction pattern
-	// The bug is in processBatchWithTransaction() at lines 138-139:
-	//   defer tx.Rollback(ctx)
-	//   ...
-	//   tx.Commit(ctx)
-	//
-	// This pattern causes Rollback() to execute AFTER successful Commit()
-	// Expected pattern: Use a committed flag to conditionally rollback
-	
-	t.Log("Bug Condition: Transaction Rollback After Commit")
-	t.Log("Location: fast_processor.go processBatchWithTransaction()")
-	t.Log("Current Pattern: defer tx.Rollback(ctx) followed by tx.Commit(ctx)")
-	t.Log("Issue: Rollback executes unconditionally after commit")
+	src, err := os.ReadFile("fast_processor.go")
+	require.NoError(t, err, "Should be able to read fast_processor.go")
+	content := string(src)
+
+	t.Log("Bug 6 FIXED: rollback is conditional using the committed flag pattern")
+
+	// No unconditional `defer tx.Rollback(ctx)` may remain.
+	assert.NotRegexp(t, `(?m)^\s*defer\s+tx\.Rollback\(ctx\)\s*$`, content,
+		"Bug 6 fixed: no unconditional defer tx.Rollback(ctx) in fast_processor.go")
+
+	// The committed-flag conditional rollback pattern must be present.
+	assert.Contains(t, content, "committed := false",
+		"Bug 6 fixed: committed flag initialized before deferred rollback")
+	assert.Regexp(t, `if\s+!committed\s*\{`, content,
+		"Bug 6 fixed: deferred rollback is conditional on !committed")
+	assert.Regexp(t, `(?m)^\s*committed\s*=\s*true\s*$`, content,
+		"Bug 6 fixed: committed flag is set to true after successful commit")
+}
+
+// Example-based test for Bug 6 - Verifies the fixed transaction pattern
+// **Validates: Requirements 1.6, 2.6**
+//
+// This test provides a concrete verification that the incorrect
+// unconditional-rollback transaction pattern is no longer present.
+func TestBug6_RollbackAfterCommitConcrete(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping bug detection test in short mode")
+	}
+
+	src, err := os.ReadFile("fast_processor.go")
+	require.NoError(t, err, "Should be able to read fast_processor.go")
+	content := string(src)
+
+	t.Log("COUNTEREXAMPLE RESOLVED: Transaction Rollback After Commit is fixed")
 	t.Log("")
-	t.Log("Expected Pattern:")
+	t.Log("Fixed Code Pattern:")
+	t.Log("  tx, err := db.PgxPool.Begin(ctx)")
+	t.Log("  if err != nil {")
+	t.Log("    return fmt.Errorf(\"begin transaction: %w\", err)")
+	t.Log("  }")
 	t.Log("  committed := false")
 	t.Log("  defer func() {")
 	t.Log("    if !committed {")
@@ -50,67 +73,21 @@ func TestProperty_Bug6_RollbackAfterCommit(t *testing.T) {
 	t.Log("    }")
 	t.Log("  }()")
 	t.Log("  ...")
-	t.Log("  tx.Commit(ctx)")
-	t.Log("  committed = true")
-	t.Log("")
-	t.Log("This test FAILS on unfixed code to document the bug exists")
-	
-	// Fail the test to document the bug
-	assert.Fail(t, 
-		"Bug Condition: defer tx.Rollback() executes after successful tx.Commit(). "+
-		"Location: processBatchWithTransaction() lines 138-139. "+
-		"Current: Unconditional defer tx.Rollback(ctx). "+
-		"Expected: Conditional rollback using committed flag. "+
-		"This failure confirms Bug 6 exists: Transaction Rollback After Commit")
-}
-
-// Example-based test for Bug 6 - Simpler counterexample
-// **Validates: Requirements 1.6, 2.6**
-//
-// This test provides a concrete example of the bug condition.
-// EXPECTED OUTCOME on UNFIXED code: FAILS (demonstrates incorrect transaction pattern)
-func TestBug6_RollbackAfterCommitConcrete(t *testing.T) {
-	// This test documents the bug by showing the incorrect transaction pattern
-	// in processBatchWithTransaction()
-	
-	t.Log("COUNTEREXAMPLE: Transaction Rollback After Commit")
-	t.Log("")
-	t.Log("Location: fast_processor.go processBatchWithTransaction()")
-	t.Log("Lines: 138-139 and 177")
-	t.Log("")
-	t.Log("Current Code Pattern:")
-	t.Log("  tx, err := db.PgxPool.Begin(ctx)")
-	t.Log("  if err != nil {")
-	t.Log("    return fmt.Errorf(\"begin transaction: %w\", err)")
-	t.Log("  }")
-	t.Log("  defer tx.Rollback(ctx)  // <-- BUG: Unconditional rollback")
-	t.Log("")
-	t.Log("  // ... process messages ...")
-	t.Log("")
-	t.Log("  if err := tx.Commit(ctx); err != nil {  // <-- Line 177")
+	t.Log("  if err := tx.Commit(ctx); err != nil {")
 	t.Log("    return fmt.Errorf(\"commit transaction: %w\", err)")
 	t.Log("  }")
-	t.Log("  // At this point, deferred Rollback() executes AFTER successful Commit()")
+	t.Log("  committed = true  // <-- Prevents rollback from executing")
 	t.Log("")
-	t.Log("Bug Condition:")
-	t.Log("  - defer tx.Rollback(ctx) is called unconditionally")
-	t.Log("  - When tx.Commit() succeeds, Rollback() still executes")
-	t.Log("  - This violates transaction management best practices")
-	t.Log("")
-	t.Log("Expected Behavior:")
-	t.Log("  - Rollback should only execute if commit fails")
-	t.Log("  - Use committed flag pattern to conditionally rollback")
-	t.Log("")
-	t.Log("Impact:")
-	t.Log("  - pgx v5 silently ignores rollback after commit")
-	t.Log("  - But this is still incorrect transaction management")
-	t.Log("  - May cause issues with other database drivers")
-	t.Log("  - Violates transaction lifecycle best practices")
-	
-	// Fail the test to document the bug
-	assert.Fail(t,
-		"Bug Condition: defer tx.Rollback() executes after successful tx.Commit(). "+
-			"This confirms Bug 6 exists: Transaction Rollback After Commit")
+
+	// The buggy unconditional pattern must NOT exist anymore.
+	assert.NotContains(t, content, "defer tx.Rollback(ctx)",
+		"Bug 6 fixed: unconditional defer tx.Rollback(ctx) removed from fast_processor.go")
+
+	// The conditional rollback pattern MUST exist.
+	assert.Contains(t, content, "committed := false",
+		"Bug 6 fixed: committed flag pattern present in fast_processor.go")
+	assert.Contains(t, content, "committed = true",
+		"Bug 6 fixed: committed flag is set after successful commit")
 }
 
 // Test: Verify correct transaction pattern (for comparison)

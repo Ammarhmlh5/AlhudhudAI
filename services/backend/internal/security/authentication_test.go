@@ -3,9 +3,14 @@ package security
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
+	jwtpkg "github.com/al-hudhud/backend/pkg/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestAPIAccessWithoutAuth tests API access without authentication
@@ -169,30 +174,65 @@ func TestRateLimiting(t *testing.T) {
 
 func generateExpiredToken(t *testing.T) string {
 	t.Helper()
-	// Generate an expired JWT token
-	return "expired.jwt.token"
+	claims := &jwtpkg.Claims{
+		UserID:   "admin",
+		Email:    "admin@test.com",
+		UserType: "SUPER_ADMIN",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(-time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now().Add(-2 * time.Hour)),
+			NotBefore: jwt.NewNumericDate(time.Now().Add(-2 * time.Hour)),
+		},
+	}
+	token, err := jwtpkg.SignToken(claims)
+	require.NoError(t, err)
+	return token
 }
 
 func generateValidToken(t *testing.T, userID string, roles []string) string {
 	t.Helper()
-	// Generate a valid JWT token
-	return "valid.jwt.token"
+	token, err := jwtpkg.GenerateToken(userID, userID+"@example.com", roleToUserType(roles), tenantIDForUser(userID), "", nil)
+	require.NoError(t, err)
+	return token
 }
 
 func generateAlmostExpiredToken(t *testing.T) string {
 	t.Helper()
-	// Generate a token that's about to expire
-	return "almost.expired.token"
+	claims := &jwtpkg.Claims{
+		UserID:   "admin",
+		Email:    "admin@test.com",
+		UserType: "SUPER_ADMIN",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+		},
+	}
+	token, err := jwtpkg.SignToken(claims)
+	require.NoError(t, err)
+	return token
 }
 
-// Placeholder types
-type AdminHandler struct{}
-
-func NewAdminHandler(a interface{}) *AdminHandler {
-	return &AdminHandler{}
+// roleToUserType maps the role names used by the security suite to the
+// user_type values enforced by the real RBAC middleware.
+func roleToUserType(roles []string) string {
+	for _, role := range roles {
+		switch role {
+		case "SUPER_ADMIN":
+			return "SUPER_ADMIN"
+		case "STAFF":
+			return "STAFF"
+		case "TENANT_ADMIN":
+			return "TENANT"
+		}
+	}
+	return "USER"
 }
 
-func (h *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Actual implementation would go here
-	w.WriteHeader(http.StatusUnauthorized)
+// tenantIDForUser derives a tenant id from a user id (user-1 -> tenant-1).
+func tenantIDForUser(userID string) string {
+	if strings.HasPrefix(userID, "user-") {
+		return "tenant-" + strings.TrimPrefix(userID, "user-")
+	}
+	return ""
 }

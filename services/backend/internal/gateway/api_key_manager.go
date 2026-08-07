@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -36,7 +37,7 @@ type GatewayAPIKey struct {
 	KeyName       string                 `gorm:"size:255;not null" json:"key_name"`
 	Description   string                 `gorm:"type:text" json:"description"`
 	APIKeyHash    string                 `gorm:"size:255;not null;uniqueIndex" json:"-"` // Hidden from JSON
-	Permissions   map[string]interface{} `gorm:"type:jsonb;default:'{}'" json:"permissions"`
+	Permissions   map[string]interface{} `gorm:"type:jsonb;default:'{}';serializer:json" json:"permissions"`
 	RateLimit     int                    `gorm:"default:60" json:"rate_limit"` // requests per minute
 	AllowedIPs    []string               `gorm:"type:text[]" json:"allowed_ips"`
 	IsActive      bool                   `gorm:"default:true" json:"is_active"`
@@ -183,7 +184,13 @@ func (akm *APIKeyManager) SetPermissions(ctx context.Context, req *SetPermission
 	}
 
 	// Update permissions
-	if err := akm.db.WithContext(ctx).Model(&apiKey).Update("permissions", req.Permissions).Error; err != nil {
+	// The raw column update bypasses the field's serializer, so the map must be
+	// serialized to JSON explicitly (jsonb column in Postgres, text in SQLite).
+	permissionsJSON, err := json.Marshal(req.Permissions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to serialize permissions: %w", err)
+	}
+	if err := akm.db.WithContext(ctx).Model(&apiKey).Update("permissions", string(permissionsJSON)).Error; err != nil {
 		return nil, fmt.Errorf("failed to update permissions: %w", err)
 	}
 

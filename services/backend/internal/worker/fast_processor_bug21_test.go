@@ -297,4 +297,10 @@ func (m *MockManager) GetBalance(ctx context.Context, tenantID uuid.UUID) (decim
 func (m *MockManager) CheckSufficient(ctx context.Context, tenantID uuid.UUID, amount decimal.Decimal) (bool, error) {
 	return true, nil
 }
+func (m *MockManager) CreditBalance(ctx context.Context, op balance.BalanceOperation) (*balance.BalanceResult, error) {
+	return &balance.BalanceResult{Success: true}, nil
+}
+func (m *MockManager) TransferBalance(ctx context.Context, from, to uuid.UUID, amount decimal.Decimal, reason, createdBy, ipAddress string) (*balance.TransferResult, error) {
+	return &balance.TransferResult{Success: true}, nil
+}
 

@@ -58,11 +58,11 @@ func (o *Orchestrator) reconcileMessages() {
 	for _, t := range tenants {
 		err := db.RunInTenantScope(t.ID, false, func(tx *gorm.DB) error {
 			var stuckMessages []models.Message
-			// Find messages stuck in PROCESSING for too long
-			// Use explicit Select to avoid "cached plan must not change result type" errors 
-			// when switching between tenant schemas with slightly different column orders.
+			// Find messages stuck in PROCESSING for too long. Messages claimed by a
+			// paired mobile device (device_id set) are owned by that device and will
+			// be settled by its status report, so only reclaim server-side PROCESSING.
 			result := tx.Select("id", "status", "retry_count", "updated_at").
-				Where("status = ? AND updated_at < ?",
+				Where("status = ? AND updated_at < ? AND device_id IS NULL",
 					models.MessageProcessing, timeout).Find(&stuckMessages)
 
 			if result.Error != nil {

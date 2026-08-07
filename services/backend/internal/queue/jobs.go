@@ -310,12 +310,21 @@ func (w *GlobalEventWorker) Work(ctx context.Context, job *river.Job[GlobalEvent
 		// 9. Phase 3: Trigger Activation for each created message
 		// We use InitTenantClient to get a worker-safe client for insertion.
 		client, err := InitTenantClient(ctx, tenantID, nil)
-		if err == nil {
-			for _, msg := range messages {
-				_, _ = client.Insert(ctx, MessageActivationArgs{
+		if err != nil {
+			return fmt.Errorf("init tenant client for activation: %w", err)
+		}
+		activationParams := make([]river.InsertManyParams, 0, len(messages))
+		for _, msg := range messages {
+			activationParams = append(activationParams, river.InsertManyParams{
+				Args: MessageActivationArgs{
 					MessageID: msg.ID,
 					TenantID:  tenantID,
-				}, nil)
+				},
+			})
+		}
+		if len(activationParams) > 0 {
+			if _, err := client.InsertMany(ctx, activationParams); err != nil {
+				return fmt.Errorf("insert message activation jobs: %w", err)
 			}
 		}
 
@@ -508,8 +517,28 @@ func (w *AnalysisWorker) Work(ctx context.Context, job *river.Job[AnalysisArgs])
 			return err
 		}
 
+		// Fallback: extract phone_number/content from the raw payload when the
+		// dedicated columns are empty (legacy ingest path stored them only in RawPayload).
+		phoneNumber := incoming.PhoneNumber
+		content := incoming.MessageContent
+		if phoneNumber == "" || content == "" {
+			var raw map[string]interface{}
+			if err := json.Unmarshal([]byte(incoming.RawPayload), &raw); err == nil {
+				if phoneNumber == "" {
+					if v, ok := raw["phone_number"].(string); ok {
+						phoneNumber = v
+					}
+				}
+				if content == "" {
+					if v, ok := raw["content"].(string); ok {
+						content = v
+					}
+				}
+			}
+		}
+
 		// Compute pricing & create message (simpler version for legacy)
-		charCount, partsCount, encoding, cost := calcMessagePricing(incoming.MessageContent)
+		charCount, partsCount, encoding, cost := calcMessagePricing(content)
 
 		// Phase 4: Create MessageEvent for reporting
 		msgEvent := models.MessageEvent{
@@ -540,8 +569,8 @@ func (w *AnalysisWorker) Work(ctx context.Context, job *river.Job[AnalysisArgs])
 			TenantID:          tenantID,
 			IncomingMessageID: &incoming.ID,
 			SenderName:        incoming.SenderName,
-			PhoneNumber:       incoming.PhoneNumber,
-			Content:           incoming.MessageContent,
+			PhoneNumber:       phoneNumber,
+			Content:           content,
 			CharCount:         charCount,
 			PartsCount:        partsCount,
 			Encoding:          encoding,

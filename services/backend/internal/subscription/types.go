@@ -66,6 +66,7 @@ type SubscribeRequest struct {
 	TenantID       uuid.UUID  `json:"tenant_id"`
 	PackageID      int64      `json:"package_id"`
 	AutoRenew      bool       `json:"auto_renew"`
+	PromoCode      string     `json:"promo_code,omitempty"`
 	IdempotencyKey string     `json:"idempotency_key,omitempty"`
 	CreatedBy      *uuid.UUID `json:"created_by,omitempty"`
 	IPAddress      string     `json:"ip_address,omitempty"`

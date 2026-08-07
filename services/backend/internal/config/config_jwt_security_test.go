@@ -143,6 +143,7 @@ func TestJWTSecurity_DefaultPlaceholderAccepted(t *testing.T) {
 	os.Setenv("DB_PASSWORD", "test_pass")
 	os.Setenv("DB_NAME", "test_db")
 	os.Setenv("REDIS_HOST", "localhost")
+	os.Setenv("REDIS_PASSWORD", "test_redis_password")
 
 	// ACT: Try to load configuration
 	cfg, err := Load()
@@ -333,6 +334,7 @@ func TestJWTSecurity_StrongSecretAccepted(t *testing.T) {
 	os.Setenv("DB_PASSWORD", "test_pass")
 	os.Setenv("DB_NAME", "test_db")
 	os.Setenv("REDIS_HOST", "localhost")
+	os.Setenv("REDIS_PASSWORD", "test_redis_password")
 
 	// ACT
 	cfg, err := Load()
@@ -355,10 +357,10 @@ func TestJWTSecurity_StrongSecretAccepted(t *testing.T) {
 	}
 }
 
-// Edge case test: JWT_SECRET at minimum length boundary (32 chars)
+// Edge case test: JWT_SECRET at minimum length boundary (48 chars)
 // **Validates: Requirements 2.1**
 //
-// This test verifies behavior at the 32-character boundary.
+// This test verifies behavior at the 48-character boundary.
 func TestJWTSecurity_MinimumLengthBoundary(t *testing.T) {
 	// Save original environment
 	originalJWTSecret := os.Getenv("JWT_SECRET")
@@ -375,9 +377,9 @@ func TestJWTSecurity_MinimumLengthBoundary(t *testing.T) {
 		shouldPass  bool
 		description string
 	}{
-		{"31-chars-secret-is-too-short!", false, "31 characters (just below minimum)"},
-		{"32-chars-secret-at-boundary!!", true, "32 characters (at minimum boundary)"},
-		{"33-chars-secret-above-minimum!!", true, "33 characters (above minimum)"},
+		{strings.Repeat("a", 47), false, "47 characters (just below minimum)"},
+		{strings.Repeat("b", 48), true, "48 characters (at minimum boundary)"},
+		{strings.Repeat("c", 49), true, "49 characters (above minimum)"},
 	}
 
 	for _, tc := range testCases {
@@ -396,15 +398,15 @@ func TestJWTSecurity_MinimumLengthBoundary(t *testing.T) {
 
 			// ASSERT
 			if tc.shouldPass {
-				// On FIXED code: Should accept secrets >= 32 chars
+				// On FIXED code: Should accept secrets >= 48 chars
 				assert.NoError(t, err,
-					"Secret with %d characters should be accepted (minimum is 32)",
+					"Secret with %d characters should be accepted (minimum is 48)",
 					len(tc.secret))
 			} else {
-				// On UNFIXED code: This WILL FAIL (accepts < 32 chars)
-				// On FIXED code: This WILL PASS (rejects < 32 chars)
+				// On UNFIXED code: This WILL FAIL (accepts < 48 chars)
+				// On FIXED code: This WILL PASS (rejects < 48 chars)
 				assert.Error(t, err,
-					"Bug Condition: Secret with %d characters should be rejected (minimum is 32). "+
+					"Bug Condition: Secret with %d characters should be rejected (minimum is 48). "+
 						"Expected: Validation error. "+
 						"This confirms the bug exists.",
 					len(tc.secret))

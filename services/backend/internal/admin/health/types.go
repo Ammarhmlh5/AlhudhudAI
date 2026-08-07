@@ -41,6 +41,20 @@ type ServerInfo struct {
 	IsActive         bool      `json:"is_active" db:"is_active"`
 }
 
+// ServerHealthDetail combines server information with its latest health check
+type ServerHealthDetail struct {
+	ID               uuid.UUID `json:"id"`
+	TenantID         uuid.UUID `json:"tenant_id"`
+	ServerURL        string    `json:"server_url"`
+	HealthEndpoint   string    `json:"health_endpoint"`
+	IsActive         bool      `json:"is_active"`
+	HealthStatus     string    `json:"health_status"`
+	ResponseTimeMs   int       `json:"response_time_ms"`
+	ErrorRate        float64   `json:"error_rate"`
+	LastCheck        *time.Time `json:"last_check,omitempty"`
+	IsAvailable      bool      `json:"is_available"`
+}
+
 // HealthHistoryFilter represents filters for querying health history
 type HealthHistoryFilter struct {
 	ServerID  uuid.UUID     `json:"server_id"`

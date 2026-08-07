@@ -13,7 +13,7 @@ import (
 // setupTestDB creates a test database connection
 func setupTestDB(t *testing.T) *sql.DB {
 	// Use test database connection
-	dsn := "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable"
+	dsn := "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable"
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		t.Skip("Test database not available:", err)

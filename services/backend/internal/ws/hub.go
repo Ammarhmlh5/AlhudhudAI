@@ -233,7 +233,17 @@ func (h *Hub) deliverPendingMessagesToDevice(conn *Connection) {
 	defer cancel()
 
 	// Only deliver to mobile devices
-	if conn.DeviceID == "" || isWebSession(conn.DeviceID) {
+	if !conn.IsMobile {
+		return
+	}
+
+	// Pending message delivery needs the global GormDB. If it is not
+	// initialized yet (e.g. in tests or before DB setup), skip delivery
+	// rather than panicking on a nil *gorm.DB.
+	if db.GormDB == nil {
+		h.logger.Warn("Skipping pending message delivery: GormDB not initialized",
+			zap.String("tenant_id", conn.TenantID.String()),
+			zap.String("device_id", conn.DeviceID))
 		return
 	}
 
@@ -243,8 +253,25 @@ func (h *Hub) deliverPendingMessagesToDevice(conn *Connection) {
 
 	var pendingMessages []models.Message
 	err := db.RunInTenantScope(conn.TenantID, false, func(tx *gorm.DB) error {
-		return tx.Where("status IN ? AND device_id IS NULL", []string{"PENDING", "QUEUED", "WAITING", "PROCESSING"}).
-			Order("created_at ASC").
+		q := tx.Where("status IN ?", []string{"PENDING", "QUEUED", "WAITING", "PROCESSING"})
+
+		// Deliver messages that were dispatched to THIS device while it was
+		// offline (status stuck in WAITING/PROCESSING) as well as unassigned
+		// pending ones. Messages are bound to the device's dispatch channel id,
+		// so match the channel id and the device's own id/hardware id.
+		cond := "device_id IS NULL"
+		args := []interface{}{}
+		if conn.ChannelID != uuid.Nil {
+			cond += " OR device_id = ?"
+			args = append(args, conn.ChannelID)
+		}
+		if _, err := uuid.Parse(conn.DeviceID); err == nil {
+			cond += " OR device_id = ?"
+			args = append(args, conn.DeviceID)
+		}
+		q = q.Where(cond, args...)
+
+		return q.Order("created_at ASC").
 			Limit(50).
 			Find(&pendingMessages).Error
 	})
@@ -452,7 +479,7 @@ func (h *Hub) Broadcast(event Event) {
 }
 
 // ServeWs handles WebSocket requests from clients
-func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request, tenantID string, deviceID string) {
+func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request, tenantID string, channelID uuid.UUID, deviceID string, isMobile bool) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		logger.GetLogger().Error("WebSocket upgrade error", zap.Error(err))
@@ -466,25 +493,17 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request, tenantID string, 
 		return
 	}
 
-	// For now, use deviceID as channelID
-	var channelIDUUID uuid.UUID
-	if deviceID == "" {
-		// If deviceID is missing (e.g., web client), generate a stable-ish UUID or just a random one for the session
-		channelIDUUID = uuid.New()
-	} else {
-		var err error
-		channelIDUUID, err = uuid.Parse(deviceID)
-		if err != nil {
-			logger.GetLogger().Error("Failed to parse channel ID", zap.Error(err))
-			return
-		}
+	// If no channel ID provided (e.g., web client), generate a random one for the session
+	if channelID == uuid.Nil {
+		channelID = uuid.New()
 	}
 
 	client := &Connection{
 		Hub:             hub,
 		TenantID:        tenantIDUUID,
-		ChannelID:       channelIDUUID,
+		ChannelID:       channelID,
 		DeviceID:        deviceID,
+		IsMobile:        isMobile,
 		Conn:            conn,
 		Send:            make(chan []byte, hub.Config.BufferSize),
 		Status:          StatusConnected,
@@ -582,23 +601,8 @@ func (c *Connection) readPump() {
 				zap.String("device_id", c.DeviceID),
 				zap.Any("report", msg))
 
-			// Process status report in background (Requirement 1.1 - Accounting Settlement)
-			if c.Hub.accountingService != nil {
-				if msgIDStr, ok := msg["message_id"].(string); ok {
-					if msgID, err := uuid.Parse(msgIDStr); err == nil {
-						if status, ok := msg["status"].(string); ok {
-							go func() {
-								if err := c.Hub.accountingService.SettleTransaction(context.Background(), msgID, status); err != nil {
-									c.Hub.logger.Error("Failed to settle transaction for status report",
-										zap.String("message_id", msgIDStr),
-										zap.String("status", status),
-										zap.Error(err))
-								}
-							}()
-						}
-					}
-				}
-			}
+			// Persist the message status and settle accounting in the background
+			go c.processStatusReport(msg)
 
 			// Broadcast status update to web clients
 			c.Hub.Broadcast(Event{
@@ -606,6 +610,70 @@ func (c *Connection) readPump() {
 				Type:     "DEVICE_STATUS_REPORT",
 				Payload:  msg,
 			})
+		}
+	}
+}
+
+// processStatusReport persists the status reported by a mobile device to the
+// messages table and settles the corresponding accounting transaction.
+func (c *Connection) processStatusReport(msg map[string]interface{}) {
+	msgIDStr, ok := msg["message_id"].(string)
+	if !ok || msgIDStr == "" {
+		return
+	}
+
+	msgID, err := uuid.Parse(msgIDStr)
+	if err != nil {
+		return
+	}
+
+	status, ok := msg["status"].(string)
+	if !ok || status == "" {
+		return
+	}
+
+	// Only accept terminal statuses reported by the mobile gateway
+	switch status {
+	case string(models.MessageSent), string(models.MessageDelivered), string(models.MessageFailed):
+	default:
+		return
+	}
+
+	now := time.Now()
+	updates := map[string]interface{}{
+		"status":     status,
+		"updated_at": now,
+	}
+	if status == string(models.MessageSent) || status == string(models.MessageDelivered) {
+		updates["sent_at"] = now
+	}
+	if status == string(models.MessageDelivered) {
+		updates["delivered_at"] = now
+	}
+
+	// A delivered message is final and cannot be changed. Any other status may be
+	// updated by a device report, including FAILED -> SENT/DELIVERED so that
+	// messages recovered through the mobile pull flow can be settled.
+	result := db.GormDB.Model(&models.Message{}).
+		Where("id = ? AND tenant_id = ? AND status <> ?",
+			msgID, c.TenantID, string(models.MessageDelivered)).
+		Updates(updates)
+
+	if result.Error != nil {
+		c.Hub.logger.Error("Failed to update message status from STATUS_REPORT",
+			zap.String("message_id", msgIDStr),
+			zap.String("status", status),
+			zap.Error(result.Error))
+		return
+	}
+
+	// Settle the accounting transaction (Requirement 1.1 - Accounting Settlement)
+	if c.Hub.accountingService != nil {
+		if err := c.Hub.accountingService.SettleTransaction(context.Background(), msgID, status); err != nil {
+			c.Hub.logger.Error("Failed to settle transaction for status report",
+				zap.String("message_id", msgIDStr),
+				zap.String("status", status),
+				zap.Error(err))
 		}
 	}
 }
@@ -926,8 +994,8 @@ func (h *Hub) GetMobileConnectionsByTenant(tenantID uuid.UUID) []*Connection {
 	connections := make([]*Connection, 0)
 	for key, conn := range h.connections {
 		if key.TenantID == tenantID && conn.Status == StatusConnected {
-			// Check if this is a mobile device (device_id is not empty and not a web session)
-			if conn.DeviceID != "" && !isWebSession(conn.DeviceID) {
+			// Check if this is a mobile device (established via /ws/pair)
+			if conn.IsMobile {
 				connections = append(connections, conn)
 			}
 		}
@@ -1029,18 +1097,17 @@ func (h *Hub) subscribeToRedis() error {
 			// Channel name format: alhudhud:dispatch:{device_id}
 			var deviceIDStr string
 			fmt.Sscanf(msg.Channel, "alhudhud:dispatch:%s", &deviceIDStr)
-			
-			deviceID, err := uuid.Parse(deviceIDStr)
-			if err != nil {
-				h.logger.Error("Failed to parse device ID from Redis channel", 
+
+			if _, err := uuid.Parse(deviceIDStr); err != nil {
+				h.logger.Error("Failed to parse device ID from Redis channel",
 					zap.String("channel", msg.Channel), zap.Error(err))
 				continue
 			}
 
-			// Forward the payload to ANY connection matching this device_id
+			// Forward the payload to ANY connection matching this device_id or channel_id
 			h.mu.RLock()
 			for key, conn := range h.connections {
-				if conn.DeviceID == deviceID.String() {
+				if conn.DeviceID == deviceIDStr || conn.ChannelID.String() == deviceIDStr {
 					select {
 					case conn.Send <- []byte(msg.Payload):
 						h.logger.Debug("Forwarded Redis dispatch to connection",

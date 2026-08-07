@@ -284,6 +284,33 @@ func (dpm *DevicePoolManager) GetDistributionMetrics(ctx context.Context, device
 	return metrics, nil
 }
 
+// GetTenantMetrics retrieves aggregated distribution metrics for all devices of a
+// tenant within a time range, joined with device names from phone_devices.
+func (dpm *DevicePoolManager) GetTenantMetrics(ctx context.Context, tenantID uuid.UUID, startTime, endTime time.Time) ([]*TenantDeviceMetric, error) {
+	var metrics []*TenantDeviceMetric
+
+	err := dpm.db.WithContext(ctx).Raw(`
+		SELECT
+			dm.device_id AS device_id,
+			COALESCE(pd.device_name, '') AS device_name,
+			COALESCE(SUM(dm.messages_assigned), 0) AS messages_assigned,
+			COALESCE(SUM(dm.messages_sent), 0) AS messages_sent,
+			COALESCE(SUM(dm.messages_sent), 0) AS successful_messages,
+			COALESCE(AVG(dm.average_processing_time_ms), 0)::int AS average_processing_time_ms
+		FROM distribution_metrics dm
+		LEFT JOIN phone_devices pd ON pd.id = dm.device_id
+		WHERE dm.tenant_id = $1 AND dm.period_start >= $2 AND dm.period_end <= $3
+		GROUP BY dm.device_id, pd.device_name
+		ORDER BY pd.device_name
+	`, tenantID, startTime, endTime).Scan(&metrics).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch tenant distribution metrics: %w", err)
+	}
+
+	return metrics, nil
+}
+
 // GetDeviceCount returns the total number of devices for a tenant
 func (dpm *DevicePoolManager) GetDeviceCount(ctx context.Context, tenantID uuid.UUID) (int64, error) {
 	var count int64

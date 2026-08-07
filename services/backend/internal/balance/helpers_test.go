@@ -14,7 +14,7 @@ import (
 
 func setupTestDB(t *testing.T) *pgxpool.Pool {
 	// Use environment variable or default to local test database
-	connString := "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable"
+	connString := "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable"
 	
 	ctx := context.Background()
 	pool, err := pgxpool.New(ctx, connString)
@@ -33,22 +33,34 @@ func setupTestDB(t *testing.T) *pgxpool.Pool {
 
 func createTestTenant(t *testing.T, pool *pgxpool.Pool, initialBalance decimal.Decimal) uuid.UUID {
 	ctx := context.Background()
-	
-	query := `
-		INSERT INTO tenants (id, name, email, balance, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, 'ACTIVE', NOW(), NOW())
-		RETURNING id
-	`
-	
+
+	userID := uuid.New()
+	_, err := pool.Exec(ctx, `
+		INSERT INTO users (id, email, password_hash, user_type, is_active, is_verified, created_at, updated_at)
+		VALUES ($1, $2, 'x', 'ADMIN', true, true, NOW(), NOW())
+	`, userID, fmt.Sprintf("user-%s@test.local", userID.String()))
+	require.NoError(t, err)
+
 	tenantID := uuid.New()
 	var returnedID uuid.UUID
-	err := pool.QueryRow(ctx, query,
+	err = pool.QueryRow(ctx, `
+		INSERT INTO tenants (id, user_id, business_name, contact_name, email, company_serial,
+			api_key_accounting, api_key_phone, api_key_web, balance, status, is_active, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'ACTIVE', true, NOW(), NOW())
+		RETURNING id
+	`,
 		tenantID,
+		userID,
 		fmt.Sprintf("Test Tenant %d", time.Now().UnixNano()),
-		fmt.Sprintf("test%d@example.com", time.Now().UnixNano()),
+		"Test Contact",
+		fmt.Sprintf("baltest-%d@example.com", time.Now().UnixNano()),
+		"COMPANY-"+tenantID.String(),
+		"acc-"+tenantID.String(),
+		"phone-"+tenantID.String(),
+		"web-"+tenantID.String(),
 		initialBalance,
 	).Scan(&returnedID)
-	
+
 	require.NoError(t, err)
 	return returnedID
 }

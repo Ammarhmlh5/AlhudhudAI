@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -19,6 +19,15 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("Failed to connect to test database: %v", err)
 	}
+
+	// :memory: sqlite is per-connection; pin the pool to a single connection
+	// so tables created by AutoMigrate are visible to later queries.
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatalf("Failed to get sql.DB: %v", err)
+	}
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
 
 	// Auto-migrate the schema
 	err = db.AutoMigrate(&CrossTenantAccessLog{})

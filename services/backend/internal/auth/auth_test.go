@@ -191,8 +191,8 @@ func TestTokenExpiry(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, claims)
 
-	// Verify expiry is set to approximately 1 hour from now
-	expectedExpiry := time.Now().Add(time.Hour)
+	// Verify expiry is set to the configured access-token lifetime
+	expectedExpiry := time.Now().Add(jwt.AccessTokenExpiry)
 	actualExpiry := claims.ExpiresAt.Time
 	assert.WithinDuration(t, expectedExpiry, actualExpiry, time.Minute)
 }

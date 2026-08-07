@@ -16,7 +16,7 @@ import (
 func createDLQReprocessTestDB(t *testing.T) *database.DB {
 	t.Helper()
 	ctx := context.Background()
-	connStr := "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable"
+	connStr := "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable"
 	pool, err := pgxpool.New(ctx, connStr)
 	require.NoError(t, err)
 	return database.NewFromPool(pool)
@@ -38,7 +38,7 @@ func TestDeadLetterQueue_ReprocessMessage(t *testing.T) {
 	dlq := NewDeadLetterQueue(db, logger)
 
 	// Create test tenant and message
-	tenantID := uuid.New()
+	tenantID := createWorkerTestTenant(t, db)
 	messageID := uuid.New()
 
 	// Insert test message
@@ -103,7 +103,7 @@ func TestDeadLetterQueue_ReprocessAllMessages(t *testing.T) {
 	dlq := NewDeadLetterQueue(db, logger)
 
 	// Create test tenant
-	tenantID := uuid.New()
+	tenantID := createWorkerTestTenant(t, db)
 
 	// Insert test messages
 	messageID1 := uuid.New()
@@ -172,8 +172,8 @@ func TestDeadLetterQueue_ReprocessTenantIsolation(t *testing.T) {
 	dlq := NewDeadLetterQueue(db, logger)
 
 	// Create two test tenants
-	tenant1ID := uuid.New()
-	tenant2ID := uuid.New()
+	tenant1ID := createWorkerTestTenant(t, db)
+	tenant2ID := createWorkerTestTenant(t, db)
 
 	// Insert test messages for both tenants
 	message1ID := uuid.New()
@@ -265,7 +265,7 @@ func TestDeadLetterQueue_ReprocessNonExistent(t *testing.T) {
 	dlq := NewDeadLetterQueue(db, logger)
 
 	// Try to reprocess non-existent message
-	tenantID := uuid.New()
+	tenantID := createWorkerTestTenant(t, db)
 	err := dlq.ReprocessMessage(ctx, tenantID, 99999)
 	assert.Error(t, err)
 }

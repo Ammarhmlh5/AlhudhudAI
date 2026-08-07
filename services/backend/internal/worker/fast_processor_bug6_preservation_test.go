@@ -1,4 +1,4 @@
-package worker
+﻿package worker
 
 import (
 	"context"
@@ -40,6 +40,23 @@ func setupBug6TestDB(t *testing.T) *pgxpool.Pool {
 	return db.PgxPool
 }
 
+func insertBug6Tenant(t *testing.T, pool *pgxpool.Pool, ctx context.Context, tenantID uuid.UUID) {
+	t.Helper()
+	userID := uuid.New()
+	_, err := pool.Exec(ctx, `
+		INSERT INTO users (id, email, password_hash, user_type, is_active, is_verified, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`, userID, "bug6-"+userID.String()+"@test.com", "hash", "ADMIN", true, true, time.Now(), time.Now())
+	require.NoError(t, err, "Setup: Should be able to create user")
+
+	_, err = pool.Exec(ctx, `
+		INSERT INTO tenants (id, user_id, business_name, contact_name, email, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (id) DO NOTHING
+	`, tenantID, userID, "Test Business", "Test Contact", "test@example.com", time.Now())
+	require.NoError(t, err, "Setup: Should be able to create tenant")
+}
+
 // TestBug6_Preservation_TransactionCommitAtomic verifies that successful
 // transaction commits persist all changes atomically
 // **Validates: Requirement 3.14**
@@ -58,11 +75,18 @@ func TestBug6_Preservation_TransactionCommitAtomic(t *testing.T) {
 		messageCount := rapid.IntRange(1, 5).Draw(t, "messageCount")
 
 		// Create tenant first to satisfy foreign key constraint
+		userID := uuid.New()
 		_, err := pool.Exec(ctx, `
+			INSERT INTO users (id, email, password_hash, user_type, is_active, is_verified, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		`, userID, "bug6-"+userID.String()+"@test.com", "hash", "ADMIN", true, true, time.Now(), time.Now())
+		require.NoError(t, err, "Setup: Should be able to create user")
+
+		_, err = pool.Exec(ctx, `
 			INSERT INTO tenants (id, user_id, business_name, contact_name, email, created_at)
-			VALUES ($1, $2, $3, $4)
+			VALUES ($1, $2, $3, $4, $5, $6)
 			ON CONFLICT (id) DO NOTHING
-		`, tenantID, uuid.New(), "Test Business", "Test Contact", "test@example.com", time.Now())
+		`, tenantID, userID, "Test Business", "Test Contact", "test@example.com", time.Now())
 		require.NoError(t, err, "Setup: Should be able to create tenant")
 
 		// Begin transaction
@@ -114,6 +138,7 @@ func TestBug6_Preservation_TransactionCommitAtomic(t *testing.T) {
 			_, _ = pool.Exec(ctx, `DELETE FROM messages WHERE id = $1`, messageID)
 		}
 		_, _ = pool.Exec(ctx, `DELETE FROM tenants WHERE id = $1`, tenantID)
+		_, _ = pool.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID)
 	})
 }
 
@@ -134,11 +159,18 @@ func TestBug6_Preservation_MultipleOperationsAtomic(t *testing.T) {
 		messageID := uuid.New()
 
 		// Create tenant first to satisfy foreign key constraint
+		userID := uuid.New()
 		_, err := pool.Exec(ctx, `
+			INSERT INTO users (id, email, password_hash, user_type, is_active, is_verified, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		`, userID, "bug6-"+userID.String()+"@test.com", "hash", "ADMIN", true, true, time.Now(), time.Now())
+		require.NoError(t, err, "Setup: Should be able to create user")
+
+		_, err = pool.Exec(ctx, `
 			INSERT INTO tenants (id, user_id, business_name, contact_name, email, created_at)
-			VALUES ($1, $2, $3, $4)
+			VALUES ($1, $2, $3, $4, $5, $6)
 			ON CONFLICT (id) DO NOTHING
-		`, tenantID, uuid.New(), "Test Business", "Test Contact", "test@example.com", time.Now())
+		`, tenantID, userID, "Test Business", "Test Contact", "test@example.com", time.Now())
 		require.NoError(t, err, "Setup: Should be able to create tenant")
 
 		// Begin transaction
@@ -183,6 +215,7 @@ func TestBug6_Preservation_MultipleOperationsAtomic(t *testing.T) {
 		// Cleanup
 		_, _ = pool.Exec(ctx, `DELETE FROM messages WHERE id = $1`, messageID)
 		_, _ = pool.Exec(ctx, `DELETE FROM tenants WHERE id = $1`, tenantID)
+		_, _ = pool.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID)
 	})
 }
 
@@ -203,11 +236,18 @@ func TestBug6_Preservation_BatchUpdateAtomic(t *testing.T) {
 		batchSize := rapid.IntRange(2, 10).Draw(t, "batchSize")
 
 		// Create tenant first to satisfy foreign key constraint
+		userID := uuid.New()
 		_, err := pool.Exec(ctx, `
+			INSERT INTO users (id, email, password_hash, user_type, is_active, is_verified, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		`, userID, "bug6-"+userID.String()+"@test.com", "hash", "ADMIN", true, true, time.Now(), time.Now())
+		require.NoError(t, err, "Setup: Should be able to create user")
+
+		_, err = pool.Exec(ctx, `
 			INSERT INTO tenants (id, user_id, business_name, contact_name, email, created_at)
-			VALUES ($1, $2, $3, $4)
+			VALUES ($1, $2, $3, $4, $5, $6)
 			ON CONFLICT (id) DO NOTHING
-		`, tenantID, uuid.New(), "Test Business", "Test Contact", "test@example.com", time.Now())
+		`, tenantID, userID, "Test Business", "Test Contact", "test@example.com", time.Now())
 		require.NoError(t, err, "Setup: Should be able to create tenant")
 
 		// Create test messages outside transaction
@@ -267,6 +307,7 @@ func TestBug6_Preservation_BatchUpdateAtomic(t *testing.T) {
 			_, _ = pool.Exec(ctx, `DELETE FROM messages WHERE id = $1`, messageID)
 		}
 		_, _ = pool.Exec(ctx, `DELETE FROM tenants WHERE id = $1`, tenantID)
+		_, _ = pool.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID)
 	})
 }
 
@@ -280,12 +321,7 @@ func TestBug6_Preservation_Simple_TransactionCommit(t *testing.T) {
 	messageID := uuid.New()
 
 	// Create tenant first to satisfy foreign key constraint
-	_, err := pool.Exec(ctx, `
-		INSERT INTO tenants (id, user_id, business_name, contact_name, email, created_at)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (id) DO NOTHING
-	`, tenantID, uuid.New(), "Test Business", "Test Contact", "test@example.com", time.Now())
-	require.NoError(t, err, "Setup: Should be able to create tenant")
+	insertBug6Tenant(t, pool, ctx, tenantID)
 
 	// Begin transaction
 	tx, err := pool.Begin(ctx)
@@ -325,7 +361,7 @@ func TestBug6_Preservation_Simple_TransactionCommit(t *testing.T) {
 	_, _ = pool.Exec(ctx, `DELETE FROM messages WHERE id = $1`, messageID)
 	_, _ = pool.Exec(ctx, `DELETE FROM tenants WHERE id = $1`, tenantID)
 
-	t.Logf("✅ Successful transaction commit persists data atomically")
+	t.Logf("âœ… Successful transaction commit persists data atomically")
 }
 
 // Simple unit test: Multiple operations commit atomically
@@ -338,12 +374,7 @@ func TestBug6_Preservation_Simple_MultipleOperations(t *testing.T) {
 	messageID := uuid.New()
 
 	// Create tenant first to satisfy foreign key constraint
-	_, err := pool.Exec(ctx, `
-		INSERT INTO tenants (id, user_id, business_name, contact_name, email, created_at)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (id) DO NOTHING
-	`, tenantID, uuid.New(), "Test Business", "Test Contact", "test@example.com", time.Now())
-	require.NoError(t, err, "Setup: Should be able to create tenant")
+	insertBug6Tenant(t, pool, ctx, tenantID)
 
 	// Begin transaction
 	tx, err := pool.Begin(ctx)
@@ -393,7 +424,7 @@ func TestBug6_Preservation_Simple_MultipleOperations(t *testing.T) {
 	_, _ = pool.Exec(ctx, `DELETE FROM messages WHERE id = $1`, messageID)
 	_, _ = pool.Exec(ctx, `DELETE FROM tenants WHERE id = $1`, tenantID)
 
-	t.Logf("✅ Multiple operations commit atomically: INSERT → UPDATE → UPDATE → COMMIT")
+	t.Logf("âœ… Multiple operations commit atomically: INSERT â†’ UPDATE â†’ UPDATE â†’ COMMIT")
 }
 
 // Simple unit test: Batch operations commit atomically
@@ -406,12 +437,7 @@ func TestBug6_Preservation_Simple_BatchOperations(t *testing.T) {
 	batchSize := 5
 
 	// Create tenant first to satisfy foreign key constraint
-	_, err := pool.Exec(ctx, `
-		INSERT INTO tenants (id, user_id, business_name, contact_name, email, created_at)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (id) DO NOTHING
-	`, tenantID, uuid.New(), "Test Business", "Test Contact", "test@example.com", time.Now())
-	require.NoError(t, err, "Setup: Should be able to create tenant")
+	insertBug6Tenant(t, pool, ctx, tenantID)
 
 	// Create test messages
 	messageIDs := make([]uuid.UUID, batchSize)
@@ -474,7 +500,7 @@ func TestBug6_Preservation_Simple_BatchOperations(t *testing.T) {
 	}
 	_, _ = pool.Exec(ctx, `DELETE FROM tenants WHERE id = $1`, tenantID)
 
-	t.Logf("✅ Batch operations commit atomically: %d messages updated", batchSize)
+	t.Logf("âœ… Batch operations commit atomically: %d messages updated", batchSize)
 }
 
 // Simple unit test: Transaction rollback on error (verify rollback works)
@@ -487,12 +513,7 @@ func TestBug6_Preservation_Simple_RollbackOnError(t *testing.T) {
 	messageID := uuid.New()
 
 	// Create tenant first to satisfy foreign key constraint
-	_, err := pool.Exec(ctx, `
-		INSERT INTO tenants (id, user_id, business_name, contact_name, email, created_at)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (id) DO NOTHING
-	`, tenantID, uuid.New(), "Test Business", "Test Contact", "test@example.com", time.Now())
-	require.NoError(t, err, "Setup: Should be able to create tenant")
+	insertBug6Tenant(t, pool, ctx, tenantID)
 
 	// Begin transaction
 	tx, err := pool.Begin(ctx)
@@ -527,10 +548,14 @@ func TestBug6_Preservation_Simple_RollbackOnError(t *testing.T) {
 	assert.False(t, exists,
 		"Preservation: Message should NOT exist after rollback (transaction not committed)")
 
+	// Roll back the transaction explicitly before cleanup so the
+	// foreign-key lock it holds on the tenant row is released.
+	require.NoError(t, tx.Rollback(ctx), "Preservation: Explicit rollback should succeed")
+
 	// Cleanup tenant
 	_, _ = pool.Exec(ctx, `DELETE FROM tenants WHERE id = $1`, tenantID)
 
-	t.Logf("✅ Transaction rollback works correctly when commit is not called")
+	t.Logf("âœ… Transaction rollback works correctly when commit is not called")
 }
 
 // Simple unit test: Nested transaction operations
@@ -544,12 +569,7 @@ func TestBug6_Preservation_Simple_NestedOperations(t *testing.T) {
 	messageID2 := uuid.New()
 
 	// Create tenant first to satisfy foreign key constraint
-	_, err := pool.Exec(ctx, `
-		INSERT INTO tenants (id, user_id, business_name, contact_name, email, created_at)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (id) DO NOTHING
-	`, tenantID, uuid.New(), "Test Business", "Test Contact", "test@example.com", time.Now())
-	require.NoError(t, err, "Setup: Should be able to create tenant")
+	insertBug6Tenant(t, pool, ctx, tenantID)
 
 	// Begin transaction
 	tx, err := pool.Begin(ctx)
@@ -607,5 +627,5 @@ func TestBug6_Preservation_Simple_NestedOperations(t *testing.T) {
 	_, _ = pool.Exec(ctx, `DELETE FROM messages WHERE id = ANY($1)`, []uuid.UUID{messageID1, messageID2})
 	_, _ = pool.Exec(ctx, `DELETE FROM tenants WHERE id = $1`, tenantID)
 
-	t.Logf("✅ Nested operations commit atomically: 2 inserts + 1 batch update")
+	t.Logf("âœ… Nested operations commit atomically: 2 inserts + 1 batch update")
 }

@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net"
+	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/al-hudhud/backend/internal/audit"
@@ -39,6 +42,12 @@ type Manager interface {
 
 	// CheckSufficient checks if balance is sufficient for the amount
 	CheckSufficient(ctx context.Context, tenantID uuid.UUID, amount decimal.Decimal) (bool, error)
+
+	// CreditBalance credits balance to a tenant atomically (e.g. admin funding a wallet)
+	CreditBalance(ctx context.Context, op BalanceOperation) (*BalanceResult, error)
+
+	// TransferBalance moves funds from one tenant wallet to another atomically
+	TransferBalance(ctx context.Context, from, to uuid.UUID, amount decimal.Decimal, reason, createdBy, ipAddress string) (*TransferResult, error)
 }
 
 // manager implements the Manager interface
@@ -54,13 +63,24 @@ type manager struct {
 func NewManager(pool *pgxpool.Pool, logger *zap.Logger) Manager {
 	// Get standard database connection for audit logger
 	db := pool.Config().ConnConfig.Database
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		pool.Config().ConnConfig.User,
-		pool.Config().ConnConfig.Password,
-		pool.Config().ConnConfig.Host,
-		pool.Config().ConnConfig.Port,
-		db,
-	)
+	// Build the URL via net/url so the password (which may contain reserved
+	// characters like # or @) is properly percent-encoded.
+	dsnURL := &url.URL{
+		Scheme: "postgres",
+		User: url.UserPassword(
+			pool.Config().ConnConfig.User,
+			pool.Config().ConnConfig.Password,
+		),
+		Host: net.JoinHostPort(
+			pool.Config().ConnConfig.Host,
+			strconv.Itoa(int(pool.Config().ConnConfig.Port)),
+		),
+		Path: db,
+	}
+	q := dsnURL.Query()
+	q.Set("sslmode", "disable")
+	dsnURL.RawQuery = q.Encode()
+	connStr := dsnURL.String()
 	
 	sqlDB, err := sql.Open("postgres", connStr)
 	if err != nil {
@@ -496,6 +516,7 @@ func (m *manager) RefundBalance(ctx context.Context, op BalanceOperation) (*Bala
 		SELECT status, amount 
 		FROM accounting_transactions 
 		WHERE tenant_id = $1 AND message_id = $2
+		  AND type IN ('DEDUCT', 'DEDUCTION')
 	`
 	
 	var currentStatus string
@@ -546,6 +567,67 @@ func (m *manager) RefundBalance(ctx context.Context, op BalanceOperation) (*Bala
 		return nil, NewDatabaseError(fmt.Errorf("refund amount mismatch: expected %v, got %s", originalAmount, op.Amount.String()))
 	}
 
+	// Claim the refund atomically FIRST: mark the original DEDUCT/DEDUCTION
+	// transaction as REFUNDED. The row lock serializes concurrent refunds for
+	// the same message, so exactly one caller matches the guard and proceeds
+	// to increment the balance. The REFUND entry written by LogRefund (and any
+	// non-deduction type) is excluded so it can never be claimed.
+	updateTxQuery := `
+		UPDATE accounting_transactions
+		SET 
+			status = 'REFUNDED',
+			updated_at = NOW(),
+			settled_at = NOW()
+		WHERE 
+			tenant_id = $1 
+			AND message_id = $2
+			AND status != 'REFUNDED'
+			AND type IN ('DEDUCT', 'DEDUCTION')
+		RETURNING id
+	`
+
+	var txID uuid.UUID
+	err = tx.QueryRow(ctx, updateTxQuery,
+		op.TenantID,
+		op.MessageID,
+	).Scan(&txID)
+
+	if err == pgx.ErrNoRows {
+		// A concurrent refund already claimed this transaction (or it was
+		// marked REFUNDED between the status check and this update). Nothing
+		// has been written in this transaction yet, so return idempotent
+		// success with the committed balance.
+		var currentBalance decimal.Decimal
+		balanceQuery := `SELECT balance FROM tenants WHERE id = $1 AND deleted_at IS NULL`
+		err = tx.QueryRow(ctx, balanceQuery, op.TenantID).Scan(&currentBalance)
+		if err != nil {
+			metrics.RecordBalanceOperation(tenantIDStr, "REFUND", "failure")
+			return nil, NewDatabaseError(fmt.Errorf("failed to get current balance: %w", err))
+		}
+		m.logger.Info("Refund already processed by concurrent request (idempotent)",
+			zap.String("tenant_id", op.TenantID.String()),
+			zap.Any("message_id", op.MessageID),
+		)
+		metrics.RecordBalanceOperation(tenantIDStr, "REFUND", "success")
+		return &BalanceResult{
+			Success:    true,
+			OldBalance: currentBalance,
+			NewBalance: currentBalance,
+		}, nil
+	}
+
+	if err != nil {
+		metrics.RecordBalanceOperation(tenantIDStr, "REFUND", "failure")
+		return nil, NewDatabaseError(fmt.Errorf("failed to update transaction status: %w", err))
+	}
+
+	// Log transaction state update (Requirement 16.8)
+	m.logger.Info("Transaction state updated to REFUNDED",
+		zap.String("tenant_id", op.TenantID.String()),
+		zap.Any("message_id", op.MessageID),
+		zap.String("transaction_id", txID.String()),
+	)
+
 	// Atomic balance refund using INCREMENT (Requirement 2.5)
 	query := `
 		UPDATE tenants 
@@ -571,40 +653,6 @@ func (m *manager) RefundBalance(ctx context.Context, op BalanceOperation) (*Bala
 			return nil, NewTenantNotFoundError(op.TenantID)
 		}
 		return nil, NewDatabaseError(fmt.Errorf("failed to refund balance: %w", err))
-	}
-
-	// Atomic update to change transaction state to REFUNDED (Requirement 16.9)
-	updateTxQuery := `
-		UPDATE accounting_transactions
-		SET 
-			status = 'REFUNDED',
-			updated_at = NOW(),
-			settled_at = NOW()
-		WHERE 
-			tenant_id = $1 
-			AND message_id = $2
-			AND status != 'REFUNDED'
-		RETURNING id
-	`
-	
-	var txID uuid.UUID
-	err = tx.QueryRow(ctx, updateTxQuery,
-		op.TenantID,
-		op.MessageID,
-	).Scan(&txID)
-	
-	if err != nil && err != pgx.ErrNoRows {
-		metrics.RecordBalanceOperation(tenantIDStr, "REFUND", "failure")
-		return nil, NewDatabaseError(fmt.Errorf("failed to update transaction status: %w", err))
-	}
-	
-	// Log transaction state update (Requirement 16.8)
-	if err == nil {
-		m.logger.Info("Transaction state updated to REFUNDED",
-			zap.String("tenant_id", op.TenantID.String()),
-			zap.Any("message_id", op.MessageID),
-			zap.String("transaction_id", txID.String()),
-		)
 	}
 
 	// Log balance history using HistoryLogger (Requirements 10.3, 20.2, 16.8)
@@ -738,6 +786,7 @@ func (m *manager) RefundBalanceTx(ctx context.Context, tx pgx.Tx, op BalanceOper
 		SELECT status, amount 
 		FROM accounting_transactions 
 		WHERE tenant_id = $1 AND message_id = $2
+		  AND type IN ('DEDUCT', 'DEDUCTION')
 	`
 	var currentStatus string
 	var originalAmount float64
@@ -779,6 +828,7 @@ func (m *manager) RefundBalanceTx(ctx context.Context, tx pgx.Tx, op BalanceOper
 		UPDATE accounting_transactions 
 		SET status = 'REFUNDED', updated_at = NOW(), settled_at = NOW()
 		WHERE tenant_id = $1 AND message_id = $2
+		  AND type IN ('DEDUCT', 'DEDUCTION')
 	`, op.TenantID, op.MessageID)
 	if err != nil {
 		return nil, NewDatabaseError(fmt.Errorf("failed to update tx status in tx: %w", err))

@@ -17,7 +17,7 @@ import (
 func createTestDB(t *testing.T) *database.DB {
 	t.Helper()
 	ctx := context.Background()
-	connStr := "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable"
+	connStr := "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable"
 	pool, err := pgxpool.New(ctx, connStr)
 	require.NoError(t, err, "Failed to connect to test database")
 
@@ -27,6 +27,19 @@ func createTestDB(t *testing.T) *database.DB {
 	require.NoError(t, pool.Ping(ctx2), "Failed to ping test database")
 
 	return database.NewFromPool(pool)
+}
+
+// createWorkerTestTenant inserts a tenant row so the messages/dead_letter_queue
+// foreign key constraints are satisfied, and returns its ID.
+func createWorkerTestTenant(t *testing.T, db *database.DB) uuid.UUID {
+	t.Helper()
+	tenantID := uuid.New()
+	_, err := db.Pool.Exec(context.Background(), `
+		INSERT INTO tenants (id, business_name, contact_name, email, status)
+		VALUES ($1, 'Worker Test Tenant', 'Test Contact', 'worker@example.com', 'ACTIVE')
+	`, tenantID)
+	require.NoError(t, err)
+	return tenantID
 }
 
 // TestDLQ_FullWorkflow tests the complete DLQ workflow
@@ -50,7 +63,7 @@ func TestDLQ_FullWorkflow(t *testing.T) {
 	dlq := NewDeadLetterQueue(db, logger)
 
 	// Create test tenant
-	tenantID := uuid.New()
+	tenantID := createWorkerTestTenant(t, db)
 
 	// Step 1: Create a failed message
 	messageID := uuid.New()
@@ -162,8 +175,8 @@ func TestDLQ_MultiTenantIsolation(t *testing.T) {
 	dlq := NewDeadLetterQueue(db, logger)
 
 	// Create two tenants
-	tenant1ID := uuid.New()
-	tenant2ID := uuid.New()
+	tenant1ID := createWorkerTestTenant(t, db)
+	tenant2ID := createWorkerTestTenant(t, db)
 
 	// Create messages for both tenants
 	message1ID := uuid.New()
@@ -236,7 +249,7 @@ func TestDLQ_ConcurrentOperations(t *testing.T) {
 	dlq := NewDeadLetterQueue(db, logger)
 
 	// Create test tenant
-	tenantID := uuid.New()
+	tenantID := createWorkerTestTenant(t, db)
 
 	// Create multiple messages
 	messageCount := 10
@@ -294,7 +307,7 @@ func TestDLQ_RetryCountTracking(t *testing.T) {
 	dlq := NewDeadLetterQueue(db, logger)
 
 	// Create test tenant
-	tenantID := uuid.New()
+	tenantID := createWorkerTestTenant(t, db)
 
 	// Test different retry counts
 	testCases := []struct {

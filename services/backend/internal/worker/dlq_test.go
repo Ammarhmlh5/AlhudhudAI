@@ -2,7 +2,9 @@ package worker
 
 import (
 	"context"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/al-hudhud/backend/internal/config"
 	"github.com/al-hudhud/backend/internal/database"
@@ -12,6 +14,31 @@ import (
 	"go.uber.org/zap"
 )
 
+// newTestDatabase opens a connection to the sms_gateway_test database using the
+// configured pool limits and the PGPASSWORD env var (falling back to "postgres").
+func newTestDatabase(t *testing.T) *database.DB {
+	t.Helper()
+	password := os.Getenv("PGPASSWORD")
+	if password == "" {
+		password = "postgres"
+	}
+	db, err := database.NewDatabase(&config.Config{
+		Database: config.DatabaseConfig{
+			Host:            "localhost",
+			Port:            "5432",
+			User:            "postgres",
+			Password:        password,
+			Name:            "sms_gateway_test",
+			SSLMode:         "disable",
+			MaxOpenConns:    10,
+			MaxIdleConns:    5,
+			ConnMaxLifetime: 5 * time.Minute,
+		},
+	}, zap.NewNop())
+	require.NoError(t, err)
+	return db
+}
+
 // TestDeadLetterQueue_MoveToDeadLetter tests moving a message to DLQ
 func TestDeadLetterQueue_MoveToDeadLetter(t *testing.T) {
 	// Skip if no database connection
@@ -20,24 +47,15 @@ func TestDeadLetterQueue_MoveToDeadLetter(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, err := database.NewDatabase(&config.Config{
-		Database: config.DatabaseConfig{
-			Host:     "localhost",
-			Port:     "5432",
-			User:     "postgres",
-			Password: "postgres",
-			Name:     "sms_gateway_test",
-			SSLMode:  "disable",
-		},
-	}, zap.NewNop())
-	require.NoError(t, err)
+	db := newTestDatabase(t)
+	var err error
 	defer db.Close()
 
 	logger := zap.NewNop()
 	dlq := NewDeadLetterQueue(db, logger)
 
 	// Create test tenant and message
-	tenantID := uuid.New()
+	tenantID := createWorkerTestTenant(t, db)
 	messageID := uuid.New()
 
 	// Insert test message
@@ -91,24 +109,15 @@ func TestDeadLetterQueue_GetDeadLetterMessages(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, err := database.NewDatabase(&config.Config{
-		Database: config.DatabaseConfig{
-			Host:     "localhost",
-			Port:     "5432",
-			User:     "postgres",
-			Password: "postgres",
-			Name:     "sms_gateway_test",
-			SSLMode:  "disable",
-		},
-	}, zap.NewNop())
-	require.NoError(t, err)
+	db := newTestDatabase(t)
+	var err error
 	defer db.Close()
 
 	logger := zap.NewNop()
 	dlq := NewDeadLetterQueue(db, logger)
 
 	// Create test tenant
-	tenantID := uuid.New()
+	tenantID := createWorkerTestTenant(t, db)
 
 	// Insert test DLQ messages
 	messageID1 := uuid.New()
@@ -146,24 +155,15 @@ func TestDeadLetterQueue_CleanupOldMessages(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, err := database.NewDatabase(&config.Config{
-		Database: config.DatabaseConfig{
-			Host:     "localhost",
-			Port:     "5432",
-			User:     "postgres",
-			Password: "postgres",
-			Name:     "sms_gateway_test",
-			SSLMode:  "disable",
-		},
-	}, zap.NewNop())
-	require.NoError(t, err)
+	db := newTestDatabase(t)
+	var err error
 	defer db.Close()
 
 	logger := zap.NewNop()
 	dlq := NewDeadLetterQueue(db, logger)
 
 	// Create test tenant
-	tenantID := uuid.New()
+	tenantID := createWorkerTestTenant(t, db)
 
 	// Insert old message (8 days ago)
 	oldMessageID := uuid.New()
@@ -217,25 +217,16 @@ func TestDeadLetterQueue_TenantIsolation(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, err := database.NewDatabase(&config.Config{
-		Database: config.DatabaseConfig{
-			Host:     "localhost",
-			Port:     "5432",
-			User:     "postgres",
-			Password: "postgres",
-			Name:     "sms_gateway_test",
-			SSLMode:  "disable",
-		},
-	}, zap.NewNop())
-	require.NoError(t, err)
+	db := newTestDatabase(t)
+	var err error
 	defer db.Close()
 
 	logger := zap.NewNop()
 	dlq := NewDeadLetterQueue(db, logger)
 
 	// Create two test tenants
-	tenant1ID := uuid.New()
-	tenant2ID := uuid.New()
+	tenant1ID := createWorkerTestTenant(t, db)
+	tenant2ID := createWorkerTestTenant(t, db)
 
 	// Insert DLQ messages for both tenants
 	message1ID := uuid.New()
@@ -280,24 +271,15 @@ func TestDeadLetterQueue_RetryCountTracking(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	db, err := database.NewDatabase(&config.Config{
-		Database: config.DatabaseConfig{
-			Host:     "localhost",
-			Port:     "5432",
-			User:     "postgres",
-			Password: "postgres",
-			Name:     "sms_gateway_test",
-			SSLMode:  "disable",
-		},
-	}, zap.NewNop())
-	require.NoError(t, err)
+	db := newTestDatabase(t)
+	var err error
 	defer db.Close()
 
 	logger := zap.NewNop()
 	dlq := NewDeadLetterQueue(db, logger)
 
 	// Create test tenant and message
-	tenantID := uuid.New()
+	tenantID := createWorkerTestTenant(t, db)
 	messageID := uuid.New()
 
 	// Insert test message

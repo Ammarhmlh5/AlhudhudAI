@@ -197,7 +197,10 @@ func TestBug2_DirectPgxPoolAccess(t *testing.T) {
 		// Attempt to access db.PgxPool
 		if db.PgxPool != nil {
 			// Try to begin a transaction
-			_, _ = db.PgxPool.Begin(ctx)
+			tx, txErr := db.PgxPool.Begin(ctx)
+			if txErr == nil {
+				_ = tx.Rollback(ctx)
+			}
 		}
 	}()
 
@@ -279,4 +282,12 @@ func (m *mockBalanceManager) GetBalance(ctx context.Context, tenantID uuid.UUID)
 
 func (m *mockBalanceManager) CheckSufficient(ctx context.Context, tenantID uuid.UUID, amount decimal.Decimal) (bool, error) {
 	return true, nil
+}
+
+func (m *mockBalanceManager) CreditBalance(ctx context.Context, op balance.BalanceOperation) (*balance.BalanceResult, error) {
+	return &balance.BalanceResult{Success: true}, nil
+}
+
+func (m *mockBalanceManager) TransferBalance(ctx context.Context, from, to uuid.UUID, amount decimal.Decimal, reason, createdBy, ipAddress string) (*balance.TransferResult, error) {
+	return &balance.TransferResult{Success: true}, nil
 }

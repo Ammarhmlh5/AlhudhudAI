@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../../api/axios';
 import RoutingConfig from '../../components/Companies/RoutingConfig';
+import { usePackages } from '../../hooks/usePackages';
 
 export default function CompanyDetails() {
   const { t } = useTranslation();
@@ -418,40 +419,216 @@ function HistoryTab({ history }) {
 }
 
 function SubscriptionTab({ tenantId }) {
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [actionError, setActionError] = useState(null);
+    const [busy, setBusy] = useState(false);
+    const [selectedPackageId, setSelectedPackageId] = useState('');
+    const { packages, loading: packagesLoading } = usePackages({ is_active: true });
+
+    const fetchSubscription = useCallback(async () => {
+        try {
+            setLoading(true);
+            const res = await apiClient.get(`/api/v1/admin/tenants/${tenantId}/subscription`);
+            setData(res.data);
+            setError(null);
+        } catch (err) {
+            setData(null);
+            setError(err.response?.data?.error || 'Failed to load subscription');
+        } finally {
+            setLoading(false);
+        }
+    }, [tenantId]);
+
+    useEffect(() => {
+        fetchSubscription();
+    }, [fetchSubscription]);
+
+    const handleChangePackage = async (e) => {
+        e.preventDefault();
+        if (!selectedPackageId) return;
+        setBusy(true);
+        setActionError(null);
+        try {
+            await apiClient.post(`/api/v1/admin/tenants/${tenantId}/subscribe`, {
+                package_id: Number(selectedPackageId),
+                auto_renew: data?.subscription?.auto_renew ?? true,
+            });
+            setSelectedPackageId('');
+            await fetchSubscription();
+            alert('Package updated successfully');
+        } catch (err) {
+            setActionError(err.response?.data?.message || err.response?.data?.error || 'Failed to update package');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const handleToggleAutoRenew = async () => {
+        if (!data?.subscription) return;
+        setBusy(true);
+        setActionError(null);
+        try {
+            await apiClient.put(`/api/v1/admin/tenants/${tenantId}/subscription/auto-renew`, {
+                enabled: !data.subscription.auto_renew,
+            });
+            await fetchSubscription();
+        } catch (err) {
+            setActionError(err.response?.data?.error || 'Failed to update auto-renewal');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const sub = data?.subscription;
+    const pkg = data?.package;
+    const statusLabel = ({
+        active: 'Active',
+        grace_period: 'Grace Period',
+        suspended: 'Suspended',
+        expired: 'Expired',
+        cancelled: 'Cancelled'
+    })[sub?.status] || sub?.status || 'No subscription';
+
+    const statusStyle = sub?.status === 'active'
+        ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+        : sub?.status === 'grace_period'
+            ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+            : 'text-rose-400 bg-rose-500/10 border-rose-500/20';
+
+    const formatNumber = (value) => {
+        const num = Number(value);
+        return Number.isFinite(num) ? num.toLocaleString('en-US') : '—';
+    };
+
     return (
         <div className="space-y-8 animate-in slide-in-from-right duration-500">
             <div className="flex justify-between items-center">
                 <h3 className="text-xl font-bold text-white border-l-4 border-indigo-600 pl-4">Subscription Plan</h3>
-                <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all">
-                    Upgrade Plan
-                </button>
+                {sub && (
+                    <button
+                        onClick={handleToggleAutoRenew}
+                        disabled={busy}
+                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                            sub.auto_renew
+                                ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white'
+                                : 'bg-slate-900 border border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white'
+                        }`}
+                    >
+                        Auto-Renew: {sub.auto_renew ? 'ON' : 'OFF'}
+                    </button>
+                )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+            {actionError && (
+                <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-2xl px-5 py-3 text-sm font-bold">
+                    {actionError}
+                </div>
+            )}
+
+            {loading && (
+                <div className="text-slate-500 font-bold py-12 text-center">Loading subscription...</div>
+            )}
+
+            {!loading && error && (
                 <div className="bg-slate-950/50 border border-slate-800 p-8 rounded-[2rem]">
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className="p-3 bg-indigo-500/10 rounded-2xl text-indigo-500"><Layers className="w-6 h-6" /></div>
-                        <div>
-                            <div className="text-xs font-black text-slate-500 uppercase">Current Tier</div>
-                            <div className="text-xl font-black text-white">Enterprise Platinum</div>
+                    <div className="text-sm text-slate-400 mb-4">{error}</div>
+                    <div className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3">Assign a package</div>
+                    <form onSubmit={handleChangePackage} className="flex flex-col sm:flex-row gap-3">
+                        <select
+                            value={selectedPackageId}
+                            onChange={(e) => setSelectedPackageId(e.target.value)}
+                            disabled={packagesLoading || busy}
+                            className="flex-1 bg-slate-900 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm disabled:opacity-50"
+                        >
+                            <option value="">{packagesLoading ? 'Loading packages...' : 'Select a package...'}</option>
+                            {packages.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                    {p.name} — {formatNumber(p.price_usd)} TND / {p.billing_cycle}
+                                </option>
+                            ))}
+                        </select>
+                        <button
+                            type="submit"
+                            disabled={!selectedPackageId || busy}
+                            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                        >
+                            {busy ? 'Processing...' : 'Subscribe'}
+                        </button>
+                    </form>
+                </div>
+            )}
+
+            {!loading && data && (
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="bg-slate-950/50 border border-slate-800 p-8 rounded-[2rem]">
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="p-3 bg-indigo-500/10 rounded-2xl text-indigo-500"><Layers className="w-6 h-6" /></div>
+                                <div>
+                                    <div className="text-xs font-black text-slate-500 uppercase">Current Tier</div>
+                                    <div className="text-xl font-black text-white">{pkg?.name || '—'}</div>
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                <DetailRow label="Price" value={`${formatNumber(pkg?.price_usd)} TND / ${pkg?.billing_cycle || '—'}`} />
+                                <DetailRow
+                                    label="Included Messages"
+                                    value={pkg?.is_unlimited ? 'Unlimited' : `${formatNumber(pkg?.included_messages)} Msg`}
+                                />
+                                <DetailRow label="Renewal Date" value={sub?.end_date ? new Date(sub.end_date).toLocaleDateString() : '—'} />
+                                <DetailRow label="Started" value={sub?.start_date ? new Date(sub.start_date).toLocaleDateString() : '—'} />
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-black text-slate-500 uppercase">Status</span>
+                                    <span className={`px-3 py-1 text-xs font-black uppercase rounded-xl border ${statusStyle}`}>
+                                        {statusLabel}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="bg-slate-950/50 border border-slate-800 p-8 rounded-[2rem]">
+                            <div className="text-xs font-black text-slate-500 uppercase mb-6">Usage</div>
+                            <div className="space-y-4">
+                                <DetailRow label="Messages Used" value={`${formatNumber(sub?.messages_used)} Msg`} />
+                                <DetailRow label="Messages Remaining" value={sub?.messages_remaining == null ? 'Unlimited' : `${formatNumber(sub?.messages_remaining)} Msg`} />
+                                <DetailRow label="Overage Messages" value={`${formatNumber(sub?.overage_messages)} Msg`} />
+                                <DetailRow label="Overage Cost" value={`${formatNumber(sub?.overage_cost)} TND`} />
+                                <DetailRow label="Rollover" value={pkg?.rollover_enabled ? 'Enabled' : 'Disabled'} />
+                            </div>
                         </div>
                     </div>
-                    <div className="space-y-4">
-                        <DetailRow label="Monthly Limit" value="5,000,000 Msg" />
-                        <DetailRow label="Renewal Date" value="2026-05-12" />
-                        <DetailRow label="Status" value="Active" />
+
+                    <div className="bg-slate-950/50 border border-slate-800 p-8 rounded-[2rem]">
+                        <div className="text-xs font-black text-slate-500 uppercase tracking-widest mb-4">Change Package</div>
+                        <form onSubmit={handleChangePackage} className="flex flex-col sm:flex-row gap-3">
+                            <select
+                                value={selectedPackageId}
+                                onChange={(e) => setSelectedPackageId(e.target.value)}
+                                disabled={packagesLoading || busy}
+                                className="flex-1 bg-slate-900 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm disabled:opacity-50"
+                            >
+                                <option value="">{packagesLoading ? 'Loading packages...' : 'Select a package...'}</option>
+                                {packages.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                        {p.name} — {formatNumber(p.price_usd)} TND / {p.billing_cycle}
+                                    </option>
+                                ))}
+                            </select>
+                            <button
+                                type="submit"
+                                disabled={!selectedPackageId || busy}
+                                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                            >
+                                {busy ? 'Processing...' : 'Change Package'}
+                            </button>
+                        </form>
+                        <p className="text-xs text-slate-600 mt-3">
+                            The package price is deducted from the tenant balance. Existing active subscription is replaced.
+                        </p>
                     </div>
-                </div>
-                <div className="bg-slate-950/50 border border-slate-800 p-8 rounded-[2rem]">
-                    <div className="text-xs font-black text-slate-500 uppercase mb-4">Plan Features</div>
-                    <ul className="space-y-3">
-                        {['Priority Support', 'Dedicated Hardware', 'Unlimited Staff', 'Custom Webhooks'].map(f => (
-                            <li key={f} className="flex items-center gap-2 text-sm font-bold text-slate-300">
-                                <ShieldCheck className="w-4 h-4 text-emerald-500" /> {f}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            </div>
+                </>
+            )}
         </div>
     );
 }

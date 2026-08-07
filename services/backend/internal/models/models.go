@@ -51,8 +51,6 @@ type Tenant struct {
 	Sector           string       `json:"sector"`
 	Balance          float64      `gorm:"type:decimal(12,2);default:0" json:"balance"`
 	Status           TenantStatus `gorm:"default:'ACTIVE'" json:"status"`
-	SubscriptionPlan string       `gorm:"default:'Basic Plan'" json:"subscription_plan"`
-	MessageLimit     int          `gorm:"default:1000" json:"message_limit"`
 	IsActive         bool         `gorm:"default:true" json:"is_active"`
 	CompanySerial    string       `gorm:"uniqueIndex" json:"company_serial"`
 	APIKeyAccounting string       `gorm:"uniqueIndex" json:"api_key_accounting"`
@@ -182,6 +180,7 @@ type Message struct {
 	IdempotencyKey string        `gorm:"index" json:"idempotency_key"`
 	ProviderJobID  string        `json:"provider_job_id"` // External ID from gateway
 	WaitReason     string        `json:"wait_reason"`
+	ErrorDetails   string        `json:"error_details"`   // Error code/reason from gateway DLR
 
 	// Timestamps
 	ScheduledAt time.Time  `gorm:"default:CURRENT_TIMESTAMP" json:"scheduled_at"`
@@ -215,17 +214,19 @@ const (
 )
 
 type DispatchChannel struct {
-	ID         uuid.UUID   `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()" json:"id"`
-	TenantID   uuid.UUID   `gorm:"type:uuid;uniqueIndex:idx_tenant_channel_key;index:idx_channel_routing,priority:1" json:"tenant_id"`
-	Type       ChannelType `gorm:"not null" json:"type"`
-	ChannelKey string      `gorm:"uniqueIndex:idx_tenant_channel_key;not null" json:"channel_key"`      // Key for API and routing
-	Config     string      `gorm:"type:jsonb" json:"config"`                                            // API keys, Device ID, etc.
-	Status     string      `gorm:"default:'ONLINE';index:idx_channel_routing,priority:2" json:"status"` // ONLINE, OFFLINE, WAIT_MODE
-	Priority   int         `gorm:"default:0;index:idx_channel_routing,priority:3" json:"priority"`      // Higher is more preferred
-	IsDefault  bool        `gorm:"default:false" json:"is_default"`
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
-	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
+	ID          uuid.UUID   `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()" json:"id"`
+	TenantID    uuid.UUID   `gorm:"type:uuid;uniqueIndex:idx_tenant_channel_key;index:idx_channel_routing,priority:1" json:"tenant_id"`
+	Type        ChannelType `gorm:"not null" json:"type"`
+	ChannelKey  string      `gorm:"uniqueIndex:idx_tenant_channel_key;not null" json:"channel_key"`      // Key for API and routing
+	Config      string      `gorm:"type:jsonb" json:"config"`                                            // API keys, Device ID, etc.
+	GatewayID   *uuid.UUID  `gorm:"type:uuid;index" json:"gateway_id"`                                   // Link to dedicated gateway
+	CurrentLoad int         `gorm:"default:0" json:"current_load"`                                       // Current number of messages being processed
+	Status      string      `gorm:"default:'ONLINE';index:idx_channel_routing,priority:2" json:"status"` // ONLINE, OFFLINE, WAIT_MODE
+	Priority    int         `gorm:"default:0;index:idx_channel_routing,priority:3" json:"priority"`      // Higher is more preferred
+	IsDefault   bool        `gorm:"default:false" json:"is_default"`
+	CreatedAt   time.Time   `json:"created_at"`
+	UpdatedAt   time.Time   `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // AlhudhudGateway stores configurations for the official Alhudhud gateways (like Bawabaty)

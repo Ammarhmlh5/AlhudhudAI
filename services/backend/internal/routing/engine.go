@@ -295,7 +295,7 @@ func (e *Engine) SelectChannel(ctx context.Context, tenantID uuid.UUID) (*Channe
 					zap.String("tenant_id", tenantID.String()),
 				)
 				// Don't retry if no channels available
-				return errors.Wrap(err, errors.CodeTenantNotFound, errors.CategoryBusiness, "no online channels available")
+				return errors.Wrap(err, errors.CodeNoChannelAvailable, errors.CategoryBusiness, "no online channels available")
 			}
 			e.logger.Error("failed to select channel",
 				zap.String("tenant_id", tenantID.String()),

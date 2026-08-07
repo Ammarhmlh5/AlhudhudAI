@@ -65,6 +65,9 @@ func TestCheckCPUThreshold_Warning(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock alert logging
 	mock.ExpectExec("INSERT INTO monitoring_alerts").
@@ -116,6 +119,9 @@ func TestCheckCPUThreshold_Critical(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock alert logging
 	mock.ExpectExec("INSERT INTO monitoring_alerts").
@@ -189,6 +195,9 @@ func TestCheckMemoryThreshold_Warning(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock memory quota query
 	mock.ExpectQuery("SELECT memory_quota_mb FROM resource_quotas").
@@ -201,6 +210,9 @@ func TestCheckMemoryThreshold_Warning(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock alert logging
 	mock.ExpectExec("INSERT INTO monitoring_alerts").
@@ -251,6 +263,9 @@ func TestCheckBandwidthThreshold_Critical(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock bandwidth quota query (stored as Mbps, converted to KBps)
 	mock.ExpectQuery("SELECT bandwidth_quota_mbps FROM resource_quotas").
@@ -263,6 +278,9 @@ func TestCheckBandwidthThreshold_Critical(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock alert logging
 	mock.ExpectExec("INSERT INTO monitoring_alerts").
@@ -313,6 +331,9 @@ func TestCheckDatabaseThreshold_Warning(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock DB connection quota query
 	mock.ExpectQuery("SELECT max_db_connections FROM resource_quotas").
@@ -325,6 +346,9 @@ func TestCheckDatabaseThreshold_Warning(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock alert logging
 	mock.ExpectExec("INSERT INTO monitoring_alerts").
@@ -375,6 +399,9 @@ func TestCheckRedisThreshold_Critical(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock Redis quota query
 	mock.ExpectQuery("SELECT redis_memory_quota_mb FROM resource_quotas").
@@ -387,6 +414,9 @@ func TestCheckRedisThreshold_Critical(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock alert logging
 	mock.ExpectExec("INSERT INTO monitoring_alerts").
@@ -446,6 +476,9 @@ func TestSendAlert(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(alert.TenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock alert logging
 	mock.ExpectExec("INSERT INTO monitoring_alerts").
@@ -529,6 +562,9 @@ func TestCheckThresholds_NoQuota(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock memory quota query returning no rows (no quota set)
 	mock.ExpectQuery("SELECT memory_quota_mb FROM resource_quotas").

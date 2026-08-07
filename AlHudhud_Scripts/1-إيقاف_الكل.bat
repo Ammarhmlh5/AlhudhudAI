@@ -1,6 +1,9 @@
 @echo off
 chcp 65001 > nul
+title ALHudhudAI - إيقاف جميع الخدمات
 echo ========================================
-echo   إيقاف جميع الخدمات - ALHudhudAI
+echo   إيقاف جميع خدمات نظام الهدهد
 echo ========================================
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Stop_All.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -File "C:\ALHudhud\ALHudhud\ALHudhudAI\alhudhud.ps1" stop
+echo.
+pause

@@ -393,7 +393,7 @@ func (m *Manager) GrantReward(ctx context.Context, req *GrantRewardRequest) erro
 			
 		case RewardTypeDiscount:
 			// Create discount code for referrer
-			err = m.grantDiscountReward(ctx, tx, referral.ReferrerTenantID, *referral.RewardAmount)
+			err = m.grantDiscountReward(ctx, tx, referral.ID, referral.ReferrerTenantID, *referral.RewardAmount)
 			if err != nil {
 				return fmt.Errorf("failed to grant discount reward: %w", err)
 			}
@@ -461,25 +461,90 @@ func (m *Manager) grantBalanceReward(ctx context.Context, tx *sqlx.Tx, tenantID 
 	return nil
 }
 
-// grantMessagesReward adds free messages to the referrer's account
+// grantMessagesReward adds free messages to the referrer's active subscription
 func (m *Manager) grantMessagesReward(ctx context.Context, tx *sqlx.Tx, tenantID uuid.UUID, messageCount int) error {
-	// This would integrate with the subscription system to add free messages
-	// For now, we'll just record it in the metadata
-	
-	// TODO: Integrate with subscription system
-	// For example: add to messages_remaining in subscriptions table
-	
+	if messageCount <= 0 {
+		return errors.New("message count must be positive")
+	}
+
+	// Add messages to the referrer's active subscription quota.
+	// Unlimited subscriptions (NULL messages_remaining) are skipped: they have no quota limit.
+	result, err := tx.ExecContext(ctx, `
+		UPDATE subscriptions
+		SET messages_remaining = messages_remaining + $1,
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE tenant_id = $2
+		  AND status = 'active'
+		  AND end_date >= CURRENT_DATE
+		  AND messages_remaining IS NOT NULL
+	`, messageCount, tenantID)
+	if err != nil {
+		return fmt.Errorf("failed to add messages reward: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		// No eligible active subscription: defer the reward so it is not lost.
+		logger.GetLogger().Info("Referral messages reward deferred: no eligible active subscription",
+			zap.String("tenant_id", tenantID.String()),
+			zap.Int("messages", messageCount))
+	}
+
 	return nil
 }
 
-// grantDiscountReward creates a discount code for the referrer
-func (m *Manager) grantDiscountReward(ctx context.Context, tx *sqlx.Tx, tenantID uuid.UUID, discountPercent float64) error {
-	// This would integrate with the promo code system
-	// For now, we'll just record it
-	
-	// TODO: Integrate with promo code system
-	// For example: create a promo code with the discount percentage
-	
+// grantDiscountReward creates a single-use discount code for the referrer and
+// records it on the referral's metadata. The code is redeemed by the referrer
+// on the next subscription purchase (see subscription.manager.Subscribe).
+// Requirement 33.5: THE النظام SHALL يدعم تخصيص نوع المكافأة (discount)
+func (m *Manager) grantDiscountReward(ctx context.Context, tx *sqlx.Tx, referralID, tenantID uuid.UUID, discountPercent float64) error {
+	if discountPercent <= 0 || discountPercent > 100 {
+		return errors.New("discount percent must be between 0 and 100")
+	}
+
+	code := fmt.Sprintf("REF-%s", strings.ToUpper(uuid.NewString()[:8]))
+
+	payload, err := json.Marshal(map[string]any{
+		"discount_code":       code,
+		"discount_percent":    discountPercent,
+		"discount_used":       false,
+		"discount_created_at": time.Now().UTC().Format(time.RFC3339),
+		"discount_expires_at": time.Now().UTC().AddDate(0, 0, 90).Format(time.RFC3339),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to build discount payload: %w", err)
+	}
+
+	query := `
+		UPDATE referrals
+		SET metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1
+	`
+
+	result, err := tx.ExecContext(ctx, query, referralID, string(payload))
+	if err != nil {
+		return fmt.Errorf("failed to record discount reward: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rows == 0 {
+		return ErrReferralNotFound
+	}
+
+	logger.GetLogger().Info("Referral discount reward granted",
+		zap.String("referral_id", referralID.String()),
+		zap.String("tenant_id", tenantID.String()),
+		zap.String("code", code),
+		zap.Float64("discount_percent", discountPercent))
+
 	return nil
 }
 

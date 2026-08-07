@@ -9,11 +9,11 @@ type SegmentationRule struct {
 	GatewayID        *int      `json:"gateway_id,omitempty" gorm:"index"` // NULL = default rules
 	CountryCode      *string   `json:"country_code,omitempty" gorm:"type:varchar(2);index"`
 	NetworkOperator  *string   `json:"network_operator,omitempty" gorm:"type:varchar(100)"`
-	EncodingType     string    `json:"encoding_type" gorm:"type:varchar(20);not null;index"` // 'gsm7', 'unicode'
-	Segment1Chars    int       `json:"segment_1_chars" gorm:"not null"`                       // 70 for first segment
-	Segment2Chars    int       `json:"segment_2_chars" gorm:"not null"`                       // 65 for second segment
-	Segment3Chars    int       `json:"segment_3_chars" gorm:"not null"`                       // 62 for third segment
-	SegmentNChars    int       `json:"segment_n_chars" gorm:"not null"`                       // for subsequent segments
+	EncodingType     string    `json:"encoding_type" gorm:"type:varchar(20);not null;index;column:encoding_type"` // 'gsm7', 'unicode'
+	Segment1Chars    int       `json:"segment_1_chars" gorm:"not null;column:segment_1_chars"`                    // 70 for first segment
+	Segment2Chars    int       `json:"segment_2_chars" gorm:"not null;column:segment_2_chars"`                    // 65 for second segment
+	Segment3Chars    int       `json:"segment_3_chars" gorm:"not null;column:segment_3_chars"`                    // 62 for third segment
+	SegmentNChars    int       `json:"segment_n_chars" gorm:"not null;column:segment_n_chars"`                    // for subsequent segments
 	HeaderOverhead   int       `json:"header_overhead" gorm:"default:0"`                      // characters used for header
 	Description      *string   `json:"description,omitempty" gorm:"type:text"`
 	IsActive         bool      `json:"is_active" gorm:"default:true;index"`

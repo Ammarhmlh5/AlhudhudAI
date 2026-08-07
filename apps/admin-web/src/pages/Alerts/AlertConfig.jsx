@@ -43,9 +43,9 @@ const AlertConfig = () => {
   const fetchConfig = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/admin/alerts/config');
+      const response = await axios.get('/api/v1/admin/alerts/config');
       if (response.data) {
-        setConfig(response.data);
+        setConfig(response.data.data || response.data);
       }
     } catch (error) {
       console.error('Failed to fetch alert config:', error);
@@ -57,7 +57,7 @@ const AlertConfig = () => {
   const handleSave = async () => {
     try {
       setSaving(true);
-      await axios.post('/api/admin/alerts/config', config);
+      await axios.post('/api/v1/admin/alerts/config', config);
       alert('Configuration saved successfully!');
     } catch (error) {
       console.error('Failed to save alert config:', error);

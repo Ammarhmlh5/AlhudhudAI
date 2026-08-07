@@ -41,7 +41,7 @@ func (dlq *DeadLetterQueue) MoveToDeadLetter(ctx context.Context, tenantID, mess
 	err = tx.QueryRow(ctx, `
 		SELECT phone_number, message_content, status, cost
 		FROM messages
-		WHERE tenant_id = $1 AND message_id = $2 AND deleted_at IS NULL
+		WHERE tenant_id = $1 AND message_id = $2
 	`, tenantID, messageID).Scan(&phoneNumber, &content, &originalStatus, &cost)
 
 	if err != nil {
@@ -67,7 +67,7 @@ func (dlq *DeadLetterQueue) MoveToDeadLetter(ctx context.Context, tenantID, mess
 		SET status = 'DEAD_LETTER', 
 		    fail_reason = $3,
 		    updated_at = NOW()
-		WHERE tenant_id = $1 AND message_id = $2 AND deleted_at IS NULL
+		WHERE tenant_id = $1 AND message_id = $2
 	`, tenantID, messageID, reason)
 
 	if err != nil {
@@ -184,7 +184,7 @@ func (dlq *DeadLetterQueue) ReprocessMessage(ctx context.Context, tenantID uuid.
 		SET status = 'PENDING',
 		    fail_reason = NULL,
 		    updated_at = NOW()
-		WHERE tenant_id = $1 AND message_id = $2 AND deleted_at IS NULL
+		WHERE tenant_id = $1 AND message_id = $2
 	`, tenantID, messageID)
 
 	if err != nil {
@@ -256,7 +256,6 @@ func (dlq *DeadLetterQueue) ReprocessAllMessages(ctx context.Context, tenantID u
 		    updated_at = NOW()
 		WHERE tenant_id = $1 
 		  AND message_id = ANY($2)
-		  AND deleted_at IS NULL
 	`, tenantID, messageIDs)
 
 	if err != nil {

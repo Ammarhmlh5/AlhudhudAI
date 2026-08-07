@@ -3,8 +3,10 @@ package billing
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
+	"github.com/al-hudhud/backend/internal/notifications"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -194,6 +196,16 @@ func (s *AutoRenewalService) RenewSubscription(
 			zap.String("required", priceUSD.String()),
 			zap.String("available", currentBalance.String()),
 		)
+
+		notifications.SendTenantNotification(ctx, s.pool, tenantID, "alert",
+			"فشل تجديد الاشتراك",
+			fmt.Sprintf("فشل تجديد الاشتراك: الرصيد غير كافٍ (المطلوب %s، المتاح %s). يُرجى شحن الرصيد لتجنب إيقاف الخدمة.", priceUSD.String(), currentBalance.String()),
+			map[string]any{
+				"subscription_id": subscriptionID,
+				"required":        priceUSD.String(),
+				"available":       currentBalance.String(),
+			}, s.logger)
+
 		return fmt.Errorf("insufficient balance: required %s, available %s", priceUSD.String(), currentBalance.String())
 	}
 
@@ -205,7 +217,7 @@ func (s *AutoRenewalService) RenewSubscription(
 	defer tx.Rollback(ctx)
 
 	// Set tenant context for RLS
-	if _, err := tx.Exec(ctx, "SET LOCAL app.current_tenant = $1", tenantID.String()); err != nil {
+	if _, err := tx.Exec(ctx, "SELECT set_config('app.current_tenant', $1, true)", tenantID.String()); err != nil {
 		return fmt.Errorf("failed to set tenant context: %w", err)
 	}
 
@@ -225,24 +237,30 @@ func (s *AutoRenewalService) RenewSubscription(
 		return fmt.Errorf("failed to deduct balance: %w", err)
 	}
 
-	// Get package details for message quota
+	// Get package details for message quota and billing cycle
 	var includedMessages *int64
+	var billingCycle string
 	err = tx.QueryRow(ctx, `
-		SELECT included_messages
+		SELECT included_messages, billing_cycle
 		FROM packages
 		WHERE id = $1 AND tenant_id = $2
-	`, packageID, tenantID).Scan(&includedMessages)
+	`, packageID, tenantID).Scan(&includedMessages, &billingCycle)
 	if err != nil {
 		return fmt.Errorf("failed to get package details: %w", err)
 	}
 
 	// Update subscription: reset dates, counters, and status
 	now := time.Now()
-	nextMonth := now.AddDate(0, 1, 0)
-	
+	nextPeriod := now
+	switch billingCycle {
+	case "yearly":
+		nextPeriod = now.AddDate(1, 0, 0)
+	default:
+		nextPeriod = now.AddDate(0, 1, 0)
+	}
 	_, err = tx.Exec(ctx, `
 		UPDATE subscriptions
-		SET start_date = $1,
+		SET start_date = $1::date,
 		    end_date = $2,
 		    next_renewal_date = $2,
 		    messages_used = 0,
@@ -255,7 +273,7 @@ func (s *AutoRenewalService) RenewSubscription(
 		    last_renewal_attempt = $1,
 		    updated_at = $1
 		WHERE id = $4 AND tenant_id = $5
-	`, now, nextMonth, includedMessages, subscriptionID, tenantID)
+	`, now, nextPeriod, includedMessages, subscriptionID, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to update subscription: %w", err)
 	}
@@ -283,7 +301,7 @@ func (s *AutoRenewalService) RenewSubscription(
 		newBalance,
 		fmt.Sprintf("Automatic renewal of subscription #%d", subscriptionID),
 		"subscription",
-		subscriptionID,
+		strconv.FormatInt(subscriptionID, 10),
 		now,
 	)
 	if err != nil {
@@ -321,7 +339,7 @@ func (s *AutoRenewalService) RenewSubscription(
 		now,
 		fmt.Sprintf("Subscription renewal for package #%d", packageID),
 		"subscription",
-		subscriptionID,
+		strconv.FormatInt(subscriptionID, 10),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create invoice: %w", err)
@@ -337,7 +355,13 @@ func (s *AutoRenewalService) RenewSubscription(
 		zap.String("new_balance", newBalance.String()),
 	)
 
-	// TODO: Send success notification (Task 13)
+	notifications.SendTenantNotification(ctx, s.pool, tenantID, "status",
+		"تم تجديد الاشتراك بنجاح",
+		fmt.Sprintf("تم تجديد اشتراكك تلقائياً حتى %s.", nextPeriod.Format("2006-01-02")),
+		map[string]any{
+			"subscription_id": subscriptionID,
+			"next_renewal":    nextPeriod.Format(time.RFC3339),
+		}, s.logger)
 
 	return nil
 }
@@ -368,7 +392,7 @@ func (s *AutoRenewalService) ApplyGracePeriod(
 	defer tx.Rollback(ctx)
 
 	// Set tenant context for RLS
-	if _, err := tx.Exec(ctx, "SET LOCAL app.current_tenant = $1", tenantID.String()); err != nil {
+	if _, err := tx.Exec(ctx, "SELECT set_config('app.current_tenant', $1, true)", tenantID.String()); err != nil {
 		return fmt.Errorf("failed to set tenant context: %w", err)
 	}
 
@@ -396,7 +420,13 @@ func (s *AutoRenewalService) ApplyGracePeriod(
 	)
 
 	// Requirement 14.4: Send notification
-	// TODO: Implement notification sending (Task 13)
+	notifications.SendTenantNotification(ctx, s.pool, tenantID, "alert",
+		"فترة السماح لاشتراكك",
+		fmt.Sprintf("تعذّر تجديد اشتراكك لعدم كفاية الرصيد. تم منحك فترة سماح لمدة %d يوم. سيتم إيقاف الخدمة بعدها إذا لم يتم الشحن.", gracePeriodDays),
+		map[string]any{
+			"subscription_id": subscriptionID,
+			"grace_period_days": gracePeriodDays,
+		}, s.logger)
 
 	return nil
 }
@@ -420,7 +450,7 @@ func (s *AutoRenewalService) SuspendSubscription(
 	defer tx.Rollback(ctx)
 
 	// Set tenant context for RLS
-	if _, err := tx.Exec(ctx, "SET LOCAL app.current_tenant = $1", tenantID.String()); err != nil {
+	if _, err := tx.Exec(ctx, "SELECT set_config('app.current_tenant', $1, true)", tenantID.String()); err != nil {
 		return fmt.Errorf("failed to set tenant context: %w", err)
 	}
 
@@ -445,7 +475,12 @@ func (s *AutoRenewalService) SuspendSubscription(
 		zap.String("tenant_id", tenantID.String()),
 	)
 
-	// TODO: Send suspension notification (Task 13)
+	notifications.SendTenantNotification(ctx, s.pool, tenantID, "alert",
+		"تم إيقاف اشتراكك",
+		"انتهت فترة السماح وتم إيقاف اشتراكك لعدم كفاية الرصيد. أعد الشحن وسيتم إعادة تفعيل الاشتراك تلقائياً.",
+		map[string]any{
+			"subscription_id": subscriptionID,
+		}, s.logger)
 
 	return nil
 }
@@ -510,7 +545,12 @@ func (s *AutoRenewalService) AutoReactivate(ctx context.Context, tenantID uuid.U
 		zap.String("tenant_id", tenantID.String()),
 	)
 
-	// TODO: Send reactivation notification (Task 13)
+	notifications.SendTenantNotification(ctx, s.pool, tenantID, "status",
+		"تم إعادة تفعيل اشتراكك",
+		"تم شحن الرصيد وإعادة تفعيل اشتراكك تلقائياً.",
+		map[string]any{
+			"subscription_id": subscriptionID,
+		}, s.logger)
 
 	return nil
 }

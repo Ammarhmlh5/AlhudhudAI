@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -33,6 +33,13 @@ type TestResource struct {
 func setupIntegrationTestDB(t *testing.T) *gorm.DB {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err, "Failed to connect to test database")
+
+	// :memory: sqlite is per-connection; pin the pool to a single connection
+	// so tables created by AutoMigrate are visible to later queries.
+	sqlDB, err := db.DB()
+	require.NoError(t, err, "Failed to get sql.DB")
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
 
 	// Auto-migrate schemas
 	err = db.AutoMigrate(&TestTenant{}, &TestResource{}, &CrossTenantAccessLog{})

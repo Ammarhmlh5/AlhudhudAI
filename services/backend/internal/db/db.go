@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -26,6 +27,12 @@ func InitDB() {
 	if err != nil {
 		log.Fatal("Error opening database: ", err)
 	}
+
+	// Cap the pool so leaked/unreleased connections cannot exhaust the server's
+	// max_connections budget (was previously unbounded and caused 53300 storms).
+	DB.SetMaxOpenConns(50)
+	DB.SetMaxIdleConns(10)
+	DB.SetConnMaxLifetime(30 * time.Minute)
 
 	if err = DB.Ping(); err != nil {
 		log.Fatal("Error connecting to the database: ", err)

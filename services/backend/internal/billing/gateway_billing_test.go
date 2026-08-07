@@ -2,6 +2,7 @@ package billing
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -23,7 +24,7 @@ func setupGatewayBillingTest(t *testing.T) (*pgxpool.Pool, *GatewayBillingServic
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	connString := "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable"
+	connString := "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable"
 	pool, err := pgxpool.New(ctx, connString)
 	if err != nil {
 		t.Skipf("Failed to create pool: %v", err)
@@ -56,16 +57,16 @@ func setupGatewayBillingTest(t *testing.T) (*pgxpool.Pool, *GatewayBillingServic
 func createGatewayBillingTestTenant(t *testing.T, pool *pgxpool.Pool, balance decimal.Decimal) uuid.UUID {
 	tenantID := uuid.New()
 	_, err := pool.Exec(context.Background(), `
-		INSERT INTO tenants (id, name, email, balance, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-	`, tenantID, "Test Enterprise", "test@enterprise.com", balance)
+		INSERT INTO tenants (id, business_name, contact_name, email, balance, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+	`, tenantID, "Test Enterprise", "Test Contact", "test@enterprise.com", balance)
 	require.NoError(t, err, "Failed to create test tenant")
 	return tenantID
 }
 
 // createTestGateway creates a test dedicated gateway
-func createTestGateway(t *testing.T, pool *pgxpool.Pool, tenantID uuid.UUID, subscriptionFee, serverRentalFee decimal.Decimal, billingCycle string) int64 {
-	var gatewayID int64
+func createTestGateway(t *testing.T, pool *pgxpool.Pool, tenantID uuid.UUID, subscriptionFee, serverRentalFee decimal.Decimal, billingCycle string) uuid.UUID {
+	var gatewayID uuid.UUID
 	err := pool.QueryRow(context.Background(), `
 		INSERT INTO dedicated_gateways (
 			tenant_id,
@@ -87,14 +88,14 @@ func createTestGateway(t *testing.T, pool *pgxpool.Pool, tenantID uuid.UUID, sub
 	`,
 		tenantID,
 		"Test Gateway",
-		"TEST-GW-001",
+		fmt.Sprintf("TEST-GW-%s", uuid.New().String()[:8]),
 		"Yemen Mobile",
 		"https://api.yemenmobile.com",
 		billingCycle,
 		subscriptionFee,
 		serverRentalFee,
 		billingCycle,
-		time.Now(), // Due today
+		time.Now().AddDate(0, 0, -1), // Due (yesterday)
 		time.Now(),
 		"active",
 	).Scan(&gatewayID)
@@ -350,7 +351,7 @@ func TestCheckDueGateways(t *testing.T) {
 	var count2 int
 	err = pool.QueryRow(ctx, `
 		SELECT COUNT(*) FROM accounting_transactions 
-		WHERE tenant_id = $2 AND transaction_type = 'GATEWAY_SUBSCRIPTION'
+		WHERE tenant_id = $1 AND transaction_type = 'GATEWAY_SUBSCRIPTION'
 	`, tenantID2).Scan(&count2)
 	require.NoError(t, err)
 	assert.Equal(t, 1, count2, "Tenant 2 gateway should be billed")

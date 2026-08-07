@@ -2,6 +2,8 @@ package promo
 
 import (
 	"time"
+
+	"github.com/lib/pq"
 )
 
 // DiscountType نوع الخصم
@@ -46,8 +48,8 @@ type PromoCode struct {
 	UsageLimit           *int         `db:"usage_limit" json:"usage_limit,omitempty"`
 	UsageCount           int          `db:"usage_count" json:"usage_count"`
 	PerUserLimit         int          `db:"per_user_limit" json:"per_user_limit"`
-	ApplicableTo         ApplicableTo `db:"applicable_to" json:"applicable_to"`
-	ApplicablePackageIDs []int64      `db:"applicable_package_ids" json:"applicable_package_ids,omitempty"`
+	ApplicableTo         ApplicableTo  `db:"applicable_to" json:"applicable_to"`
+	ApplicablePackageIDs pq.Int64Array `db:"applicable_package_ids" json:"applicable_package_ids,omitempty"`
 	IsActive             bool         `db:"is_active" json:"is_active"`
 	CreatedAt            time.Time    `db:"created_at" json:"created_at"`
 	UpdatedAt            time.Time    `db:"updated_at" json:"updated_at"`
@@ -105,13 +107,13 @@ type ApplyPromoCodeResponse struct {
 
 // PromoCodePerformance أداء كود خصم
 type PromoCodePerformance struct {
-	PromoCodeID       int64   `json:"promo_code_id"`
-	Code              string  `json:"code"`
-	Description       string  `json:"description"`
-	TotalUsageCount   int     `json:"total_usage_count"`
-	TotalDiscountGiven float64 `json:"total_discount_given"`
-	TotalRevenue      float64 `json:"total_revenue"`
-	UniqueUsers       int     `json:"unique_users"`
+	PromoCodeID        int64   `db:"id" json:"promo_code_id"`
+	Code               string  `db:"code" json:"code"`
+	Description        string  `db:"description" json:"description"`
+	TotalUsageCount    int     `db:"total_usage_count" json:"total_usage_count"`
+	TotalDiscountGiven float64 `db:"total_discount_given" json:"total_discount_given"`
+	TotalRevenue       float64 `db:"total_revenue" json:"total_revenue"`
+	UniqueUsers        int     `db:"unique_users" json:"unique_users"`
 }
 
 // ValidationError خطأ التحقق من صحة الكود

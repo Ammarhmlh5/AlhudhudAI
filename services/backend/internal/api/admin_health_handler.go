@@ -56,7 +56,7 @@ func (h *AdminHealthHandler) GetServerDetails(c *gin.Context) {
 		return
 	}
 
-	server, err := h.healthChecker.GetServer(c.Request.Context(), serverID)
+	server, err := h.healthChecker.GetServerWithHealth(c.Request.Context(), serverID)
 	if err != nil {
 		RespondWithError(c, http.StatusNotFound, "server_not_found", "Server not found", nil)
 		return

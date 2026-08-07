@@ -28,8 +28,13 @@ func TestRedisFailureRecovery(t *testing.T) {
 	cfg.Database.Host = "localhost"
 	cfg.Database.Port = "5432"
 	cfg.Database.User = "postgres"
-	cfg.Database.Password = "postgres"
+	cfg.Database.Password = testDBPassword()
 	cfg.Database.Name = "sms_gateway_test"
+	cfg.Database.SSLMode = "disable"
+	cfg.Database.MaxOpenConns = 10
+	cfg.Database.MaxIdleConns = 5
+	cfg.Database.ConnMaxLifetime = time.Hour
+	cfg.Database.ConnMaxIdleTime = 30 * time.Minute
 
 	db, err := database.NewDatabase(cfg, logger)
 	require.NoError(t, err)
@@ -37,9 +42,9 @@ func TestRedisFailureRecovery(t *testing.T) {
 
 	redisClient := goredis.NewClient(&goredis.Options{
 		Addr: "localhost:6379",
-		DB:   2,
+		DB:   13, // Dedicated test DB so FlushDB does not collide with other packages
 	})
-	require.NoError(t, redisClient.Ping(ctx).Err())
+	requireRedisPing(t, redisClient)
 	defer redisClient.Close()
 
 	messageBuffer := buffer.NewMessageBuffer(redisClient, logger)
@@ -68,7 +73,7 @@ func TestRedisFailureRecovery(t *testing.T) {
 		// Reconnect for cleanup
 		redisClient = goredis.NewClient(&goredis.Options{
 			Addr: "localhost:6379",
-			DB:   2,
+			DB:   13,
 		})
 		redisClient.FlushDB(ctx)
 	})

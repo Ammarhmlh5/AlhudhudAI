@@ -27,8 +27,13 @@ func TestDatabaseFailureRecovery(t *testing.T) {
 	cfg.Database.Host = "localhost"
 	cfg.Database.Port = "5432"
 	cfg.Database.User = "postgres"
-	cfg.Database.Password = "postgres"
+	cfg.Database.Password = testDBPassword()
 	cfg.Database.Name = "sms_gateway_test"
+	cfg.Database.SSLMode = "disable"
+	cfg.Database.MaxOpenConns = 10
+	cfg.Database.MaxIdleConns = 5
+	cfg.Database.ConnMaxLifetime = time.Hour
+	cfg.Database.ConnMaxIdleTime = 30 * time.Minute
 
 	t.Run("PrimaryDatabaseFailure", func(t *testing.T) {
 		primaryDB, err := database.NewDatabase(cfg, logger)
@@ -36,7 +41,17 @@ func TestDatabaseFailureRecovery(t *testing.T) {
 		defer primaryDB.Close()
 
 		tenantID := uuid.New()
-		_, _ = primaryDB.Pool.Exec(ctx, "INSERT INTO tenants (id, name, balance, status, created_at, updated_at) VALUES ($1, $2, $3, $4, NOW(), NOW())", tenantID, "Failover Test", 100.0, "ACTIVE")
+		userID := uuid.New()
+		_, err = primaryDB.Pool.Exec(ctx, `
+			INSERT INTO users (id, email, password_hash, user_type, is_active, is_verified, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+		`, userID, "int-"+userID.String()+"@test.com", "hash", "ADMIN", true, true)
+		require.NoError(t, err)
+		_, err = primaryDB.Pool.Exec(ctx, `
+			INSERT INTO tenants (id, user_id, business_name, contact_name, email, balance, status, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, 'ACTIVE', NOW(), NOW())
+		`, tenantID, userID, "Test Business", "Test Contact", "test@example.com", 100.0)
+		require.NoError(t, err)
 
 		balanceManager := balance.NewManager(primaryDB.Pool, logger)
 

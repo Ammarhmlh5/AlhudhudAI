@@ -15,7 +15,7 @@ import (
 // setupTestDB creates a test database connection
 func setupTestDB(t *testing.T) *sql.DB {
 	// Use environment variable or default test database
-	dsn := "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable"
+	dsn := "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable"
 	db, err := sql.Open("postgres", dsn)
 	require.NoError(t, err)
 
@@ -114,7 +114,11 @@ func TestLogger_Log(t *testing.T) {
 
 	err := logger.Log(entry)
 	assert.NoError(t, err)
-	assert.NotZero(t, entry.ID)
+
+	var persistedID int64
+	err = db.QueryRow(`SELECT id FROM audit_trail WHERE resource_id = $1 AND tenant_id = $2`, "msg-789", tenantID).Scan(&persistedID)
+	assert.NoError(t, err)
+	assert.NotZero(t, persistedID)
 }
 
 func TestLogger_Query(t *testing.T) {
@@ -216,10 +220,15 @@ func TestLogger_QueryWithDateRange(t *testing.T) {
 	err := logger.LogSuccess(ActionUserLogin, ResourceUser, userID.String(), &userID, &tenantID, "192.168.1.1", nil)
 	require.NoError(t, err)
 
-	// Query with date range
-	now := time.Now()
-	startDate := now.Add(-1 * time.Hour)
-	endDate := now.Add(1 * time.Hour)
+	// The DB stores timestamps as session-local wall clock but they are read
+	// back as UTC, so bracket the range around the actually-stored value rather
+	// than the test process clock (avoids timezone skew between environments).
+	var stored time.Time
+	err = db.QueryRow(`SELECT created_at FROM audit_trail WHERE tenant_id = $1`, tenantID).Scan(&stored)
+	require.NoError(t, err)
+
+	startDate := stored.Add(-1 * time.Hour)
+	endDate := stored.Add(1 * time.Hour)
 
 	filters := AuditQueryFilters{
 		TenantID:  &tenantID,

@@ -264,8 +264,8 @@ func TestRefundBalance_Idempotency(t *testing.T) {
 	initialBalance := decimal.NewFromFloat(100.0)
 	
 	_, err := pool.Exec(ctx, `
-		INSERT INTO tenants (id, balance, created_at, updated_at)
-		VALUES ($1, $2, NOW(), NOW())
+		INSERT INTO tenants (id, business_name, contact_name, email, balance, created_at, updated_at)
+		VALUES ($1, 'Test Tenant', 'Test Contact', 'test@example.com', $2, NOW(), NOW())
 		ON CONFLICT (id) DO UPDATE SET balance = $2
 	`, tenantID, initialBalance)
 	require.NoError(t, err)
@@ -281,8 +281,8 @@ func TestRefundBalance_Idempotency(t *testing.T) {
 	require.NoError(t, err)
 	
 	_, err = pool.Exec(ctx, `
-		INSERT INTO accounting_transactions (tenant_id, message_id, amount, status, transaction_type, created_at, updated_at)
-		VALUES ($1, $2, $3, 'COMPLETED', 'DEDUCT', NOW(), NOW())
+		INSERT INTO accounting_transactions (tenant_id, message_id, amount, status, type, created_at, updated_at)
+		VALUES ($1, $2, $3, 'COMMITTED', 'DEDUCT', NOW(), NOW())
 	`, tenantID, messageID, refundAmount)
 	require.NoError(t, err)
 
@@ -299,13 +299,14 @@ func TestRefundBalance_Idempotency(t *testing.T) {
 	result1, err := manager.RefundBalance(ctx, op)
 	require.NoError(t, err)
 	require.True(t, result1.Success)
-	assert.Equal(t, initialBalance.Add(refundAmount), result1.NewBalance)
+	assert.True(t, initialBalance.Add(refundAmount).Equal(result1.NewBalance))
 
 	// Verify transaction status is REFUNDED
 	var status string
 	err = pool.QueryRow(ctx, `
 		SELECT status FROM accounting_transactions 
 		WHERE tenant_id = $1 AND message_id = $2
+		  AND type IN ('DEDUCT', 'DEDUCTION')
 	`, tenantID, messageID).Scan(&status)
 	require.NoError(t, err)
 	assert.Equal(t, "REFUNDED", status)
@@ -320,7 +321,7 @@ func TestRefundBalance_Idempotency(t *testing.T) {
 	var finalBalance decimal.Decimal
 	err = pool.QueryRow(ctx, `SELECT balance FROM tenants WHERE id = $1`, tenantID).Scan(&finalBalance)
 	require.NoError(t, err)
-	assert.Equal(t, initialBalance.Add(refundAmount), finalBalance, "Balance should only be refunded once")
+	assert.True(t, initialBalance.Add(refundAmount).Equal(finalBalance), "Balance should only be refunded once")
 
 	// Verify only one refund entry in balance_history
 	var refundCount int
@@ -349,8 +350,8 @@ func TestRefundBalance_TransactionNotFound(t *testing.T) {
 	initialBalance := decimal.NewFromFloat(100.0)
 	
 	_, err := pool.Exec(ctx, `
-		INSERT INTO tenants (id, balance, created_at, updated_at)
-		VALUES ($1, $2, NOW(), NOW())
+		INSERT INTO tenants (id, business_name, contact_name, email, balance, created_at, updated_at)
+		VALUES ($1, 'Test Tenant', 'Test Contact', 'test@example.com', $2, NOW(), NOW())
 		ON CONFLICT (id) DO UPDATE SET balance = $2
 	`, tenantID, initialBalance)
 	require.NoError(t, err)
@@ -366,16 +367,18 @@ func TestRefundBalance_TransactionNotFound(t *testing.T) {
 		CreatedBy: "test",
 	}
 
-	// Should succeed even if transaction doesn't exist (graceful handling)
+	// Manager contract: a refund requires an existing COMMITTED accounting transaction.
+	// With no transaction present, RefundBalance must fail and leave balance untouched.
 	result, err := manager.RefundBalance(ctx, op)
-	require.NoError(t, err)
-	require.True(t, result.Success)
+	require.Error(t, err)
+	require.Nil(t, result)
+	assert.Contains(t, err.Error(), "no original transaction found")
 
-	// Verify balance was refunded
+	// Verify balance was NOT refunded
 	var finalBalance decimal.Decimal
 	err = pool.QueryRow(ctx, `SELECT balance FROM tenants WHERE id = $1`, tenantID).Scan(&finalBalance)
 	require.NoError(t, err)
-	assert.Equal(t, initialBalance.Add(op.Amount), finalBalance)
+	assert.True(t, initialBalance.Equal(finalBalance))
 }
 
 // TestRefundBalance_WithoutMessageID tests that refund requires message_id
@@ -393,8 +396,8 @@ func TestRefundBalance_WithoutMessageID(t *testing.T) {
 	// Setup: Create tenant
 	tenantID := uuid.New()
 	_, err := pool.Exec(ctx, `
-		INSERT INTO tenants (id, balance, created_at, updated_at)
-		VALUES ($1, 100.0, NOW(), NOW())
+		INSERT INTO tenants (id, business_name, contact_name, email, balance, created_at, updated_at)
+		VALUES ($1, 'Test Tenant', 'Test Contact', 'test@example.com', 100.0, NOW(), NOW())
 		ON CONFLICT (id) DO UPDATE SET balance = 100.0
 	`, tenantID)
 	require.NoError(t, err)
@@ -432,8 +435,8 @@ func TestRefundBalance_ConcurrentIdempotency(t *testing.T) {
 	initialBalance := decimal.NewFromFloat(100.0)
 	
 	_, err := pool.Exec(ctx, `
-		INSERT INTO tenants (id, balance, created_at, updated_at)
-		VALUES ($1, $2, NOW(), NOW())
+		INSERT INTO tenants (id, business_name, contact_name, email, balance, created_at, updated_at)
+		VALUES ($1, 'Test Tenant', 'Test Contact', 'test@example.com', $2, NOW(), NOW())
 		ON CONFLICT (id) DO UPDATE SET balance = $2
 	`, tenantID, initialBalance)
 	require.NoError(t, err)
@@ -449,8 +452,8 @@ func TestRefundBalance_ConcurrentIdempotency(t *testing.T) {
 	require.NoError(t, err)
 	
 	_, err = pool.Exec(ctx, `
-		INSERT INTO accounting_transactions (tenant_id, message_id, amount, status, transaction_type, created_at, updated_at)
-		VALUES ($1, $2, $3, 'COMPLETED', 'DEDUCT', NOW(), NOW())
+		INSERT INTO accounting_transactions (tenant_id, message_id, amount, status, type, created_at, updated_at)
+		VALUES ($1, $2, $3, 'COMMITTED', 'DEDUCT', NOW(), NOW())
 	`, tenantID, messageID, refundAmount)
 	require.NoError(t, err)
 
@@ -499,7 +502,7 @@ func TestRefundBalance_ConcurrentIdempotency(t *testing.T) {
 	var finalBalance decimal.Decimal
 	err = pool.QueryRow(ctx, `SELECT balance FROM tenants WHERE id = $1`, tenantID).Scan(&finalBalance)
 	require.NoError(t, err)
-	assert.Equal(t, initialBalance.Add(refundAmount), finalBalance, "Balance should only be refunded once despite concurrent calls")
+	assert.True(t, initialBalance.Add(refundAmount).Equal(finalBalance), "Balance should only be refunded once despite concurrent calls")
 
 	// Verify only one refund entry in balance_history
 	var refundCount int
@@ -528,8 +531,8 @@ func TestRefundBalance_TransactionStateUpdate(t *testing.T) {
 	initialBalance := decimal.NewFromFloat(100.0)
 	
 	_, err := pool.Exec(ctx, `
-		INSERT INTO tenants (id, balance, created_at, updated_at)
-		VALUES ($1, $2, NOW(), NOW())
+		INSERT INTO tenants (id, business_name, contact_name, email, balance, created_at, updated_at)
+		VALUES ($1, 'Test Tenant', 'Test Contact', 'test@example.com', $2, NOW(), NOW())
 		ON CONFLICT (id) DO UPDATE SET balance = $2
 	`, tenantID, initialBalance)
 	require.NoError(t, err)
@@ -545,8 +548,8 @@ func TestRefundBalance_TransactionStateUpdate(t *testing.T) {
 	require.NoError(t, err)
 	
 	_, err = pool.Exec(ctx, `
-		INSERT INTO accounting_transactions (tenant_id, message_id, amount, status, transaction_type, created_at, updated_at)
-		VALUES ($1, $2, $3, 'COMPLETED', 'DEDUCT', NOW(), NOW())
+		INSERT INTO accounting_transactions (tenant_id, message_id, amount, status, type, created_at, updated_at)
+		VALUES ($1, $2, $3, 'COMMITTED', 'DEDUCT', NOW(), NOW())
 	`, tenantID, messageID, refundAmount)
 	require.NoError(t, err)
 
@@ -570,6 +573,7 @@ func TestRefundBalance_TransactionStateUpdate(t *testing.T) {
 	err = pool.QueryRow(ctx, `
 		SELECT status, settled_at FROM accounting_transactions 
 		WHERE tenant_id = $1 AND message_id = $2
+		  AND type IN ('DEDUCT', 'DEDUCTION')
 	`, tenantID, messageID).Scan(&status, &settledAt)
 	require.NoError(t, err)
 	assert.Equal(t, "REFUNDED", status, "Transaction status should be REFUNDED")
@@ -618,15 +622,13 @@ func TestDeductBalanceWithTimeout_Timeout(t *testing.T) {
 		// Create a context that times out immediately
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 		defer cancel()
-		
-		// Wait for timeout
-		time.Sleep(10 * time.Millisecond)
-		
-		// Verify context is done
+
+		// The 1ns deadline fires almost immediately. Wait for it with a generous
+		// grace period instead of racing a fixed sleep, which flakes under load.
 		select {
 		case <-ctx.Done():
 			assert.Equal(t, context.DeadlineExceeded, ctx.Err())
-		default:
+		case <-time.After(5 * time.Second):
 			t.Fatal("context should be done")
 		}
 	})

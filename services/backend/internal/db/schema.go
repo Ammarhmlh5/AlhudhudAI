@@ -30,7 +30,6 @@ var PublicTables = []interface{}{
 	&models.Invoice{},
 	&models.AdminStatistics{},
 	&models.Tariff{},
-	&models.Package{},
 	&models.DispatchChannel{},
 	&models.GlobalIncomingEvent{},
 	&models.AlhudhudGateway{},
@@ -45,6 +44,7 @@ var TenantTables = []interface{}{
 	&models.DispatchChannel{},
 	&models.AccountingTransaction{},
 	&models.MessageEvent{},
+	&models.Contact{},
 }
 
 // GetSchemaName generates a safe schema name from tenant ID

@@ -50,7 +50,7 @@ type GatewayUser struct {
 	GatewayID   uuid.UUID              `gorm:"type:uuid;not null" json:"gateway_id"`
 	UserID      uuid.UUID              `gorm:"type:uuid;not null" json:"user_id"`
 	Role        string                 `gorm:"size:50;not null" json:"role"`
-	Permissions map[string]interface{} `gorm:"type:jsonb;default:'{}'" json:"permissions"`
+	Permissions map[string]interface{} `gorm:"type:jsonb;default:'{}';serializer:json" json:"permissions"`
 	IsActive    bool                   `gorm:"default:true" json:"is_active"`
 	CreatedAt   time.Time              `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt   time.Time              `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
@@ -165,7 +165,13 @@ func (um *UserManager) UpdatePermissions(ctx context.Context, req *UpdatePermiss
 	}
 
 	// Update permissions
-	if err := um.db.WithContext(ctx).Model(&gatewayUser).Update("permissions", req.Permissions).Error; err != nil {
+	// The raw column update bypasses the field's serializer, so the map must be
+	// serialized to JSON explicitly (jsonb column in Postgres, text in SQLite).
+	permissionsJSON, err := json.Marshal(req.Permissions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to serialize permissions: %w", err)
+	}
+	if err := um.db.WithContext(ctx).Model(&gatewayUser).Update("permissions", string(permissionsJSON)).Error; err != nil {
 		return nil, fmt.Errorf("failed to update permissions: %w", err)
 	}
 

@@ -15,7 +15,7 @@ var (
 	jwtSecret = []byte("your-secret-key-change-this-in-production")
 
 	// Token expiration times
-	AccessTokenExpiry  = 1 * time.Hour      // 1 hour
+	AccessTokenExpiry  = 7 * 24 * time.Hour // 7 days
 	RefreshTokenExpiry = 7 * 24 * time.Hour // 7 days
 )
 
@@ -57,6 +57,14 @@ func GenerateRefreshToken() (string, error) {
 		return "", err
 	}
 	return base64.URLEncoding.EncodeToString(b), nil
+}
+
+// SignToken signs the provided claims with the configured JWT secret.
+// Unlike GenerateToken it accepts caller-supplied expirations, which is
+// required for refresh flows and testing expired tokens.
+func SignToken(claims *Claims) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(jwtSecret)
 }
 
 // ValidateToken validates and parses a JWT token

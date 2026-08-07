@@ -24,6 +24,7 @@ func setupTestHandler(t *testing.T) (Handler, sqlmock.Sqlmock, *redis.Client) {
 	// Create test Redis client (using miniredis would be better in production)
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
+		DB:   7, // Dedicated test DB so FlushDB does not collide with other packages
 	})
 	
 	// Flush DB to avoid idempotency conflicts between test runs
@@ -44,6 +45,7 @@ func TestNewHandler(t *testing.T) {
 
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
+		DB:   7, // Dedicated test DB so FlushDB does not collide with other packages
 	})
 
 	logger, _ := zap.NewDevelopment()
@@ -181,6 +183,7 @@ func TestUpdateMessageStatus_UnknownStatus(t *testing.T) {
 
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
+		DB:   7, // Dedicated test DB so FlushDB does not collide with other packages
 	})
 
 	logger, _ := zap.NewDevelopment()
@@ -218,6 +221,7 @@ func TestUpdateMessageStatus_MessageNotFound(t *testing.T) {
 
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
+		DB:   7, // Dedicated test DB so FlushDB does not collide with other packages
 	})
 
 	logger, _ := zap.NewDevelopment()
@@ -258,6 +262,7 @@ func TestSettleFailedMessage_MessageNotFound(t *testing.T) {
 
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
+		DB:   7, // Dedicated test DB so FlushDB does not collide with other packages
 	})
 
 	logger, _ := zap.NewDevelopment()
@@ -299,6 +304,7 @@ func TestSettleSuccessMessage(t *testing.T) {
 
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
+		DB:   7, // Dedicated test DB so FlushDB does not collide with other packages
 	})
 
 	logger, _ := zap.NewDevelopment()

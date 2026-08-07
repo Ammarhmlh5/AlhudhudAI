@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -17,9 +17,16 @@ func setupServiceTestDB(t *testing.T) *gorm.DB {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
 
-	// Auto-migrate the services table
-	err = db.AutoMigrate(&models.Service{})
+	// :memory: sqlite is per-connection; pin the pool to a single connection
+	// so tables created by AutoMigrate are visible to later queries.
+	sqlDB, err := db.DB()
 	require.NoError(t, err)
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
+
+	// Auto-migrate is not possible for models.Tenant on SQLite (Postgres-only
+	// `DEFAULT public.uuid_generate_v4()`), so create a portable schema instead.
+	createPortableSchema(t, db)
 
 	return db
 }

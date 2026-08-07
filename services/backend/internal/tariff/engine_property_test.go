@@ -54,7 +54,7 @@ func TestProperty_UseActiveTariffOnly(t *testing.T) {
 			tenantID := createTestTenantForTariff(t, db)
 
 			// Create test service
-			serviceID := createTestServiceForProperty(t, db, "TEST_SERVICE", "gateway")
+			serviceID := createTestServiceForProperty(t, db, tenantID, "TEST_SERVICE", "gateway")
 
 			// Create multiple tariffs with different states
 			countryCode := "YE"
@@ -126,7 +126,7 @@ func TestProperty_UseActiveTariffOnly(t *testing.T) {
 					"Expected: %d (active), Got: %d",
 				activeTariff.ID, result.TariffID)
 
-			assert.Equal(t, fmt.Sprintf("%.4f", activeTariff.CostPerMessage), result.CostPerSegment.String(),
+			assert.True(t, result.CostPerSegment.Equal(decimal.NewFromFloat(activeTariff.CostPerMessage)),
 				"Property violated: Should use active tariff cost\n"+
 				"Expected: %.4f, Got: %s",
 				activeTariff.CostPerMessage, result.CostPerSegment.String())
@@ -158,7 +158,7 @@ func TestProperty_TariffEffectiveDateBoundaries(t *testing.T) {
 	for iteration := 0; iteration < numIterations; iteration++ {
 		t.Run(fmt.Sprintf("DateBoundaries_Iteration_%d", iteration+1), func(t *testing.T) {
 			tenantID := createTestTenantForTariff(t, db)
-			serviceID := createTestServiceForProperty(t, db, fmt.Sprintf("TEST_SERVICE_%d", iteration), "gateway")
+			serviceID := createTestServiceForProperty(t, db, tenantID, fmt.Sprintf("TEST_SERVICE_%d", iteration), "gateway")
 			countryCode := "YE"
 			networkOperator := "Yemen Mobile"
 
@@ -217,7 +217,7 @@ func TestProperty_MostSpecificTariffSelection(t *testing.T) {
 	for iteration := 0; iteration < numIterations; iteration++ {
 		t.Run(fmt.Sprintf("Specificity_Iteration_%d", iteration+1), func(t *testing.T) {
 			tenantID := createTestTenantForTariff(t, db)
-			serviceID := createTestServiceForProperty(t, db, fmt.Sprintf("TEST_SERVICE_SPEC_%d", iteration), "gateway")
+			serviceID := createTestServiceForProperty(t, db, tenantID, fmt.Sprintf("TEST_SERVICE_SPEC_%d", iteration), "gateway")
 			countryCode := "YE"
 			networkOperator := "Yemen Mobile"
 
@@ -297,7 +297,7 @@ func TestProperty_InactiveTariffsNeverUsed(t *testing.T) {
 	for iteration := 0; iteration < numIterations; iteration++ {
 		t.Run(fmt.Sprintf("InactiveNeverUsed_Iteration_%d", iteration+1), func(t *testing.T) {
 			tenantID := createTestTenantForTariff(t, db)
-			serviceID := createTestServiceForProperty(t, db, fmt.Sprintf("TEST_SERVICE_INACTIVE_%d", iteration), "gateway")
+			serviceID := createTestServiceForProperty(t, db, tenantID, fmt.Sprintf("TEST_SERVICE_INACTIVE_%d", iteration), "gateway")
 			countryCode := "YE"
 			networkOperator := fmt.Sprintf("Operator_%d", rand.Intn(5))
 
@@ -360,7 +360,7 @@ func TestProperty_TariffCacheConsistency(t *testing.T) {
 	for iteration := 0; iteration < numIterations; iteration++ {
 		t.Run(fmt.Sprintf("CacheConsistency_Iteration_%d", iteration+1), func(t *testing.T) {
 			tenantID := createTestTenantForTariff(t, db)
-			serviceID := createTestServiceForProperty(t, db, fmt.Sprintf("TEST_SERVICE_CACHE_%d", iteration), "gateway")
+			serviceID := createTestServiceForProperty(t, db, tenantID, fmt.Sprintf("TEST_SERVICE_CACHE_%d", iteration), "gateway")
 			countryCode := "YE"
 			networkOperator := "Yemen Mobile"
 
@@ -433,7 +433,7 @@ func createTestTariff(t *testing.T, db *gorm.DB, params TariffParams) *models.Ta
 		ServiceID:       params.ServiceID,
 		CountryCode:     params.CountryCode,
 		NetworkOperator: params.NetworkOperator,
-		MessageType:     "standard",
+		MessageType:     "GSM-7",
 		CostPerMessage:  params.CostPerMessage.InexactFloat64(),
 		Currency:        "YER",
 		EffectiveFrom:   params.EffectiveFrom,
@@ -444,29 +444,33 @@ func createTestTariff(t *testing.T, db *gorm.DB, params TariffParams) *models.Ta
 	err := db.Create(tariff).Error
 	require.NoError(t, err, "Failed to create test tariff")
 
+	if !params.IsActive {
+		err = db.Exec(`UPDATE tariffs SET is_active = false WHERE id = ?`, tariff.ID).Error
+		require.NoError(t, err, "Failed to force inactive tariff")
+	}
+
 	return tariff
 }
 
 func createTestTenantForTariff(t *testing.T, db *gorm.DB) uuid.UUID {
 	// Use raw SQL to insert tenant
 	tenantID := uuid.New()
-	err := db.Raw(`
-		INSERT INTO tenants (id, business_name, balance, created_at, updated_at)
-		VALUES (?, ?, ?, NOW(), NOW())
-		RETURNING id
-	`, tenantID, "Property Test Tenant", 10000.0).Scan(&tenantID).Error
+	err := db.Exec(`
+		INSERT INTO tenants (id, business_name, contact_name, email, balance, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+	`, tenantID, "Property Test Tenant", "Test Contact", "test@property.com", 10000.0).Error
 	
 	require.NoError(t, err, "Failed to create test tenant")
 	return tenantID
 }
 
-func createTestServiceForProperty(t *testing.T, db *gorm.DB, code, serviceType string) int {
+func createTestServiceForProperty(t *testing.T, db *gorm.DB, tenantID uuid.UUID, code, serviceType string) int {
 	var serviceID int
 	err := db.Raw(`
-		INSERT INTO services (name, code, type, is_active, created_at, updated_at)
-		VALUES (?, ?, ?, true, NOW(), NOW())
+		INSERT INTO services (tenant_id, name, code, type, is_active, created_at, updated_at)
+		VALUES (?, ?, ?, ?, true, NOW(), NOW())
 		RETURNING id
-	`, code, code, serviceType).Scan(&serviceID).Error
+	`, tenantID, code, code, serviceType).Scan(&serviceID).Error
 	
 	require.NoError(t, err, "Failed to create test service")
 	return serviceID
@@ -478,7 +482,7 @@ func ptrTime(t time.Time) *time.Time {
 
 func setupTestEnvironment(t *testing.T) (*gorm.DB, *pgxpool.Pool, *redis.Client) {
 	// Database connection
-	connString := "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable"
+	connString := "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable"
 	
 	// GORM connection
 	gormDB, err := gorm.Open(postgres.Open(connString), &gorm.Config{})
@@ -492,12 +496,24 @@ func setupTestEnvironment(t *testing.T) (*gorm.DB, *pgxpool.Pool, *redis.Client)
 	// Redis connection
 	cache := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
-		DB:   1, // Use DB 1 for tests
+		DB:   3, // Dedicated test DB so FlushDB does not collide with routing (DB 1)
 	})
 
-	// Verify Redis connection
-	err = cache.Ping(ctx).Err()
-	require.NoError(t, err, "Failed to connect to Redis")
+	// Verify Redis connection. Under the full `go test ./...` parallel sweep
+	// the WSL2 Redis relay can be saturated enough to blow the default 3s read
+	// timeout (observed "i/o timeout" at this ping), so retry with a generous
+	// per-attempt budget before giving up.
+	var pingErr error
+	for attempt := 0; attempt < 5; attempt++ {
+		pingCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		pingErr = cache.Ping(pingCtx).Err()
+		cancel()
+		if pingErr == nil {
+			break
+		}
+		time.Sleep(300 * time.Millisecond)
+	}
+	require.NoError(t, pingErr, "Failed to connect to Redis")
 
 	// Clean Redis test database
 	cache.FlushDB(ctx)

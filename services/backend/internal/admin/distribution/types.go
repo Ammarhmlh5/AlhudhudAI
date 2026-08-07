@@ -35,6 +35,13 @@ type Device struct {
 	UpdatedAt               time.Time `json:"updated_at"`
 }
 
+// TableName maps Device to the phone_devices table created by migration
+// 036_phone_devices_table.sql. The default GORM table name "devices" does
+// not exist in the schema, which previously caused 500 errors.
+func (Device) TableName() string {
+	return "phone_devices"
+}
+
 // DevicePool represents a pool of available devices for distribution
 type DevicePool struct {
 	TenantID uuid.UUID `json:"tenant_id"`
@@ -69,14 +76,32 @@ const (
 
 // DistributionConfig represents the distribution strategy configuration for a tenant
 type DistributionConfig struct {
-	ID             int64        `json:"id"`
-	TenantID       uuid.UUID    `json:"tenant_id"`
-	StrategyType   StrategyType `json:"strategy_type"`
-	StrategyConfig map[string]interface{} `json:"strategy_config,omitempty"`
-	CustomRules    map[string]interface{} `json:"custom_rules,omitempty"`
-	IsActive       bool         `json:"is_active"`
-	CreatedAt      time.Time    `json:"created_at"`
-	UpdatedAt      time.Time    `json:"updated_at"`
+	ID             int64                 `json:"id"`
+	TenantID       uuid.UUID             `json:"tenant_id"`
+	StrategyType   StrategyType          `json:"strategy_type"`
+	StrategyConfig map[string]interface{} `json:"strategy_config,omitempty" gorm:"serializer:json"`
+	CustomRules    map[string]interface{} `json:"custom_rules,omitempty" gorm:"serializer:json"`
+	IsActive       bool                  `json:"is_active"`
+	CreatedAt      time.Time             `json:"created_at"`
+	UpdatedAt      time.Time             `json:"updated_at"`
+}
+
+// TableName maps DistributionConfig to the distribution_strategies table created
+// by migration 035_distribution_strategies_table.sql. The default GORM table name
+// "distribution_configs" does not exist in the schema.
+func (DistributionConfig) TableName() string {
+	return "distribution_strategies"
+}
+
+// TenantDeviceMetric represents aggregated distribution metrics for a tenant's device.
+// Rows are produced by joining distribution_metrics with phone_devices.
+type TenantDeviceMetric struct {
+	DeviceID                uuid.UUID `json:"device_id"`
+	DeviceName              string    `json:"device_name"`
+	MessagesAssigned        int64     `json:"messages_assigned"`
+	MessagesSent            int64     `json:"messages_sent"`
+	SuccessfulMessages      int64     `json:"successful_messages"`
+	AverageProcessingTimeMs int       `json:"average_processing_time_ms"`
 }
 
 // DeviceStatus constants

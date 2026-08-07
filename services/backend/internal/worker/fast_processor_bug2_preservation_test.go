@@ -2,7 +2,9 @@ package worker
 
 import (
 	"context"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -43,10 +45,33 @@ func TestProperty_Bug2_GormQueriesContinueToWork(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
 		// Generate test tenant data
 		tenantName := rapid.StringN(5, 20, -1).Draw(t, "tenantName")
-		
+		// Strip control characters (e.g. 0x00) which PostgreSQL rejects in UTF8
+		tenantName = strings.Map(func(r rune) rune {
+			if r < 0x20 || r == 0x7f {
+				return -1
+			}
+			return r
+		}, tenantName)
+		if tenantName == "" {
+			tenantName = "Test Tenant"
+		}
+
+		// Create a valid test user to satisfy fk_tenants_user
+		userID := uuid.New()
+		err := db.GormDB.Exec(`
+			INSERT INTO users (id, email, password_hash, user_type, is_active, is_verified, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		`, userID, "worker-"+userID.String()+"@test.com", "hash", "ADMIN", true, true, time.Now(), time.Now()).Error
+		if err != nil {
+			t.Fatalf("Failed to create test user: %v", err)
+			return
+		}
+		defer db.GormDB.Exec("DELETE FROM users WHERE id = ?", userID)
+
 		// Create a test tenant using GORM with unique company_serial
 		tenant := &models.Tenant{
 			ID:            uuid.New(),
+			UserID:        userID,
 			BusinessName:  tenantName,
 			ContactName:   "Test Contact",
 			Email:         "test@example.com",
@@ -55,7 +80,7 @@ func TestProperty_Bug2_GormQueriesContinueToWork(t *testing.T) {
 		}
 
 		// ACT: Create tenant using GORM
-		err := db.GormDB.WithContext(ctx).Create(tenant).Error
+		err = db.GormDB.WithContext(ctx).Create(tenant).Error
 		
 		// ASSERT: GORM create should work
 		// On UNFIXED code: PASSES (GORM works independently)
@@ -92,6 +117,7 @@ func TestBug2_GormTransactionsContinueToWork(t *testing.T) {
 	// Create test data with unique company_serial
 	tenant := &models.Tenant{
 		ID:            uuid.New(),
+		UserID:        createTestUser(t),
 		BusinessName:  "Test Company",
 		ContactName:   "Test Contact",
 		Email:         "test@example.com",
@@ -170,6 +196,7 @@ func TestBug2_GormQueryBuilderContinuesToWork(t *testing.T) {
 	// Create test tenants with unique company_serial
 	tenant1 := &models.Tenant{
 		ID:            uuid.New(),
+		UserID:        createTestUser(t),
 		BusinessName:  "Active Company",
 		ContactName:   "Test Contact",
 		Email:         "active@example.com",
@@ -178,6 +205,7 @@ func TestBug2_GormQueryBuilderContinuesToWork(t *testing.T) {
 	}
 	tenant2 := &models.Tenant{
 		ID:            uuid.New(),
+		UserID:        createTestUser(t),
 		BusinessName:  "Inactive Company",
 		ContactName:   "Test Contact",
 		Email:         "inactive@example.com",
@@ -237,6 +265,7 @@ func TestBug2_GormUpdatesContinueToWork(t *testing.T) {
 	// Create test tenant with unique company_serial
 	tenant := &models.Tenant{
 		ID:            uuid.New(),
+		UserID:        createTestUser(t),
 		BusinessName:  "Original Name",
 		ContactName:   "Test Contact",
 		Email:         "test@example.com",
@@ -284,6 +313,7 @@ func TestBug2_GormDeletesContinueToWork(t *testing.T) {
 	// Create test tenant with unique company_serial
 	tenant := &models.Tenant{
 		ID:            uuid.New(),
+		UserID:        createTestUser(t),
 		BusinessName:  "To Be Deleted",
 		ContactName:   "Test Contact",
 		Email:         "delete@example.com",

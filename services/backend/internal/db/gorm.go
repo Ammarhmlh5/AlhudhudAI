@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/al-hudhud/backend/pkg/logger"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -70,8 +72,26 @@ func InitGormDB() {
 		log.Fatal("Failed to parse pgxpool config", zap.Error(err))
 	}
 
-	pgxConfig.MaxConns = 50
-	pgxConfig.MinConns = 10
+	// Allow tests (and deployments) to cap the pool so parallel test packages
+	// do not exhaust the server's max_connections budget.
+	maxConns := int32(50)
+	if v := os.Getenv("DB_MAX_CONNS"); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 32); err == nil && n > 0 {
+			maxConns = int32(n)
+		}
+	}
+	minConns := maxConns / 5
+	if v := os.Getenv("DB_MIN_CONNS"); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 32); err == nil && n >= 0 {
+			minConns = int32(n)
+		}
+	}
+	if minConns > maxConns {
+		minConns = maxConns
+	}
+
+	pgxConfig.MaxConns = maxConns
+	pgxConfig.MinConns = minConns
 
 	PgxPool, err = pgxpool.NewWithConfig(ctx, pgxConfig)
 	if err != nil {
@@ -85,6 +105,14 @@ func InitGormDB() {
 	log.Info("PgxPool initialized successfully",
 		zap.Int32("max_conns", pgxConfig.MaxConns),
 		zap.Int32("min_conns", pgxConfig.MinConns))
+
+	// Cap the GORM connection pool too, so parallel test packages cannot
+	// exhaust the server's max_connections budget.
+	if sqlDB, err := GormDB.DB(); err == nil {
+		sqlDB.SetMaxOpenConns(int(maxConns))
+		sqlDB.SetMaxIdleConns(int(minConns))
+		sqlDB.SetConnMaxLifetime(time.Hour)
+	}
 
 	// Run Migrations
 	migrate()
@@ -124,5 +152,13 @@ func migrate() {
 func Close() {
 	if PgxPool != nil {
 		PgxPool.Close()
+		PgxPool = nil
+	}
+	if GormDB != nil {
+		sqlDB, err := GormDB.DB()
+		if err == nil {
+			sqlDB.Close()
+		}
+		GormDB = nil
 	}
 }

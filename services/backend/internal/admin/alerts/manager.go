@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -11,6 +12,9 @@ import (
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
+
+// ErrAlertNotFound is returned when an alert cannot be found
+var ErrAlertNotFound = errors.New("alert not found")
 
 // Manager handles alert operations
 // Implements Requirements 6.1-6.4, 6.9
@@ -242,6 +246,7 @@ func (m *Manager) GetAlerts(ctx context.Context, filter *AlertFilter) (*AlertLis
 
 // GetAlertByID retrieves a single alert by ID.
 // tenantID is REQUIRED to prevent cross-tenant data leakage.
+// Pass tenantID = uuid.Nil to bypass the tenant filter (admin/super-admin only).
 func (m *Manager) GetAlertByID(ctx context.Context, alertID int64, tenantID uuid.UUID) (*Alert, error) {
 	// SECURITY: always filter by both id AND tenant_id so a tenant
 	// cannot read alerts that belong to another tenant.
@@ -251,13 +256,18 @@ func (m *Manager) GetAlertByID(ctx context.Context, alertID int64, tenantID uuid
 			context, status, acknowledged_at, acknowledged_by,
 			resolved_at, dedup_key, created_at
 		FROM alerts
-		WHERE id = $1 AND tenant_id = $2
+		WHERE id = $1
 	`
+	args := []interface{}{alertID}
+	if tenantID != uuid.Nil {
+		query += ` AND tenant_id = $2`
+		args = append(args, tenantID)
+	}
 
 	var alert Alert
 	var contextJSON []byte
 
-	err := m.db.QueryRowContext(ctx, query, alertID, tenantID).Scan(
+	err := m.db.QueryRowContext(ctx, query, args...).Scan(
 		&alert.ID,
 		&alert.TenantID,
 		&alert.AlertType,
@@ -274,7 +284,7 @@ func (m *Manager) GetAlertByID(ctx context.Context, alertID int64, tenantID uuid
 	)
 
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("alert not found: %d", alertID)
+		return nil, fmt.Errorf("%w: %d", ErrAlertNotFound, alertID)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get alert: %w", err)
@@ -296,6 +306,11 @@ func (m *Manager) GetAlertByID(ctx context.Context, alertID int64, tenantID uuid
 // AcknowledgeAlert marks an alert as acknowledged
 // Implements Requirements 6.9
 func (m *Manager) AcknowledgeAlert(ctx context.Context, alertID int64, userID uuid.UUID) error {
+	acknowledgedBy := interface{}(nil)
+	if userID != uuid.Nil {
+		acknowledgedBy = userID
+	}
+
 	query := `
 		UPDATE alerts
 		SET 
@@ -310,7 +325,7 @@ func (m *Manager) AcknowledgeAlert(ctx context.Context, alertID int64, userID uu
 		query,
 		AlertStatusAcknowledged,
 		time.Now(),
-		userID,
+		acknowledgedBy,
 		alertID,
 		AlertStatusActive,
 	)
@@ -329,7 +344,7 @@ func (m *Manager) AcknowledgeAlert(ctx context.Context, alertID int64, userID uu
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("alert not found or already acknowledged: %d", alertID)
+		return fmt.Errorf("%w: %d", ErrAlertNotFound, alertID)
 	}
 
 	m.logger.Info("Alert acknowledged",
@@ -374,7 +389,7 @@ func (m *Manager) ResolveAlert(ctx context.Context, alertID int64) error {
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("alert not found or already resolved: %d", alertID)
+		return fmt.Errorf("%w: %d", ErrAlertNotFound, alertID)
 	}
 
 	m.logger.Info("Alert resolved",
@@ -408,6 +423,15 @@ func (m *Manager) validateCreateRequest(req *CreateAlertRequest) error {
 		AlertTypeServerFailure:      true,
 		AlertTypeThresholdViolation: true,
 		AlertTypeDeviceFailure:      true,
+		AlertTypeTimingViolation:    true,
+		AlertTypeEnforcementAction:  true,
+		AlertTypeQueueBackup:        true,
+		AlertTypeHighErrorRate:      true,
+		AlertTypeSystemResource:     true,
+		AlertTypeDatabaseFailure:    true,
+		AlertTypeLowBalance:         true,
+		AlertTypeSystemHealth:       true,
+		AlertTypeChannelOffline:     true,
 	}
 	if !validTypes[req.AlertType] {
 		return fmt.Errorf("invalid alert_type: %s", req.AlertType)
@@ -422,6 +446,65 @@ func (m *Manager) validateCreateRequest(req *CreateAlertRequest) error {
 	if !validSeverities[req.Severity] {
 		return fmt.Errorf("invalid severity: %s", req.Severity)
 	}
+
+	return nil
+}
+
+// alertConfigKey is the admin_settings key used to store the alert configuration
+const alertConfigKey = "alert_config"
+
+// GetConfig returns the stored alert configuration as raw JSON.
+// Returns nil when no configuration has been saved yet.
+func (m *Manager) GetConfig(ctx context.Context) (json.RawMessage, error) {
+	var value sql.NullString
+	err := m.db.QueryRowContext(ctx,
+		`SELECT value FROM admin_settings WHERE key = $1`, alertConfigKey,
+	).Scan(&value)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to load alert config: %w", err)
+	}
+	if !value.Valid || value.String == "" {
+		return nil, nil
+	}
+	if !json.Valid([]byte(value.String)) {
+		return nil, fmt.Errorf("stored alert config is invalid JSON")
+	}
+
+	return json.RawMessage(value.String), nil
+}
+
+// UpdateConfig stores the alert configuration as JSON in admin_settings.
+func (m *Manager) UpdateConfig(ctx context.Context, config []byte, updatedBy uuid.UUID) error {
+	updatedByVal := interface{}(nil)
+	if updatedBy != uuid.Nil {
+		updatedByVal = updatedBy
+	}
+
+	query := `
+		INSERT INTO admin_settings (key, value, value_type, category, description, updated_at, updated_by)
+		VALUES ($1, $2, 'json', 'alerts', 'Alert thresholds and notification channels', NOW(), $3)
+		ON CONFLICT (key) DO UPDATE SET
+			value = EXCLUDED.value,
+			value_type = EXCLUDED.value_type,
+			updated_at = NOW(),
+			updated_by = EXCLUDED.updated_by
+	`
+
+	_, err := m.db.ExecContext(ctx, query, alertConfigKey, string(config), updatedByVal)
+	if err != nil {
+		m.logger.Error("Failed to store alert config",
+			zap.Error(err),
+		)
+		return fmt.Errorf("failed to store alert config: %w", err)
+	}
+
+	m.logger.Info("Alert config updated",
+		zap.String("user_id", updatedBy.String()),
+	)
 
 	return nil
 }

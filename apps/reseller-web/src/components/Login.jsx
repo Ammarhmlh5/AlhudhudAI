@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Mail, ShieldCheck, ArrowRight, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Lock, Mail, ShieldCheck, ArrowRight, Loader2, Globe } from 'lucide-react';
 import apiClient from '../api/axios';
 
 export default function Login() {
+    const { t, i18n } = useTranslation();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -19,14 +21,14 @@ export default function Login() {
             
             // Validate if the user is a RESELLER or STAFF of a reseller
             if (res.data.user.user_type !== 'RESELLER' && res.data.user.user_type !== 'SUPER_ADMIN') {
-                setError('Access denied. This portal is for resellers only.');
+                setError(t('login.access_denied'));
                 return;
             }
 
             localStorage.setItem('reseller_token', res.data.token);
             navigate('/');
         } catch (err) {
-            setError(err.response?.data?.error || 'Invalid email or password');
+            setError(err.response?.data?.error || t('login.invalid'));
         } finally {
             setLoading(false);
         }
@@ -46,7 +48,17 @@ export default function Login() {
                     <h1 className="text-4xl font-black text-white tracking-tighter uppercase mb-2">
                         Hudhud<span className="text-rose-500">B2B</span>
                     </h1>
-                    <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-[10px]">Enterprise Reseller Access</p>
+                    <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-[10px]">{t('brand.tagline')}</p>
+                </div>
+
+                <div className="absolute top-4 end-4">
+                    <button
+                        onClick={() => i18n.changeLanguage(i18n.language === 'ar' ? 'en' : 'ar')}
+                        className="flex items-center gap-2 px-3 py-2 bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 rounded-xl transition-colors text-xs font-bold"
+                    >
+                        <Globe className="w-4 h-4" />
+                        {i18n.language === 'ar' ? 'English' : 'عربي'}
+                    </button>
                 </div>
 
                 <div className="glass-card p-10 border border-slate-800/50 relative overflow-hidden">
@@ -60,7 +72,7 @@ export default function Login() {
                         )}
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Email Address</label>
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{t('login.email')}</label>
                             <div className="relative group">
                                 <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-rose-500 transition-colors" />
                                 <input 
@@ -76,8 +88,8 @@ export default function Login() {
 
                         <div className="space-y-2">
                             <div className="flex justify-between items-center px-1">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Password</label>
-                                <button type="button" className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-400 transition-colors">Forgot?</button>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t('login.password')}</label>
+                                <button type="button" className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-400 transition-colors">{t('login.forgot')}</button>
                             </div>
                             <div className="relative group">
                                 <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-rose-500 transition-colors" />
@@ -101,7 +113,7 @@ export default function Login() {
                                 <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
                                 <>
-                                    Secure Login
+                                    {t('login.submit')}
                                     <ArrowRight className="w-4 h-4" />
                                 </>
                             )}
@@ -110,7 +122,7 @@ export default function Login() {
                 </div>
 
                 <p className="text-center mt-8 text-slate-600 text-xs font-bold">
-                    Authorized Access Only. All activities are logged.
+                    {t('brand.footer')}
                 </p>
             </div>
         </div>

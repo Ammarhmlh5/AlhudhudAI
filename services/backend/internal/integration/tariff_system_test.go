@@ -37,6 +37,7 @@ type TariffSystemTestSuite struct {
 	rolloverManager   rollover.Manager
 	autoRenewal       *billing.AutoRenewalService
 	tariffEngine      tariff.Engine
+	createdTenants    []uuid.UUID
 }
 
 func (suite *TariffSystemTestSuite) SetupSuite() {
@@ -47,8 +48,9 @@ func (suite *TariffSystemTestSuite) SetupSuite() {
 	cfg.Database.Host = "localhost"
 	cfg.Database.Port = "5432"
 	cfg.Database.User = "postgres"
-	cfg.Database.Password = "postgres"
+	cfg.Database.Password = testDBPassword()
 	cfg.Database.Name = "sms_gateway_test"
+	cfg.Database.SSLMode = "disable"
 	cfg.Database.MaxOpenConns = 10
 	cfg.Database.MaxIdleConns = 5
 	cfg.Database.ConnMaxLifetime = time.Hour
@@ -58,14 +60,14 @@ func (suite *TariffSystemTestSuite) SetupSuite() {
 	require.NoError(suite.T(), err)
 	suite.db = db
 
-	connStr := "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable"
+	connStr := "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable"
 	gormDB, err := gorm.Open(postgres.Open(connStr), &gorm.Config{})
 	require.NoError(suite.T(), err)
 	suite.gormDB = gormDB
 
 	suite.redisClient = goredis.NewClient(&goredis.Options{
 		Addr: "localhost:6379",
-		DB:   2,
+		DB:   13, // Dedicated test DB so FlushDB does not collide with other packages
 	})
 
 	suite.balanceManager = balance.NewManager(db.Pool, suite.logger)
@@ -90,12 +92,18 @@ func (suite *TariffSystemTestSuite) SetupTest() {
 }
 
 func (suite *TariffSystemTestSuite) cleanupTestData() {
-	suite.gormDB.Exec("DELETE FROM rollover_messages")
-	suite.gormDB.Exec("DELETE FROM subscriptions")
-	suite.gormDB.Exec("DELETE FROM packages")
-	suite.gormDB.Exec("DELETE FROM balance_history")
-	suite.gormDB.Exec("DELETE FROM accounting_transactions")
-	suite.gormDB.Exec("DELETE FROM tenants WHERE email LIKE 'test_%'")
+	// Scope cleanup to the tenants this suite created so parallel packages
+	// sharing sms_gateway_test are not wiped.
+	for _, tenantID := range suite.createdTenants {
+		suite.gormDB.Exec("DELETE FROM rollover_messages WHERE tenant_id = ?", tenantID)
+		suite.gormDB.Exec("DELETE FROM subscriptions WHERE tenant_id = ?", tenantID)
+		suite.gormDB.Exec("DELETE FROM packages WHERE tenant_id = ?", tenantID)
+		suite.gormDB.Exec("DELETE FROM balance_history WHERE tenant_id = ?", tenantID)
+		suite.gormDB.Exec("DELETE FROM accounting_transactions WHERE tenant_id = ?", tenantID)
+		suite.gormDB.Exec("DELETE FROM messages WHERE tenant_id = ?", tenantID)
+		suite.gormDB.Exec("DELETE FROM dispatch_channels WHERE tenant_id = ?", tenantID)
+		suite.gormDB.Exec("DELETE FROM tenants WHERE id = ?", tenantID)
+	}
 	suite.redisClient.FlushDB(suite.ctx)
 }
 
@@ -137,14 +145,18 @@ func (suite *TariffSystemTestSuite) TestCompleteSubscriptionFlow() {
 
 func (suite *TariffSystemTestSuite) createTestTenant(email string, balanceVal float64) uuid.UUID {
 	tenantID := uuid.New()
-	tenant := &models.Tenant{
-		ID:      tenantID,
-		Email:   email,
-		Balance: balanceVal,
-		Status:  "ACTIVE",
-	}
-	err := suite.gormDB.Create(tenant).Error
+	userID := uuid.New()
+	err := suite.gormDB.Exec(`
+		INSERT INTO users (id, email, password_hash, user_type, is_active, is_verified, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+	`, userID, "int-"+userID.String()+"@test.com", "hash", "TENANT", true, true).Error
 	require.NoError(suite.T(), err)
+	err = suite.gormDB.Exec(`
+		INSERT INTO tenants (id, user_id, business_name, contact_name, email, balance, status, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', NOW(), NOW())
+	`, tenantID, userID, "Test Business", "Test Contact", email, balanceVal).Error
+	require.NoError(suite.T(), err)
+	suite.createdTenants = append(suite.createdTenants, tenantID)
 	return tenantID
 }
 

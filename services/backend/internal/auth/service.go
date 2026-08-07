@@ -7,7 +7,9 @@ import (
 	"github.com/al-hudhud/backend/internal/db"
 	"github.com/al-hudhud/backend/internal/models"
 	"github.com/al-hudhud/backend/pkg/jwt"
+	"github.com/al-hudhud/backend/pkg/logger"
 	"github.com/al-hudhud/backend/pkg/password"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -54,10 +56,15 @@ func (s *Service) Login(email, passwordStr, ipAddress, userAgent string) (*model
 	var staff *models.StaffProfile
 	var tenantIDStr, staffIDStr string
 
-	if user.UserType == models.TenantType {
+	if user.UserType == models.TenantType || user.UserType == models.ResellerType {
 		tenant = &models.Tenant{}
 		if err := db.GormDB.Where("user_id = ?", user.ID).First(tenant).Error; err == nil {
 			tenantIDStr = tenant.ID.String()
+		} else {
+			logger.GetLogger().Warn("Login: tenant lookup failed",
+				zap.String("email", email),
+				zap.String("user_id", user.ID.String()),
+				zap.Error(err))
 		}
 	}
 
@@ -135,7 +142,7 @@ func (s *Service) RefreshToken(refreshToken string) (string, error) {
 	}
 
 	var tenantIDStr, staffIDStr string
-	if user.UserType == models.TenantType {
+	if user.UserType == models.TenantType || user.UserType == models.ResellerType {
 		var t models.Tenant
 		if err := db.GormDB.Where("user_id = ?", user.ID).First(&t).Error; err == nil {
 			tenantIDStr = t.ID.String()

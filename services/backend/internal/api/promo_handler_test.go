@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -24,7 +25,7 @@ func setupPromoTestRouter(t *testing.T) (*gin.Engine, *sqlx.DB) {
 	}
 	gin.SetMode(gin.TestMode)
 	
-	db, err := sqlx.Connect("postgres", "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable")
+	db, err := sqlx.Connect("postgres", "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable")
 	require.NoError(t, err)
 	
 	router := gin.New()
@@ -263,7 +264,7 @@ func TestGetPromoPerformanceAPI(t *testing.T) {
 	}
 	
 	// الحصول على الأداء
-	req, _ := http.NewRequest("GET", "/api/admin/promo-codes/"+string(rune(promoCode.ID))+"/performance", nil)
+	req, _ := http.NewRequest("GET", "/api/admin/promo-codes/"+strconv.FormatInt(promoCode.ID, 10)+"/performance", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 	
@@ -307,7 +308,7 @@ func TestUpdatePromoCodeAPI(t *testing.T) {
 	}
 	
 	body, _ := json.Marshal(updates)
-	req, _ := http.NewRequest("PUT", "/api/admin/promo-codes/"+string(rune(promoCode.ID)), bytes.NewBuffer(body))
+	req, _ := http.NewRequest("PUT", "/api/admin/promo-codes/"+strconv.FormatInt(promoCode.ID, 10), bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	
 	w := httptest.NewRecorder()
@@ -346,7 +347,7 @@ func TestDeletePromoCodeAPI(t *testing.T) {
 	require.NoError(t, err)
 	
 	// حذف الكود
-	req, _ := http.NewRequest("DELETE", "/api/admin/promo-codes/"+string(rune(promoCode.ID)), nil)
+	req, _ := http.NewRequest("DELETE", "/api/admin/promo-codes/"+strconv.FormatInt(promoCode.ID, 10), nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 	

@@ -133,7 +133,7 @@ func TestBillingService_GenerateMonthlyInvoice(t *testing.T) {
 	// Assert
 	assert.NoError(t, err)
 	assert.NotNil(t, invoice)
-	assert.Equal(t, decimal.NewFromFloat(55.00), invoice.TotalAmount) // 1000*0.05 + 500*0.01
+	assert.True(t, decimal.NewFromFloat(55.00).Equal(invoice.TotalAmount), "expected 55.00, got %s", invoice.TotalAmount) // 1000*0.05 + 500*0.01
 	mockBillingRepo.AssertExpectations(t)
 }
 

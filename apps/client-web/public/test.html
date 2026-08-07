@@ -2,93 +2,562 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>أداة محاكاة إرسال الرسائل (API Tester)</title>
+    <title>أداة محاكاة إرسال الرسائل — وضع الدفعات (Batch API Tester)</title>
     <style>
-        body { font-family: Tahoma, Arial, sans-serif; background-color: #f4f4f9; padding: 20px; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        h2 { color: #333; text-align: center; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background-color: #2196F3; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; }
-        button:hover { background-color: #0b7dda; }
-        .log-box { margin-top: 20px; background: #222; color: #0f0; padding: 15px; border-radius: 5px; font-family: monospace; white-space: pre-wrap; word-wrap: break-word; min-height: 100px;}
+        * { box-sizing: border-box; }
+        body { font-family: Tahoma, Arial, sans-serif; background-color: #f4f4f9; padding: 20px; margin: 0; }
+        .container { max-width: 960px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h2 { color: #333; text-align: center; margin-top: 0; }
+        .sub { text-align: center; color: #666; margin-top: -10px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 14px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
+        input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .fieldset { border: 1px solid #ddd; border-radius: 8px; padding: 14px; margin-bottom: 16px; }
+        .fieldset legend { font-weight: bold; color: #444; padding: 0 8px; }
+        .mode-row { display: flex; gap: 16px; margin-top: 4px; }
+        .mode-row label { display: flex; align-items: center; gap: 6px; font-weight: normal; cursor: pointer; }
+        .buttons { display: flex; gap: 10px; margin: 16px 0; }
+        button { padding: 12px 18px; border: none; border-radius: 5px; font-size: 15px; cursor: pointer; color: white; flex: 1; }
+        button:disabled { opacity: .5; cursor: not-allowed; }
+        #btnStart { background-color: #2196F3; }
+        #btnStart:hover:not(:disabled) { background-color: #0b7dda; }
+        #btnStop { background-color: #f44336; }
+        #btnStop:hover:not(:disabled) { background-color: #d32f2f; }
+        #btnExport { background-color: #4CAF50; }
+        #btnExport:hover:not(:disabled) { background-color: #388e3c; }
+        #btnClear { background-color: #9e9e9e; }
+        #btnClear:hover:not(:disabled) { background-color: #757575; }
+        .progress-wrap { margin: 16px 0; }
+        .progress-bar { width: 100%; height: 26px; background: #e0e0e0; border-radius: 13px; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #2196F3, #4CAF50); transition: width .2s; }
+        .progress-text { text-align: center; margin-top: 6px; font-weight: bold; color: #333; }
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0; }
+        .stat-card { background: #fafafa; border: 1px solid #eee; border-radius: 8px; padding: 12px; text-align: center; }
+        .stat-card .num { font-size: 22px; font-weight: bold; color: #2196F3; }
+        .stat-card.success .num { color: #4CAF50; }
+        .stat-card.fail .num { color: #f44336; }
+        .stat-card .lbl { font-size: 12px; color: #888; margin-top: 4px; }
+        table.results { width: 100%; border-collapse: collapse; font-size: 12px; }
+        table.results th, table.results td { border: 1px solid #ddd; padding: 5px 7px; text-align: center; }
+        table.results th { background: #f0f0f0; position: sticky; top: 0; }
+        .res-ok { color: #2e7d32; }
+        .res-fail { color: #c62828; }
+        .res-warn { color: #ef6c00; }
+        .results-wrap { max-height: 320px; overflow: auto; border: 1px solid #eee; border-radius: 6px; }
+        .log-box { margin-top: 16px; background: #222; color: #0f0; padding: 15px; border-radius: 5px; font-family: Consolas, monospace; white-space: pre-wrap; word-wrap: break-word; min-height: 80px; max-height: 220px; overflow: auto; }
+        .small { font-size: 12px; color: #888; }
+        .hint { font-size: 12px; color: #888; margin-top: 4px; }
+        .bulk-only { display: none; }
+        .bulk-mode .bulk-only { display: block; }
+        .bulk-mode .indiv-only { display: none; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+        .badge-ok { background: #e8f5e9; color: #2e7d32; }
+        .badge-fail { background: #ffebee; color: #c62828; }
+        .badge-warn { background: #fff3e0; color: #ef6c00; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>أداة محاكاة العميل (API Tester)</h2>
-        <p style="text-align:center; color:#666;">تقوم هذه الأداة بمحاكاة إرسال رسالة باستخدام مفتاح API الخاص بك لضمان تطابق العملية مع الواقع.</p>
-        
-        <div class="form-group">
-            <label for="apiKey">مفتاح الربط البرمجي (API Key):</label>
-            <input type="text" id="apiKey" placeholder="أدخل مفتاح الـ API الخاص بالمستأجر...">
+        <h2>أداة محاكاة إرسال الرسائل (وضع الدفعات)</h2>
+        <p class="sub">محاكاة إرسال دفعات كبيرة من الأنظمة المحاسبية — فردي (جيسون لكل رسالة) أو جماعي (صفيف واحد)</p>
+
+        <div class="fieldset">
+            <legend>بيانات المصادقة والرسالة</legend>
+            <div class="form-group">
+                <label for="apiKey">مفتاح الربط البرمجي (API Key):</label>
+                <input type="text" id="apiKey" placeholder="أدخل مفتاح الـ API الخاص بالمستأجر...">
+            </div>
+            <div class="grid">
+                <div class="form-group">
+                    <label for="phone">رقم الهاتف الافتراضي:</label>
+                    <input type="text" id="phone" value="+967777217167">
+                </div>
+                <div class="form-group">
+                    <label for="phoneList">قائمة هواتف (اختياري، مفصولة بفاصلة):</label>
+                    <input type="text" id="phoneList" placeholder="+967777217167,+967777777777,+967700000000">
+                    <div class="hint">إن مُلئت، تُستخدم بالتناوب لكل رسالة بدلاً من الرقم الافتراضي.</div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="message">نص الرسالة (يدعم القالب {i} و {phone}):</label>
+                <textarea id="message" rows="3">فاتورة رقم {i} — تجربة إرسال دفعة من أداة المحاكاة.</textarea>
+            </div>
         </div>
-        
-        <div class="form-group">
-            <label for="phone">رقم الهاتف المستقبل (مثال: +967777217167):</label>
-            <input type="text" id="phone" value="+967777217167">
+
+        <div class="fieldset">
+            <legend>إعدادات الدفعة</legend>
+            <div class="form-group">
+                <label>وضع الإرسال:</label>
+                <div class="mode-row" id="modeRow">
+                    <label><input type="radio" name="mode" value="individual" checked> فردي (رسالة لكل طلب)</label>
+                    <label><input type="radio" name="mode" value="bulk"> جماعي (صفيف رسائل واحد)</label>
+                </div>
+            </div>
+            <div class="grid3">
+                <div class="form-group">
+                    <label for="count">عدد الرسائل:</label>
+                    <input type="number" id="count" value="100" min="1" max="100000">
+                </div>
+                <div class="form-group indiv-only">
+                    <label for="concurrency">التزامن (طلبات متوازية):</label>
+                    <input type="number" id="concurrency" value="10" min="1" max="100">
+                    <div class="hint">حد معدّل الـ Backend: 100 طلب/10 ثوانٍ.</div>
+                </div>
+                <div class="form-group indiv-only">
+                    <label for="delay">التأخير بين الطلبات (ms):</label>
+                    <input type="number" id="delay" value="0" min="0">
+                </div>
+                <div class="form-group bulk-only">
+                    <label for="chunkSize">حجم الدفعة الفرعية (chunk):</label>
+                    <input type="number" id="chunkSize" value="500" min="1" max="1000">
+                    <div class="hint">حد الـ Backend الأقصى للدفعة: 1000 رسالة.</div>
+                </div>
+            </div>
+            <div class="grid bulk-only" id="bulkFields">
+                <div class="form-group">
+                    <label for="messageType">نوع الرسالة (message_type):</label>
+                    <select id="messageType">
+                        <option value="INVOICE">INVOICE (فاتورة)</option>
+                        <option value="PAYMENT">PAYMENT (دفع)</option>
+                        <option value="ALERT">ALERT (تنبيه)</option>
+                        <option value="REMINDER">REMINDER (تذكير)</option>
+                        <option value="PROMO">PROMO (ترويج)</option>
+                        <option value="OTP">OTP</option>
+                        <option value="">OTHER (أخرى)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="senderName">اسم المرسل (sender_name):</label>
+                    <input type="text" id="senderName" value="Accounting System">
+                </div>
+            </div>
         </div>
-        
-        <div class="form-group">
-            <label for="message">نص الرسالة:</label>
-            <textarea id="message" rows="4">تجربة إرسال رسالة من أداة المحاكاة للتحقق من وصولها للهاتف.</textarea>
+
+        <div class="buttons">
+            <button id="btnStart" onclick="runSimulation()">بدء الإرسال</button>
+            <button id="btnStop" onclick="stopSimulation()" disabled>إيقاف</button>
+            <button id="btnExport" onclick="exportCSV()" disabled>تصدير النتائج (CSV)</button>
+            <button id="btnClear" onclick="clearAll()">مسح النتائج</button>
         </div>
-        
-        <button onclick="sendSMS()">إرسال الرسالة الآن</button>
-        
-        <div class="form-group" style="margin-top: 20px;">
+
+        <div class="progress-wrap">
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            <div class="progress-text" id="progressText">جاهز...</div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card"><div class="num" id="statTotal">0</div><div class="lbl">الإجمالي</div></div>
+            <div class="stat-card success"><div class="num" id="statOk">0</div><div class="lbl">ناجح</div></div>
+            <div class="stat-card fail"><div class="num" id="statFail">0</div><div class="lbl">فاشل</div></div>
+            <div class="stat-card"><div class="num" id="statRate">0</div><div class="lbl">رسالة/ثانية</div></div>
+        </div>
+
+        <div class="fieldset">
+            <legend>النتائج التفصيلية (آخر 200 سجل معروض — التصدير يشمل الكل)</legend>
+            <div class="results-wrap">
+                <table class="results">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>الهاتف</th>
+                            <th>الحالة</th>
+                            <th>event/message id</th>
+                            <th>زمن (ms)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="form-group">
             <label>سجل العمليات (Logs):</label>
-            <div id="logs" class="log-box">جاهز لإرسال الطلب...</div>
+            <div id="logs" class="log-box">جاهز لإرسال الدفعة...</div>
         </div>
     </div>
 
     <script>
+        // ====== ثوابت الـ API ======
+        const BASE_URL = 'http://localhost:8085';
+        const API_SEND = BASE_URL + '/api/v1/messaging/send';
+        const API_BULK = BASE_URL + '/api/v1/messaging/bulk-send';
+        const API_PROGRESS = (id) => BASE_URL + '/api/v1/messaging/bulk/' + encodeURIComponent(id) + '/progress';
+
+        // ====== الحالة العامة ======
+        let running = false;
+        let stopRequested = false;
+        let batchId = '';
+        let results = [];          // كل النتائج (للتصدير)
+        let stats = { total: 0, ok: 0, fail: 0 };
+        let startTime = 0;
+        let currentMode = 'individual';
+        let resultsCounter = 0;
+        const VISIBLE_ROWS = 200;
+
+        // ====== عناصر DOM ======
+        const $ = (id) => document.getElementById(id);
+        const logsDiv = $('logs');
+
+        // ====== أدوات مساعدة ======
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+        function now() { return (typeof performance !== 'undefined') ? performance.now() : Date.now(); }
+
         function logMsg(msg, isError = false) {
-            const logsDiv = document.getElementById('logs');
             const time = new Date().toLocaleTimeString();
             const color = isError ? '#f44336' : '#4CAF50';
-            logsDiv.innerHTML += `<br><span style="color:${color}">[${time}] ${msg}</span>`;
+            const el = document.createElement('div');
+            el.innerHTML = `<span style="color:${color}">[${time}] ${msg}</span>`;
+            logsDiv.appendChild(el);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
         }
 
-        async function sendSMS() {
-            const apiKey = document.getElementById('apiKey').value.trim();
-            const phone = document.getElementById('phone').value.trim();
-            const message = document.getElementById('message').value.trim();
+        function setRunning(on) {
+            running = on;
+            $('btnStart').disabled = on;
+            $('btnStop').disabled = !on;
+            $('btnExport').disabled = results.length === 0;
+            $('count').disabled = on;
+            $('concurrency').disabled = on;
+            $('delay').disabled = on;
+            $('chunkSize').disabled = on;
+            $('modeRow').querySelectorAll('input').forEach(r => r.disabled = on);
+        }
 
-            if (!apiKey || !phone || !message) {
-                alert("يرجى تعبئة كافة الحقول!");
-                return;
+        // ====== وضع الإرسال (إظهار/إخفاء حقول الدفعة الجماعية) ======
+        document.querySelectorAll('input[name="mode"]').forEach(r => {
+            r.addEventListener('change', (e) => {
+                currentMode = e.target.value;
+                document.querySelector('.container').classList.toggle('bulk-mode', currentMode === 'bulk');
+            });
+        });
+
+        // ====== توليد قائمة الرسائل ======
+        function buildMessages() {
+            const count = Math.max(1, parseInt($('count').value, 10) || 1);
+            const template = $('message').value.trim() || 'رسالة تجريبية {i}';
+            const defaultPhone = $('phone').value.trim();
+            const phoneList = $('phoneList').value.split(',').map(s => s.trim()).filter(Boolean);
+            const phones = phoneList.length ? phoneList : (defaultPhone ? [defaultPhone] : ['+967000000000']);
+            const messages = [];
+            for (let i = 0; i < count; i++) {
+                const phone = phones[i % phones.length];
+                const content = template.replace(/\{i\}/g, i + 1).replace(/\{phone\}/g, phone);
+                messages.push({ phone_number: phone, content });
             }
+            return messages;
+        }
 
-            document.getElementById('logs').innerHTML = "جاري إرسال الطلب إلى السيرفر...";
+        // ====== جلب مع إعادة محاولة عند 429/5xx ======
+        async function fetchWithRetry(url, options, label, maxAttempts = 4) {
+            let attempts = 0;
+            let lastErr = null;
+            while (true) {
+                attempts++;
+                try {
+                    const resp = await fetch(url, options);
+                    let data = null;
+                    const text = await resp.text();
+                    try { data = text ? JSON.parse(text) : null; } catch (e) { data = { raw: text.slice(0, 300) }; }
 
-            try {
-                // نستخدم المنفذ 8085 الخاص بالسيرفر
-                const response = await fetch('http://localhost:8085/api/v1/messaging/send', {
+                    if (resp.status === 429 && attempts < maxAttempts) {
+                        const retryAfter = parseRetryAfter(resp.headers.get('Retry-After'));
+                        const wait = retryAfter != null ? retryAfter : 1000 * attempts;
+                        logMsg(`[429] معدل الطلبات تجاوز الحد — إعادة المحاولة بعد ${wait}ms (${label})`, true);
+                        await sleep(wait);
+                        continue;
+                    }
+                    if (resp.status >= 500 && attempts < maxAttempts) {
+                        await sleep(500 * attempts);
+                        continue;
+                    }
+                    return { ok: resp.ok, status: resp.status, data, attempts };
+                } catch (err) {
+                    lastErr = err;
+                    if (attempts >= maxAttempts) break;
+                    await sleep(500 * attempts);
+                }
+            }
+            return { ok: false, status: 0, data: { error: (lastErr && lastErr.message) || 'network error' }, attempts };
+        }
+
+        function parseRetryAfter(value) {
+            if (!value) return null;
+            const secs = parseInt(value, 10);
+            if (!isNaN(secs)) return secs * 1000;
+            const t = Date.parse(value);
+            if (!isNaN(t)) return Math.max(0, t - Date.now());
+            return null;
+        }
+
+        // ====== تجمّع التزامن (Promise pool) ======
+        async function runPool(items, concurrency, worker) {
+            let next = 0;
+            const workers = [];
+            const n = Math.max(1, Math.min(concurrency, items.length));
+            const runWorker = async () => {
+                while (!stopRequested) {
+                    const idx = next++;
+                    if (idx >= items.length) break;
+                    await worker(items[idx], idx);
+                }
+            };
+            for (let i = 0; i < n; i++) workers.push(runWorker());
+            await Promise.all(workers);
+        }
+
+        // ====== تحديث العرض ======
+        function updateProgress() {
+            const done = stats.ok + stats.fail;
+            const pct = stats.total > 0 ? Math.round(done / stats.total * 100) : 0;
+            $('progressFill').style.width = pct + '%';
+            const elapsed = (now() - startTime) / 1000;
+            const rate = elapsed > 0 ? (done / elapsed).toFixed(1) : '0';
+            $('statTotal').textContent = stats.total;
+            $('statOk').textContent = stats.ok;
+            $('statFail').textContent = stats.fail;
+            $('statRate').textContent = rate;
+            const state = stopRequested ? 'متوقفة' : (running ? 'جاري الإرسال' : 'انتهت');
+            $('progressText').textContent = `${state} — ${done}/${stats.total} (${pct}%) — ${rate} رسالة/ثانية`;
+        }
+
+        function addResult(entry) {
+            resultsCounter++;
+            results.push(entry);
+            stats.total = stats.total || results.length;
+            const tbody = $('resultsBody');
+            const tr = document.createElement('tr');
+            const cls = entry.ok ? 'res-ok' : 'res-fail';
+            const badgeCls = entry.ok ? 'badge-ok' : 'badge-fail';
+            tr.innerHTML = `
+                <td>${resultsCounter}</td>
+                <td>${escapeHtml(entry.phone)}</td>
+                <td><span class="badge ${badgeCls}">${escapeHtml(entry.statusLabel)}</span></td>
+                <td>${escapeHtml(entry.id || '—')}</td>
+                <td>${entry.ms}</td>
+            `;
+            tbody.appendChild(tr);
+            // إبقاء الجدول محدوداً بصرياً
+            while (tbody.children.length > VISIBLE_ROWS) tbody.removeChild(tbody.firstChild);
+            updateProgress();
+        }
+
+        function escapeHtml(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
+
+        // ====== الوضع الفردي ======
+        async function sendIndividual(messages, concurrency, delayMs) {
+            const apiKey = $('apiKey').value.trim();
+            let attempted = 0;
+            await runPool(messages, concurrency, async (msg, idx) => {
+                if (stopRequested) return;
+                attempted++;
+                if (delayMs > 0) await sleep(delayMs);
+                const t0 = now();
+                const res = await fetchWithRetry(API_SEND, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-API-Key': apiKey,
-                        'X-Idempotency-Key': 'sim_' + Date.now()
+                        'X-Idempotency-Key': `sim_${batchId}_${idx}`
                     },
-                    body: JSON.stringify({
-                        phone_number: phone,
-                        content: message
-                    })
-                });
+                    body: JSON.stringify({ phone_number: msg.phone_number, content: msg.content })
+                }, `رسالة ${idx + 1}`);
+                const ms = Math.round(now() - t0);
 
-                const data = await response.json();
-
-                if (response.ok) {
-                    logMsg(`نجاح الإرسال! الرد: ${JSON.stringify(data, null, 2)}`);
-                    logMsg("الرسالة الآن يفترض أن تظهر في تطبيق الهاتف!");
+                if (res.ok) {
+                    stats.ok++;
+                    addResult({
+                        ok: true,
+                        phone: msg.phone_number,
+                        statusLabel: 'ناجح',
+                        id: (res.data && (res.data.id || res.data.message_id)) || '',
+                        ms
+                    });
+                    if (attempted % 50 === 0) logMsg(`تقدّم فردي: ${stats.ok + stats.fail}/${messages.length}`);
                 } else {
-                    logMsg(`فشل الإرسال (رمز ${response.status}): ${JSON.stringify(data, null, 2)}`, true);
+                    stats.fail++;
+                    const errMsg = (res.data && (res.data.error || JSON.stringify(res.data).slice(0, 200))) || `HTTP ${res.status}`;
+                    addResult({
+                        ok: false,
+                        phone: msg.phone_number,
+                        statusLabel: `فشل ${res.status}`,
+                        id: errMsg,
+                        ms
+                    });
                 }
-            } catch (error) {
-                logMsg(`حدث خطأ أثناء الاتصال بالسيرفر: ${error.message}`, true);
+            });
+        }
+
+        // ====== الوضع الجماعي ======
+        async function pollEventProgress(eventId, maxPolls = 30, intervalMs = 2000) {
+            const apiKey = $('apiKey').value.trim();
+            let lastData = null;
+            for (let i = 0; i < maxPolls; i++) {
+                if (stopRequested) return { terminal: false, status: 'STOPPED', data: lastData };
+                const res = await fetchWithRetry(API_PROGRESS(eventId), {
+                    headers: { 'X-API-Key': apiKey }
+                }, `progress ${eventId}`);
+                if (res.ok && res.data) {
+                    lastData = res.data;
+                    const st = (res.data.status || '').toUpperCase();
+                    const total = res.data.total_items || 0;
+                    const processed = res.data.processed_items || 0;
+                    const failed = res.data.failed_items || 0;
+                    if (st === 'FAILED') return { terminal: true, status: 'FAILED', data: res.data };
+                    if (st === 'COMPLETED' || (total > 0 && processed + failed >= total)) {
+                        return { terminal: true, status: 'COMPLETED', data: res.data };
+                    }
+                }
+                await sleep(intervalMs);
             }
+            return { terminal: false, status: 'PROCESSING', data: lastData };
+        }
+
+        async function sendBulk(messages, chunkSize, messageType, senderName) {
+            const apiKey = $('apiKey').value.trim();
+            const chunks = [];
+            for (let i = 0; i < messages.length; i += chunkSize) {
+                chunks.push(messages.slice(i, i + chunkSize));
+            }
+            logMsg(`جماعي: تقسيم ${messages.length} رسالة إلى ${chunks.length} دفعة فرعية (chunk=${chunkSize})`);
+
+            for (let c = 0; c < chunks.length; c++) {
+                if (stopRequested) break;
+                const chunk = chunks[c];
+                const body = {
+                    message_type: messageType || 'INVOICE',
+                    sender_name: senderName || 'Accounting System',
+                    messages: chunk.map(m => ({
+                        phone_number: m.phone_number,
+                        content: m.content
+                    }))
+                };
+                const t0 = now();
+                const res = await fetchWithRetry(API_BULK, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    },
+                    body: JSON.stringify(body)
+                }, `دفعة ${c + 1}/${chunks.length} (${chunk.length} رسالة)`);
+                const ms = Math.round(now() - t0);
+
+                if (!res.ok) {
+                    stats.fail += chunk.length;
+                    const errMsg = (res.data && (res.data.error || JSON.stringify(res.data).slice(0, 200))) || `HTTP ${res.status}`;
+                    for (const m of chunk) {
+                        addResult({ ok: false, phone: m.phone_number, statusLabel: `فشل دفعة ${res.status}`, id: errMsg, ms });
+                    }
+                    logMsg(`فشلت الدفعة ${c + 1}: ${errMsg}`, true);
+                    continue;
+                }
+
+                const eventId = (res.data && res.data.event_id) || '';
+                logMsg(`قُبلت الدفعة ${c + 1}: event_id=${eventId} (${chunk.length} رسالة) في ${ms}ms`);
+
+                // استطلاع استرشادي لتقدم المعالجة (لا يحجب الحصر)
+                const prog = await pollEventProgress(eventId);
+                if (prog.terminal && prog.status === 'FAILED') {
+                    stats.fail += chunk.length;
+                    for (const m of chunk) {
+                        addResult({ ok: false, phone: m.phone_number, statusLabel: 'فشلت المعالجة', id: eventId, ms });
+                    }
+                    continue;
+                }
+                stats.ok += chunk.length;
+                const label = prog.status === 'COMPLETED' ? 'ناجح ✓' : (prog.status === 'STOPPED' ? 'قُبلت' : 'قُبلت (قيد المعالجة)');
+                for (const m of chunk) {
+                    addResult({ ok: true, phone: m.phone_number, statusLabel: label, id: eventId, ms });
+                }
+            }
+        }
+
+        // ====== نقطة البداية ======
+        async function runSimulation() {
+            if (running) return;
+            const apiKey = $('apiKey').value.trim();
+            if (!apiKey) {
+                alert('يرجى تعبئة مفتاح الـ API (API Key)!');
+                return;
+            }
+
+            stopRequested = false;
+            batchId = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+            results = [];
+            resultsCounter = 0;
+            stats = { total: 0, ok: 0, fail: 0 };
+            $('resultsBody').innerHTML = '';
+            logsDiv.innerHTML = '';
+            startTime = now();
+            setRunning(true);
+
+            const mode = currentMode;
+            const messages = buildMessages();
+            const total = messages.length;
+            stats.total = total;
+            updateProgress();
+            logMsg(`بدء المحاكاة (الوضع: ${mode === 'bulk' ? 'جماعي' : 'فردي'}) — ${total} رسالة — batch=${batchId}`);
+
+            try {
+                if (mode === 'bulk') {
+                    const chunkSize = Math.max(1, Math.min(1000, parseInt($('chunkSize').value, 10) || 500));
+                    const messageType = $('messageType').value;
+                    const senderName = $('senderName').value.trim();
+                    await sendBulk(messages, chunkSize, messageType, senderName);
+                } else {
+                    const concurrency = Math.max(1, Math.min(100, parseInt($('concurrency').value, 10) || 10));
+                    const delayMs = Math.max(0, parseInt($('delay').value, 10) || 0);
+                    await sendIndividual(messages, concurrency, delayMs);
+                }
+            } catch (err) {
+                logMsg('خطأ غير متوقع: ' + (err && err.message), true);
+            }
+
+            setRunning(false);
+            const elapsed = ((now() - startTime) / 1000).toFixed(2);
+            logMsg(`انتهت المحاكاة — ناجح: ${stats.ok}، فاشل: ${stats.fail}، الزمن: ${elapsed}s`);
+            updateProgress();
+        }
+
+        function stopSimulation() {
+            if (!running) return;
+            stopRequested = true;
+            logMsg('تم طلب الإيقاف — سيتم إيقاف الطلبات الجديدة...', true);
+        }
+
+        // ====== التصدير ======
+        function exportCSV() {
+            if (!results.length) return;
+            let csv = '\uFEFF#;phone;status;id;ms;ok\n';
+            results.forEach((r, i) => {
+                csv += `${i + 1};${r.phone};${r.statusLabel};${r.id};${r.ms};${r.ok ? 1 : 0}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `simulator_results_${batchId || Date.now()}.csv`;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+            logMsg(`تم تصدير ${results.length} نتيجة إلى CSV`);
+        }
+
+        function clearAll() {
+            if (running) return;
+            results = [];
+            resultsCounter = 0;
+            stats = { total: 0, ok: 0, fail: 0 };
+            $('resultsBody').innerHTML = '';
+            logsDiv.innerHTML = 'جاهز لإرسال الدفعة...';
+            $('progressFill').style.width = '0%';
+            $('progressText').textContent = 'جاهز...';
+            updateProgress();
+            $('btnExport').disabled = true;
         }
     </script>
 </body>

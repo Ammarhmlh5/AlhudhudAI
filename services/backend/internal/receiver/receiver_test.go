@@ -31,6 +31,10 @@ func TestEndToEndMessagingFlow(t *testing.T) {
 	os.Setenv("DB_PASSWORD", "Ammar1983hmlh##")
 	os.Setenv("DB_NAME", "al_hudhud_new")
 	os.Setenv("DB_SSLMODE", "disable")
+	// Cap the shared pool: the al_hudhud_new server is shared with a running
+	// service, so opening the production-sized pool exhausts max_connections.
+	os.Setenv("DB_MAX_CONNS", "5")
+	os.Setenv("DB_MIN_CONNS", "1")
 
 	// Setup Database
 	db.InitGormDB()

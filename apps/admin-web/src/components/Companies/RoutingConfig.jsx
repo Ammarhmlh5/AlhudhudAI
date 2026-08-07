@@ -38,7 +38,7 @@ const RoutingConfig = ({ tenantId }) => {
   const fetchConfig = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/admin/routing/${tenantId}`);
+      const response = await axios.get(`/api/v1/admin/routing/${tenantId}`);
       if (response.data) {
         setConfig(response.data);
       }
@@ -51,7 +51,7 @@ const RoutingConfig = ({ tenantId }) => {
 
   const fetchMetrics = async () => {
     try {
-      const response = await axios.get(`/api/admin/routing/${tenantId}/metrics`);
+      const response = await axios.get(`/api/v1/admin/routing/${tenantId}/metrics`);
       if (response.data) {
         setMetrics(response.data);
       }
@@ -63,7 +63,7 @@ const RoutingConfig = ({ tenantId }) => {
   const handleSave = async () => {
     try {
       setSaving(true);
-      await axios.put(`/api/admin/routing/${tenantId}`, config);
+      await axios.put(`/api/v1/admin/routing/${tenantId}`, config);
       alert('Routing configuration saved successfully!');
       fetchMetrics(); // Refresh metrics after save
     } catch (error) {

@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -17,11 +17,93 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
 
-	// Auto-migrate tables
-	err = db.AutoMigrate(&models.Tenant{}, &models.Service{}, &models.Tariff{})
+	// :memory: sqlite is per-connection; pin the pool to a single connection
+	// so tables created by AutoMigrate are visible to later queries.
+	sqlDB, err := db.DB()
 	require.NoError(t, err)
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
+
+	// models.Tenant/User carry Postgres-only `DEFAULT public.uuid_generate_v4()`
+	// which SQLite cannot parse, so the schema is created with portable DDL
+	// instead of AutoMigrate.
+	createPortableSchema(t, db)
 
 	return db
+}
+
+// createPortableSchema creates the users/tenants/services/tariffs tables with
+// DDL that is valid on SQLite (column names match GORM's snake_case mapping).
+func createPortableSchema(t *testing.T, db *gorm.DB) {
+	t.Helper()
+	statements := []string{
+		`CREATE TABLE IF NOT EXISTS users (
+			id TEXT PRIMARY KEY,
+			email TEXT,
+			password_hash TEXT,
+			phone_number TEXT,
+			google_id TEXT,
+			user_type TEXT,
+			is_active INTEGER,
+			is_verified INTEGER,
+			created_at DATETIME,
+			updated_at DATETIME,
+			deleted_at DATETIME
+		)`,
+		`CREATE TABLE IF NOT EXISTS tenants (
+			id TEXT PRIMARY KEY,
+			user_id TEXT,
+			business_name TEXT NOT NULL,
+			contact_name TEXT,
+			email TEXT,
+			phone TEXT,
+			country_code TEXT,
+			address TEXT,
+			sector TEXT,
+			balance NUMERIC DEFAULT 0,
+			status TEXT,
+			is_active INTEGER DEFAULT 1,
+			company_serial TEXT,
+			api_key_accounting TEXT,
+			api_key_phone TEXT,
+			api_key_web TEXT,
+			is_reseller INTEGER DEFAULT 0,
+			parent_id TEXT,
+			allow_gateways INTEGER DEFAULT 0,
+			created_at DATETIME,
+			updated_at DATETIME,
+			deleted_at DATETIME
+		)`,
+		`CREATE TABLE IF NOT EXISTS services (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			tenant_id TEXT NOT NULL,
+			name TEXT NOT NULL,
+			code TEXT NOT NULL,
+			type TEXT NOT NULL,
+			description TEXT,
+			is_active INTEGER DEFAULT 1,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS tariffs (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			tenant_id TEXT NOT NULL,
+			service_id INTEGER NOT NULL,
+			country_code TEXT NOT NULL,
+			network_operator TEXT,
+			message_type TEXT DEFAULT 'standard',
+			cost_per_message NUMERIC NOT NULL,
+			currency TEXT DEFAULT 'YER',
+			effective_from DATETIME NOT NULL,
+			effective_to DATETIME,
+			is_active INTEGER DEFAULT 1,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+	}
+	for _, stmt := range statements {
+		require.NoError(t, db.Exec(stmt).Error)
+	}
 }
 
 func createTestTenant(t *testing.T, db *gorm.DB) *models.Tenant {

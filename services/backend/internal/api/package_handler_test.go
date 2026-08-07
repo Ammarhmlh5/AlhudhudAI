@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -22,10 +23,14 @@ func setupTestRouter(tenantID uuid.UUID, userRole string) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	// Mock middleware to set tenant_id and user_role
+	// Mock middleware to set tenant_id and user_type
 	router.Use(func(c *gin.Context) {
 		c.Set("tenant_id", tenantID.String())
-		c.Set("user_role", userRole)
+		userType := "USER"
+		if userRole == "admin" {
+			userType = "TENANT"
+		}
+		c.Set("user_type", userType)
 		c.Next()
 	})
 
@@ -40,7 +45,7 @@ func TestCreatePackage_Success(t *testing.T) {
 
 	// Setup
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable")
+	pool, err := pgxpool.New(ctx, "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable")
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -97,7 +102,7 @@ func TestCreatePackage_NonAdmin(t *testing.T) {
 
 	// Setup
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable")
+	pool, err := pgxpool.New(ctx, "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable")
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -145,7 +150,7 @@ func TestCreatePackage_NonAdmin(t *testing.T) {
 func TestCreatePackage_InvalidRequest(t *testing.T) {
 	// Setup
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable")
+	pool, err := pgxpool.New(ctx, "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable")
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -228,7 +233,7 @@ func TestListPackages_Success(t *testing.T) {
 
 	// Setup
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable")
+	pool, err := pgxpool.New(ctx, "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable")
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -266,7 +271,7 @@ func TestListPackages_WithFilters(t *testing.T) {
 
 	// Setup
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable")
+	pool, err := pgxpool.New(ctx, "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable")
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -307,7 +312,7 @@ func TestGetPackage_Success(t *testing.T) {
 
 	// Setup
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable")
+	pool, err := pgxpool.New(ctx, "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable")
 	require.NoError(t, err)
 	defer pool.Close()
 
@@ -336,7 +341,7 @@ func TestGetPackage_Success(t *testing.T) {
 
 	// Execute
 	w := httptest.NewRecorder()
-	httpReq, _ := http.NewRequest("GET", "/packages/"+string(rune(packageID)), nil)
+	httpReq, _ := http.NewRequest("GET", "/packages/"+strconv.FormatInt(packageID, 10), nil)
 
 	router.ServeHTTP(w, httpReq)
 
@@ -362,7 +367,7 @@ func TestGetPackage_NotFound(t *testing.T) {
 
 	// Setup
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable")
+	pool, err := pgxpool.New(ctx, "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable")
 	require.NoError(t, err)
 	defer pool.Close()
 

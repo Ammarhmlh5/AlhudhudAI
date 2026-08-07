@@ -11,4 +11,9 @@ const apiClient = createApiClient({
 // Re-export functions for backward compatibility
 export { initializeCSRF, getCsrfToken, clearCsrfToken };
 
+// Wrapper that passes the configured API_BASE_URL
+export function initializeAppCSRF() {
+    return initializeCSRF(API_BASE_URL);
+}
+
 export default apiClient;

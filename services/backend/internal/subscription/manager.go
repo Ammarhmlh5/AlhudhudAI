@@ -72,7 +72,7 @@ func (m *manager) Subscribe(ctx context.Context, req SubscribeRequest) (*Subscri
 	defer tx.Rollback(ctx)
 
 	// Set tenant context for RLS
-	_, err = tx.Exec(ctx, "SET LOCAL app.current_tenant = $1", req.TenantID)
+	_, err = tx.Exec(ctx, "SELECT set_config('app.current_tenant', $1, true)", req.TenantID.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to set tenant context: %w", err)
 	}
@@ -138,13 +138,53 @@ func (m *manager) Subscribe(ctx context.Context, req SubscribeRequest) (*Subscri
 		return nil, fmt.Errorf("failed to get tenant balance: %w", err)
 	}
 
-	// Check if balance is sufficient
-	if currentBalance.LessThan(pkg.PriceUSD) {
+	// Handle upgrade/downgrade: if there is an active subscription on a
+	// different package, cancel it, credit a prorated refund for the unused
+	// period, and forfeit its pending rollover messages (Plan 4.1).
+	refund := decimal.Zero
+	existingSub, existingErr := m.getActiveSubscriptionInTx(ctx, tx, req.TenantID)
+	if existingErr == nil && existingSub != nil && existingSub.PackageID != req.PackageID {
+		refund, err = m.upgradeSubscriptionInTx(ctx, tx, existingSub, req.TenantID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to process upgrade/downgrade: %w", err)
+		}
+		m.logger.Info("Subscription upgraded/downgraded",
+			zap.String("tenant_id", req.TenantID.String()),
+			zap.Int64("old_subscription_id", existingSub.ID),
+			zap.Int64("old_package_id", existingSub.PackageID),
+			zap.Int64("new_package_id", req.PackageID),
+			zap.String("refund", refund.String()),
+		)
+	}
+
+	// Apply a single-use referral discount code (Plan 4.4) if provided.
+	effectivePrice := pkg.PriceUSD
+	if req.PromoCode != "" {
+		discount, err := m.resolveReferralDiscountInTx(ctx, tx, req.TenantID, req.PromoCode)
+		if err != nil {
+			return nil, err
+		}
+		if !discount.IsZero() {
+			factor := decimal.NewFromInt(100).Sub(discount).Div(decimal.NewFromInt(100))
+			effectivePrice = pkg.PriceUSD.Mul(factor).Truncate(2)
+			m.logger.Info("Referral discount applied",
+				zap.String("tenant_id", req.TenantID.String()),
+				zap.String("promo_code", req.PromoCode),
+				zap.String("price", pkg.PriceUSD.String()),
+				zap.String("effective_price", effectivePrice.String()),
+				zap.String("discount_percent", discount.String()))
+		}
+	}
+
+	// Check if balance is sufficient (refund is credited before this check)
+	availableBalance := currentBalance.Add(refund)
+	if availableBalance.LessThan(effectivePrice) {
 		m.logger.Warn("Insufficient balance for subscription",
 			zap.String("tenant_id", req.TenantID.String()),
 			zap.Int64("package_id", req.PackageID),
-			zap.String("required", pkg.PriceUSD.String()),
-			zap.String("available", currentBalance.String()),
+			zap.String("required", effectivePrice.String()),
+			zap.String("available", availableBalance.String()),
+			zap.String("refund", refund.String()),
 		)
 		return &SubscribeResult{
 			Success:    false,
@@ -167,7 +207,7 @@ func (m *manager) Subscribe(ctx context.Context, req SubscribeRequest) (*Subscri
 			AND deleted_at IS NULL
 		RETURNING balance
 	`
-	err = tx.QueryRow(ctx, deductQuery, pkg.PriceUSD, req.TenantID.String()).Scan(&newBalance)
+	err = tx.QueryRow(ctx, deductQuery, effectivePrice, req.TenantID.String()).Scan(&newBalance)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return &SubscribeResult{
@@ -178,6 +218,13 @@ func (m *manager) Subscribe(ctx context.Context, req SubscribeRequest) (*Subscri
 			}, nil
 		}
 		return nil, fmt.Errorf("failed to deduct balance: %w", err)
+	}
+
+	// Consume the discount code only after the payment is successful (Plan 4.4)
+	if req.PromoCode != "" {
+		if err := m.markReferralDiscountUsedInTx(ctx, tx, req.TenantID, req.PromoCode); err != nil {
+			return nil, fmt.Errorf("failed to mark discount code as used: %w", err)
+		}
 	}
 
 	// Calculate subscription dates (Requirement 4.3)
@@ -251,7 +298,7 @@ func (m *manager) Subscribe(ctx context.Context, req SubscribeRequest) (*Subscri
 	_, err = tx.Exec(ctx, accountingQuery,
 		txID,
 		req.TenantID,
-		pkg.PriceUSD,
+		effectivePrice,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to record accounting transaction: %w", err)
@@ -321,6 +368,168 @@ func (m *manager) getPackageInTx(ctx context.Context, tx pgx.Tx, packageID int64
 	}
 
 	return &pkg, nil
+}
+
+// getActiveSubscriptionInTx returns the tenant's active subscription within a transaction.
+func (m *manager) getActiveSubscriptionInTx(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (*Subscription, error) {
+	query := `
+		SELECT 
+			id, package_id, start_date, end_date
+		FROM subscriptions
+		WHERE tenant_id = $1
+		  AND status = 'active'
+		  AND end_date >= CURRENT_DATE
+		ORDER BY created_at DESC
+		LIMIT 1
+	`
+
+	var sub Subscription
+	err := tx.QueryRow(ctx, query, tenantID).Scan(
+		&sub.ID,
+		&sub.PackageID,
+		&sub.StartDate,
+		&sub.EndDate,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("no active subscription found")
+		}
+		return nil, err
+	}
+
+	return &sub, nil
+}
+
+// upgradeSubscriptionInTx cancels the existing subscription, credits a prorated
+// refund for the unused period, forfeits pending rollover messages, and records
+// the refund transaction. It returns the refund amount.
+func (m *manager) upgradeSubscriptionInTx(ctx context.Context, tx pgx.Tx, existing *Subscription, tenantID uuid.UUID) (decimal.Decimal, error) {
+	// Get the old package price
+	oldPkg, err := m.getPackageInTx(ctx, tx, existing.PackageID)
+	if err != nil {
+		return decimal.Zero, fmt.Errorf("failed to get old package: %w", err)
+	}
+
+	refund := m.calculateProratedRefund(existing.StartDate, existing.EndDate, oldPkg.PriceUSD)
+
+	// Credit the refund to the tenant balance
+	if !refund.IsZero() {
+		_, err = tx.Exec(ctx, `
+			UPDATE tenants 
+			SET 
+				balance = balance + $1,
+				updated_at = NOW()
+			WHERE 
+				id = (SELECT id FROM tenants WHERE id::text = $2::text LIMIT 1)
+				AND deleted_at IS NULL
+		`, refund, tenantID.String())
+		if err != nil {
+			return decimal.Zero, fmt.Errorf("failed to credit refund: %w", err)
+		}
+	}
+
+	// Cancel the old subscription
+	_, err = tx.Exec(ctx, `
+		UPDATE subscriptions
+		SET status = 'cancelled',
+		    updated_at = NOW()
+		WHERE id = $1 AND tenant_id = $2
+	`, existing.ID, tenantID)
+	if err != nil {
+		return decimal.Zero, fmt.Errorf("failed to cancel old subscription: %w", err)
+	}
+
+	// Forfeit pending rollover messages of the old subscription (Plan 4.1)
+	_, err = tx.Exec(ctx, `
+		UPDATE rollover_messages
+		SET status = 'forfeited',
+		    payment_status = 'failed',
+		    forfeited_reason = 'upgrade',
+		    forfeited_at = NOW(),
+		    updated_at = NOW()
+		WHERE subscription_id = $1
+		  AND status = 'pending'
+	`, existing.ID)
+	if err != nil {
+		return decimal.Zero, fmt.Errorf("failed to forfeit rollover messages: %w", err)
+	}
+
+	// Record the refund transaction
+	if !refund.IsZero() {
+		_, err = tx.Exec(ctx, `
+			INSERT INTO accounting_transactions (
+				id,
+				tenant_id,
+				type,
+				amount,
+				status,
+				created_at,
+				updated_at
+			) VALUES (
+				$1, $2, 'SUBSCRIPTION_REFUND', $3, 'COMPLETED', NOW(), NOW()
+			)
+		`, uuid.New(), tenantID, refund)
+		if err != nil {
+			return decimal.Zero, fmt.Errorf("failed to record refund transaction: %w", err)
+		}
+	}
+
+	return refund, nil
+}
+
+// calculateProratedRefund computes the refund for the unused portion of a
+// billing period, prorated by day.
+func (m *manager) calculateProratedRefund(startDate, endDate time.Time, price decimal.Decimal) decimal.Decimal {
+	totalHours := endDate.Sub(startDate).Hours()
+	remainingHours := endDate.Sub(time.Now()).Hours()
+	if totalHours <= 0 || remainingHours <= 0 {
+		return decimal.Zero
+	}
+
+	ratio := decimal.NewFromFloat(remainingHours / totalHours)
+	return price.Mul(ratio).Truncate(2)
+}
+
+// resolveReferralDiscountInTx looks up a single-use referral discount code
+// granted via the referral program (Plan 4.4) and returns its percentage.
+// It only matches codes that are unused and not yet expired.
+func (m *manager) resolveReferralDiscountInTx(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, code string) (decimal.Decimal, error) {
+	var discount decimal.Decimal
+	query := `
+		SELECT (metadata->>'discount_percent')::numeric
+		FROM referrals
+		WHERE referrer_tenant_id = $1
+		  AND metadata->>'discount_code' = $2
+		  AND COALESCE((metadata->>'discount_used')::boolean, false) = false
+		  AND (metadata->>'discount_expires_at')::timestamptz > CURRENT_TIMESTAMP
+		ORDER BY created_at DESC
+		LIMIT 1
+	`
+	err := tx.QueryRow(ctx, query, tenantID, code).Scan(&discount)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return decimal.Zero, NewInvalidRequestError("invalid or expired discount code")
+		}
+		return decimal.Zero, fmt.Errorf("failed to resolve discount code: %w", err)
+	}
+	return discount, nil
+}
+
+// markReferralDiscountUsedInTx marks a single-use referral discount code as used
+// so it cannot be redeemed again.
+func (m *manager) markReferralDiscountUsedInTx(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, code string) error {
+	_, err := tx.Exec(ctx, `
+		UPDATE referrals
+		SET metadata = jsonb_set(metadata, '{discount_used}', 'true'::jsonb),
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE referrer_tenant_id = $1
+		  AND metadata->>'discount_code' = $2
+		  AND COALESCE((metadata->>'discount_used')::boolean, false) = false
+	`, tenantID, code)
+	if err != nil {
+		return fmt.Errorf("failed to mark discount code as used: %w", err)
+	}
+	return nil
 }
 
 // GetPackage returns package details
@@ -482,7 +691,7 @@ func (m *manager) DeductMessages(ctx context.Context, req DeductMessagesRequest)
 	}
 
 	// Set tenant context for RLS
-	_, err = tx.Exec(ctx, "SET LOCAL app.current_tenant = $1", tenantID)
+	_, err = tx.Exec(ctx, "SELECT set_config('app.current_tenant', $1, true)", tenantID.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to set tenant context: %w", err)
 	}
@@ -675,7 +884,7 @@ func (m *manager) CalculateOverageCost(ctx context.Context, subscriptionID int64
 	}
 
 	// Set tenant context for RLS
-	_, err = tx.Exec(ctx, "SET LOCAL app.current_tenant = $1", tenantID)
+	_, err = tx.Exec(ctx, "SELECT set_config('app.current_tenant', $1, true)", tenantID.String())
 	if err != nil {
 		return decimal.Zero, fmt.Errorf("failed to set tenant context: %w", err)
 	}

@@ -65,6 +65,22 @@ func (m *MockBalanceManager) CheckSufficient(ctx context.Context, tenantID uuid.
 	return args.Bool(0), args.Error(1)
 }
 
+func (m *MockBalanceManager) CreditBalance(ctx context.Context, op balance.BalanceOperation) (*balance.BalanceResult, error) {
+	args := m.Called(ctx, op)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*balance.BalanceResult), args.Error(1)
+}
+
+func (m *MockBalanceManager) TransferBalance(ctx context.Context, from, to uuid.UUID, amount decimal.Decimal, reason, createdBy, ipAddress string) (*balance.TransferResult, error) {
+	args := m.Called(ctx, from, to, amount, reason, createdBy, ipAddress)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*balance.TransferResult), args.Error(1)
+}
+
 // MockRoutingEngine is a mock implementation of RoutingEngine
 type MockRoutingEngine struct {
 	mock.Mock

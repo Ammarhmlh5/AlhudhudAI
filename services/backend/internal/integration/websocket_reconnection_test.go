@@ -11,6 +11,7 @@ import (
 	"github.com/al-hudhud/backend/internal/config"
 	"github.com/al-hudhud/backend/internal/database"
 	"github.com/al-hudhud/backend/internal/ws"
+	"github.com/google/uuid"
 	goredis "github.com/redis/go-redis/v9"
 	"github.com/gorilla/websocket"
 	"github.com/shopspring/decimal"
@@ -28,8 +29,9 @@ func TestWebSocketReconnectionFlow(t *testing.T) {
 	cfg.Database.Host = "localhost"
 	cfg.Database.Port = "5432"
 	cfg.Database.User = "postgres"
-	cfg.Database.Password = "postgres"
+	cfg.Database.Password = testDBPassword()
 	cfg.Database.Name = "sms_gateway_test"
+	cfg.Database.SSLMode = "disable"
 	cfg.Database.MaxOpenConns = 10
 	cfg.Database.MaxIdleConns = 5
 	cfg.Database.ConnMaxLifetime = time.Hour
@@ -41,9 +43,9 @@ func TestWebSocketReconnectionFlow(t *testing.T) {
 
 	redisClient := goredis.NewClient(&goredis.Options{
 		Addr: "localhost:6379",
-		DB:   1,
+		DB:   13, // Dedicated test DB so FlushDB does not collide with other packages
 	})
-	require.NoError(t, redisClient.Ping(ctx).Err())
+	requireRedisPing(t, redisClient)
 	defer redisClient.Close()
 
 	// 2. Setup WebSocket Hub
@@ -62,7 +64,7 @@ func TestWebSocketReconnectionFlow(t *testing.T) {
 
 	// 4. Create WebSocket server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ws.ServeWs(wsHub, w, r, tenantID.String(), channelID.String())
+		ws.ServeWs(wsHub, w, r, tenantID.String(), channelID, "test_mobile_device", true)
 	}))
 	defer server.Close()
 
@@ -72,19 +74,15 @@ func TestWebSocketReconnectionFlow(t *testing.T) {
 	require.NoError(t, err)
 	defer conn1.Close()
 
-	// 6. Verify connection in Hub
-	status, err := wsHub.GetConnectionStatus(ctx, tenantID, channelID)
-	require.NoError(t, err)
-	assert.Equal(t, string(ws.StatusConnected), status)
+	// 6. Verify connection in Hub (poll: ServeWs registers asynchronously)
+	waitForWSStatus(t, ctx, wsHub, tenantID, channelID, string(ws.StatusConnected))
 
 	// 7. Simulate disconnection
 	conn1.Close()
 	time.Sleep(100 * time.Millisecond)
 
 	// 8. Verify offline status
-	status, err = wsHub.GetConnectionStatus(ctx, tenantID, channelID)
-	require.NoError(t, err)
-	assert.Equal(t, string(ws.StatusDisconnected), status)
+	waitForWSStatus(t, ctx, wsHub, tenantID, channelID, string(ws.StatusDisconnected))
 
 	// 9. Reconnect
 	conn2, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
@@ -92,7 +90,24 @@ func TestWebSocketReconnectionFlow(t *testing.T) {
 	defer conn2.Close()
 
 	// 10. Verify online again
-	status, err = wsHub.GetConnectionStatus(ctx, tenantID, channelID)
+	waitForWSStatus(t, ctx, wsHub, tenantID, channelID, string(ws.StatusConnected))
+}
+
+// waitForWSStatus polls the hub until GetConnectionStatus returns want.
+// ServeWs registers connections asynchronously through the hub's register
+// channel, so asserting immediately after Dial races with that registration.
+func waitForWSStatus(t *testing.T, ctx context.Context, h *ws.Hub, tenantID, channelID uuid.UUID, want string) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		got, err := h.GetConnectionStatus(ctx, tenantID, channelID)
+		require.NoError(t, err)
+		if got == want {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	got, err := h.GetConnectionStatus(ctx, tenantID, channelID)
 	require.NoError(t, err)
-	assert.Equal(t, string(ws.StatusConnected), status)
+	assert.Equal(t, want, got)
 }

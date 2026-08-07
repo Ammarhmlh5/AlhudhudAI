@@ -92,3 +92,29 @@ func (h *Handler) DeleteContact(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Contact deleted"})
 }
+
+// SyncContactsHandler receives the phone directory from a paired mobile device
+// and upserts it into the tenant's contacts list.
+func (h *Handler) SyncContactsHandler(c *gin.Context) {
+	tenantID, ok := auth.GetTenantIDOrAbort(c)
+	if !ok {
+		return
+	}
+
+	var req SyncContactsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	synced, err := h.service.SyncContacts(c, tenantID, req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, SyncContactsResponse{
+		Synced:  synced,
+		Message: "Contacts synced successfully",
+	})
+}

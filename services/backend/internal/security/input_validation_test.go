@@ -3,12 +3,23 @@ package security
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+// newTestRequest builds a request whose target may contain characters that
+// url.ParseRequestURI rejects (spaces, quotes, control bytes). It bypasses
+// URL parsing so the raw path reaches the router for validation.
+func newTestRequest(method, target string, body io.Reader) *http.Request {
+	req := httptest.NewRequest(method, "/", body)
+	req.URL.Path = target
+	req.RequestURI = target
+	return req
+}
 
 // TestSQLInjectionPrevention tests SQL injection prevention
 func TestSQLInjectionPrevention(t *testing.T) {
@@ -36,7 +47,7 @@ func TestSQLInjectionPrevention(t *testing.T) {
 			endpoint := fmt.Sprintf(endpointTemplate, payload)
 			
 			t.Run("SQL Injection - "+endpoint, func(t *testing.T) {
-				req := httptest.NewRequest("GET", endpoint, nil)
+				req := newTestRequest("GET", endpoint, nil)
 				req.Header.Set("Authorization", "Bearer "+validToken)
 				w := httptest.NewRecorder()
 				
@@ -132,7 +143,7 @@ func TestInputLengthValidation(t *testing.T) {
 	
 	t.Run("Extremely long tenant ID", func(t *testing.T) {
 		longTenantID := string(make([]byte, 10000)) // 10KB tenant ID
-		req := httptest.NewRequest("GET", "/api/admin/companies/"+longTenantID+"/rating", nil)
+		req := newTestRequest("GET", "/api/admin/companies/"+longTenantID+"/rating", nil)
 		req.Header.Set("Authorization", "Bearer "+validToken)
 		w := httptest.NewRecorder()
 		
@@ -174,7 +185,7 @@ func TestSpecialCharacterHandling(t *testing.T) {
 
 	for _, payload := range specialCharPayloads {
 		t.Run("Special char - "+payload, func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/api/admin/companies/"+payload+"/rating", nil)
+			req := newTestRequest("GET", "/api/admin/companies/"+payload+"/rating", nil)
 			req.Header.Set("Authorization", "Bearer "+validToken)
 			w := httptest.NewRecorder()
 			

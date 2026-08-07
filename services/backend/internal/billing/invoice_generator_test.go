@@ -41,6 +41,9 @@ func TestGenerateInvoice(t *testing.T) {
 		mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 			WithArgs(tenantID.String()).
 			WillReturnResult(sqlmock.NewResult(0, 0))
+			mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+				WithArgs("false").
+				WillReturnResult(sqlmock.NewResult(0, 0))
 
 		mock.ExpectQuery("SELECT create_invoice_for_payment").
 			WithArgs(
@@ -61,6 +64,9 @@ func TestGenerateInvoice(t *testing.T) {
 		mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 			WithArgs(tenantID.String()).
 			WillReturnResult(sqlmock.NewResult(0, 0))
+			mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+				WithArgs("false").
+				WillReturnResult(sqlmock.NewResult(0, 0))
 
 		rows := sqlmock.NewRows([]string{
 			"id", "tenant_id", "invoice_number", "subscription_id", "transaction_id",
@@ -129,6 +135,9 @@ func TestGenerateInvoice(t *testing.T) {
 		mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 			WithArgs(tenantID.String()).
 			WillReturnResult(sqlmock.NewResult(0, 0))
+			mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+				WithArgs("false").
+				WillReturnResult(sqlmock.NewResult(0, 0))
 
 		mock.ExpectQuery("SELECT create_invoice_for_payment").
 			WithArgs(tenantID, subscriptionID, sqlmock.AnyArg(), params.Subtotal, params.Description, params.ServiceName, params.CountryCode).
@@ -141,6 +150,9 @@ func TestGenerateInvoice(t *testing.T) {
 		mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 			WithArgs(tenantID.String()).
 			WillReturnResult(sqlmock.NewResult(0, 0))
+			mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+				WithArgs("false").
+				WillReturnResult(sqlmock.NewResult(0, 0))
 
 		rows := sqlmock.NewRows([]string{
 			"id", "tenant_id", "invoice_number", "subscription_id", "transaction_id",
@@ -186,6 +198,9 @@ func TestGenerateInvoice(t *testing.T) {
 		mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 			WithArgs(tenantID.String()).
 			WillReturnResult(sqlmock.NewResult(0, 0))
+			mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+				WithArgs("false").
+				WillReturnResult(sqlmock.NewResult(0, 0))
 
 		mock.ExpectQuery("SELECT create_invoice_for_payment").
 			WithArgs(tenantID, sqlmock.AnyArg(), transactionID, params.Subtotal, params.Description, params.ServiceName, params.CountryCode).
@@ -198,6 +213,9 @@ func TestGenerateInvoice(t *testing.T) {
 		mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 			WithArgs(tenantID.String()).
 			WillReturnResult(sqlmock.NewResult(0, 0))
+			mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+				WithArgs("false").
+				WillReturnResult(sqlmock.NewResult(0, 0))
 
 		rows := sqlmock.NewRows([]string{
 			"id", "tenant_id", "invoice_number", "subscription_id", "transaction_id",
@@ -241,6 +259,9 @@ func TestGenerateInvoice(t *testing.T) {
 		mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 			WithArgs(tenantID.String()).
 			WillReturnResult(sqlmock.NewResult(0, 0))
+			mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+				WithArgs("false").
+				WillReturnResult(sqlmock.NewResult(0, 0))
 
 		mock.ExpectQuery("SELECT create_invoice_for_payment").
 			WithArgs(tenantID, sqlmock.AnyArg(), sqlmock.AnyArg(), params.Subtotal, params.Description, params.ServiceName, params.CountryCode).
@@ -253,6 +274,9 @@ func TestGenerateInvoice(t *testing.T) {
 		mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 			WithArgs(tenantID.String()).
 			WillReturnResult(sqlmock.NewResult(0, 0))
+			mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+				WithArgs("false").
+				WillReturnResult(sqlmock.NewResult(0, 0))
 
 		rows := sqlmock.NewRows([]string{
 			"id", "tenant_id", "invoice_number", "subscription_id", "transaction_id",
@@ -317,6 +341,9 @@ func TestGetInvoiceByID(t *testing.T) {
 		mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 			WithArgs(tenantID.String()).
 			WillReturnResult(sqlmock.NewResult(0, 0))
+			mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+				WithArgs("false").
+				WillReturnResult(sqlmock.NewResult(0, 0))
 
 		mock.ExpectQuery("SELECT (.+) FROM billing_invoices WHERE id = \\$1 AND tenant_id = \\$2").
 			WithArgs(invoiceID, tenantID).
@@ -336,6 +363,9 @@ func TestGetInvoiceByID(t *testing.T) {
 		mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 			WithArgs(tenantID.String()).
 			WillReturnResult(sqlmock.NewResult(0, 0))
+			mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+				WithArgs("false").
+				WillReturnResult(sqlmock.NewResult(0, 0))
 
 		mock.ExpectQuery("SELECT (.+) FROM billing_invoices WHERE id = \\$1 AND tenant_id = \\$2").
 			WithArgs(int64(99999), tenantID).
@@ -356,6 +386,9 @@ func TestGetInvoiceByID(t *testing.T) {
 		mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 			WithArgs(wrongTenantID.String()).
 			WillReturnResult(sqlmock.NewResult(0, 0))
+			mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+				WithArgs("false").
+				WillReturnResult(sqlmock.NewResult(0, 0))
 
 		mock.ExpectQuery("SELECT (.+) FROM billing_invoices WHERE id = \\$1 AND tenant_id = \\$2").
 			WithArgs(invoiceID, wrongTenantID).
@@ -402,6 +435,9 @@ func TestGetInvoiceByNumber(t *testing.T) {
 		mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 			WithArgs(tenantID.String()).
 			WillReturnResult(sqlmock.NewResult(0, 0))
+			mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+				WithArgs("false").
+				WillReturnResult(sqlmock.NewResult(0, 0))
 
 		mock.ExpectQuery("SELECT (.+) FROM billing_invoices WHERE invoice_number = \\$1 AND tenant_id = \\$2").
 			WithArgs(invoiceNumber, tenantID).
@@ -421,6 +457,9 @@ func TestGetInvoiceByNumber(t *testing.T) {
 		mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 			WithArgs(tenantID.String()).
 			WillReturnResult(sqlmock.NewResult(0, 0))
+			mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+				WithArgs("false").
+				WillReturnResult(sqlmock.NewResult(0, 0))
 
 		mock.ExpectQuery("SELECT (.+) FROM billing_invoices WHERE invoice_number = \\$1 AND tenant_id = \\$2").
 			WithArgs("INV-NONE", tenantID).
@@ -454,6 +493,9 @@ func TestMarkPDFGenerated(t *testing.T) {
 		mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 			WithArgs(tenantID.String()).
 			WillReturnResult(sqlmock.NewResult(0, 0))
+			mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+				WithArgs("false").
+				WillReturnResult(sqlmock.NewResult(0, 0))
 
 		mock.ExpectExec("UPDATE billing_invoices SET pdf_generated = true").
 			WithArgs(pdfPath, invoiceID, tenantID).
@@ -484,6 +526,9 @@ func TestMarkEmailSent(t *testing.T) {
 		mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 			WithArgs(tenantID.String()).
 			WillReturnResult(sqlmock.NewResult(0, 0))
+			mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+				WithArgs("false").
+				WillReturnResult(sqlmock.NewResult(0, 0))
 
 		mock.ExpectExec("UPDATE billing_invoices SET email_sent = true").
 			WithArgs(invoiceID, tenantID).

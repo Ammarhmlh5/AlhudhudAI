@@ -180,17 +180,17 @@ func TestCalculateUptimeStatistics(t *testing.T) {
 	}{
 		{
 			name: "high uptime",
-			mockRows: sqlmock.NewRows([]string{"uptime", "downtime"}).
-				AddRow(99.5, 7),
+			mockRows: sqlmock.NewRows([]string{"uptime"}).
+				AddRow(99.5),
 			expected: &UptimeStatistics{
 				UptimePercentage: 99.5,
-				DowntimeMinutes:  7,
+				DowntimeMinutes:  0,
 			},
 		},
 		{
 			name: "perfect uptime",
-			mockRows: sqlmock.NewRows([]string{"uptime", "downtime"}).
-				AddRow(100.0, 0),
+			mockRows: sqlmock.NewRows([]string{"uptime"}).
+				AddRow(100.0),
 			expected: &UptimeStatistics{
 				UptimePercentage: 100.0,
 				DowntimeMinutes:  0,
@@ -221,7 +221,11 @@ func TestCalculateUptimeStatistics(t *testing.T) {
 			}
 
 			stats, err := aggregator.calculateUptimeStatistics(ctx, gatewayID, date, tx)
-			assert.NoError(t, err)
+			if tt.mockErr != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 			assert.Equal(t, tt.expected.UptimePercentage, stats.UptimePercentage)
 			assert.Equal(t, tt.expected.DowntimeMinutes, stats.DowntimeMinutes)
 			tx.Rollback()
@@ -380,10 +384,10 @@ func TestAggregateAllDaily(t *testing.T) {
 	gateway2TenantID := uuid.New()
 
 	// Mock getting all active gateways
-	mock.ExpectQuery("SELECT id, tenant_id FROM dedicated_gateways").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "tenant_id"}).
-			AddRow(gateway1ID, gateway1TenantID).
-			AddRow(gateway2ID, gateway2TenantID))
+	mock.ExpectQuery("SELECT id FROM dedicated_gateways WHERE status = 'active'").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).
+			AddRow(gateway1ID).
+			AddRow(gateway2ID))
 
 	// Mock aggregation for gateway 1
 	mockGatewayAggregation(mock, gateway1ID, gateway1TenantID, date)

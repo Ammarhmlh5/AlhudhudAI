@@ -16,7 +16,7 @@ import (
 // setupRolloverDB creates a test database connection
 func setupRolloverDB(t *testing.T) *pgxpool.Pool {
 	// Use test database connection
-	connString := "postgres://postgres:postgres@localhost:5432/alhudhud_test?sslmode=disable"
+	connString := "postgres://postgres@localhost:5432/alhudhud_test?sslmode=disable"
 	
 	pool, err := pgxpool.New(context.Background(), connString)
 	require.NoError(t, err)
@@ -29,11 +29,11 @@ func createTestTenant(t *testing.T, pool *pgxpool.Pool, name string, balance dec
 	tenantID := uuid.New()
 	
 	query := `
-		INSERT INTO tenants (id, name, balance, created_at, updated_at)
-		VALUES ($1, $2, $3, NOW(), NOW())
+		INSERT INTO tenants (id, business_name, contact_name, email, balance, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
 	`
 	
-	_, err := pool.Exec(context.Background(), query, tenantID, name, balance)
+	_, err := pool.Exec(context.Background(), query, tenantID, name, "Test Contact", "test@rollover.com", balance)
 	require.NoError(t, err)
 	
 	return tenantID
@@ -44,8 +44,8 @@ func createTestService(t *testing.T, pool *pgxpool.Pool, tenantID uuid.UUID, nam
 	var serviceID int64
 	
 	query := `
-		INSERT INTO tariff_services (tenant_id, name, code, is_active, created_at, updated_at)
-		VALUES ($1, $2, $3, true, NOW(), NOW())
+		INSERT INTO services (tenant_id, name, code, type, is_active, created_at, updated_at)
+		VALUES ($1, $2, $3, 'SMS', true, NOW(), NOW())
 		RETURNING id
 	`
 	
@@ -244,8 +244,8 @@ func TestGetRolloverMessages(t *testing.T) {
 
 	insertQuery := `
 		INSERT INTO rollover_messages (
-			subscription_id, tenant_id, messages_count, source_month, expiry_date, created_at
-		) VALUES ($1, $2, $3, $4, $5, NOW())
+			subscription_id, tenant_id, messages_count, messages_remaining, source_month, expiry_date, created_at
+		) VALUES ($1, $2, $3, $3, $4, $5, NOW())
 	`
 
 	_, err := pool.Exec(ctx, insertQuery, subscriptionID, tenantID, 200, sourceMonth, expiryDate)

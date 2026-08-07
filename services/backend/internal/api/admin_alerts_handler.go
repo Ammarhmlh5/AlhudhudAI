@@ -1,7 +1,11 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -153,7 +157,7 @@ func (h *AdminAlertsHandler) GetAlert(c *gin.Context) {
 	// Get alert details
 	alert, err := h.alertManager.GetAlertByID(c.Request.Context(), alertID, uuid.Nil)
 	if err != nil {
-		if err.Error() == "alert not found" {
+		if errors.Is(err, alerts.ErrAlertNotFound) {
 			RespondWithError(c, http.StatusNotFound, "alert_not_found", 
 				"Alert not found", nil)
 			return
@@ -178,15 +182,35 @@ func (h *AdminAlertsHandler) AcknowledgeAlert(c *gin.Context) {
 	var input struct {
 		AcknowledgedBy uuid.UUID `json:"acknowledged_by"`
 	}
-	if err := c.ShouldBindJSON(&input); err != nil {
-		RespondWithError(c, http.StatusBadRequest, "invalid_json", "Invalid JSON format", nil)
+	bodyBytes, err := io.ReadAll(c.Request.Body)
+	if err == nil && len(bytes.TrimSpace(bodyBytes)) > 0 {
+		if err := json.Unmarshal(bodyBytes, &input); err != nil {
+			RespondWithError(c, http.StatusBadRequest, "invalid_json", "Invalid JSON format", nil)
+			return
+		}
+	}
+
+	// Determine who acknowledged: prefer the request body, fall back to the authenticated admin
+	acknowledgedBy := input.AcknowledgedBy
+	if acknowledgedBy == uuid.Nil {
+		if userIDVal, exists := c.Get("user_id"); exists {
+			if userIDStr, ok := userIDVal.(string); ok {
+				if uid, parseErr := uuid.Parse(userIDStr); parseErr == nil {
+					acknowledgedBy = uid
+				}
+			}
+		}
+	}
+
+	if acknowledgedBy == uuid.Nil {
+		RespondWithError(c, http.StatusUnauthorized, "auth_required", "Authenticated user is required to acknowledge an alert", nil)
 		return
 	}
 
 	// Acknowledge alert
-	err = h.alertManager.AcknowledgeAlert(c.Request.Context(), alertID, input.AcknowledgedBy)
+	err = h.alertManager.AcknowledgeAlert(c.Request.Context(), alertID, acknowledgedBy)
 	if err != nil {
-		if err.Error() == "alert not found" {
+		if errors.Is(err, alerts.ErrAlertNotFound) {
 			RespondWithError(c, http.StatusNotFound, "alert_not_found", 
 				"Alert not found", nil)
 			return
@@ -212,7 +236,7 @@ func (h *AdminAlertsHandler) ResolveAlert(c *gin.Context) {
 	// Resolve alert
 	err = h.alertManager.ResolveAlert(c.Request.Context(), alertID)
 	if err != nil {
-		if err.Error() == "alert not found" {
+		if errors.Is(err, alerts.ErrAlertNotFound) {
 			RespondWithError(c, http.StatusNotFound, "alert_not_found", 
 				"Alert not found", nil)
 			return
@@ -226,7 +250,82 @@ func (h *AdminAlertsHandler) ResolveAlert(c *gin.Context) {
 	RespondWithSuccess(c, http.StatusOK, alert, "Alert resolved successfully")
 }
 
-// ConfigureAlerts handles POST /api/admin/alerts/config
+// ConfigureAlerts handles GET/POST /api/admin/alerts/config
 func (h *AdminAlertsHandler) ConfigureAlerts(c *gin.Context) {
-	RespondWithError(c, http.StatusNotImplemented, "not_implemented", "Alert configuration is not yet implemented", nil)
+	switch c.Request.Method {
+	case http.MethodGet:
+		h.getAlertConfig(c)
+	case http.MethodPost:
+		h.updateAlertConfig(c)
+	default:
+		RespondWithError(c, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
+	}
+}
+
+func (h *AdminAlertsHandler) getAlertConfig(c *gin.Context) {
+	config, err := h.alertManager.GetConfig(c.Request.Context())
+	if err != nil {
+		RespondWithError(c, http.StatusInternalServerError, "internal_error",
+			"Failed to retrieve alert configuration", nil)
+		return
+	}
+
+	if config == nil {
+		RespondWithSuccess(c, http.StatusOK, defaultAlertConfig(), "")
+		return
+	}
+
+	RespondWithSuccess(c, http.StatusOK, config, "")
+}
+
+func (h *AdminAlertsHandler) updateAlertConfig(c *gin.Context) {
+	bodyBytes, err := io.ReadAll(c.Request.Body)
+	if err != nil || !json.Valid(bodyBytes) {
+		RespondWithError(c, http.StatusBadRequest, "invalid_json", "Invalid JSON format", nil)
+		return
+	}
+
+	// Resolve updated_by from the authenticated admin
+	updatedBy := uuid.Nil
+	if userIDVal, exists := c.Get("user_id"); exists {
+		if userIDStr, ok := userIDVal.(string); ok {
+			if uid, parseErr := uuid.Parse(userIDStr); parseErr == nil {
+				updatedBy = uid
+			}
+		}
+	}
+
+	if err := h.alertManager.UpdateConfig(c.Request.Context(), bodyBytes, updatedBy); err != nil {
+		RespondWithError(c, http.StatusInternalServerError, "internal_error",
+			"Failed to save alert configuration", nil)
+		return
+	}
+
+	RespondWithSuccess(c, http.StatusOK, json.RawMessage(bodyBytes), "Alert configuration saved successfully")
+}
+
+func defaultAlertConfig() map[string]interface{} {
+	return map[string]interface{}{
+		"thresholds": map[string]interface{}{
+			"response_time_warning": 200,
+			"response_time_critical": 500,
+			"error_rate_warning":    1,
+			"error_rate_critical":   5,
+			"success_rate_warning":  95,
+			"success_rate_critical": 90,
+		},
+		"notification_channels": map[string]interface{}{
+			"email": map[string]interface{}{
+				"enabled":    true,
+				"recipients": []string{},
+			},
+			"sms": map[string]interface{}{
+				"enabled":    false,
+				"recipients": []string{},
+			},
+			"in_app": map[string]interface{}{
+				"enabled": true,
+			},
+		},
+	}
 }

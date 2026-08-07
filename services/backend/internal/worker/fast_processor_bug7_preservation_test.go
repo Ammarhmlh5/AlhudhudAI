@@ -119,6 +119,14 @@ func (m *mockBalanceManagerBug7Preservation) CheckSufficient(ctx context.Context
 	return m.currentBalance.GreaterThanOrEqual(amount), nil
 }
 
+func (m *mockBalanceManagerBug7Preservation) CreditBalance(ctx context.Context, op balance.BalanceOperation) (*balance.BalanceResult, error) {
+	return &balance.BalanceResult{Success: true}, nil
+}
+
+func (m *mockBalanceManagerBug7Preservation) TransferBalance(ctx context.Context, from, to uuid.UUID, amount decimal.Decimal, reason, createdBy, ipAddress string) (*balance.TransferResult, error) {
+	return &balance.TransferResult{Success: true}, nil
+}
+
 // TestBug7_Preservation_SufficientBalanceDeduction verifies that successful
 // balance deductions with sufficient funds continue to work correctly
 // **Validates: Requirement 3.4**

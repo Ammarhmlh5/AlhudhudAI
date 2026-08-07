@@ -70,6 +70,9 @@ func TestCheckTelecomBalance_Success(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock get gateway info
 	rows := sqlmock.NewRows([]string{
@@ -89,6 +92,9 @@ func TestCheckTelecomBalance_Success(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	credRows := sqlmock.NewRows([]string{
 		"telecom_provider", "telecom_api_endpoint", "telecom_username",
@@ -107,6 +113,9 @@ func TestCheckTelecomBalance_Success(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	mock.ExpectExec("UPDATE dedicated_gateways SET telecom_balance").
 		WithArgs(currentBalance, sqlmock.AnyArg(), gatewayID, tenantID).
@@ -141,6 +150,9 @@ func TestCheckTelecomBalance_BalanceCheckDisabled(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock get gateway info with balance_check_enabled = false
 	rows := sqlmock.NewRows([]string{
@@ -180,6 +192,9 @@ func TestCheckTelecomBalance_NoTelecomClient(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock get gateway info
 	rows := sqlmock.NewRows([]string{
@@ -221,6 +236,9 @@ func TestCheckTelecomBalance_LowBalanceAlert(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock get gateway info
 	rows := sqlmock.NewRows([]string{
@@ -240,6 +258,9 @@ func TestCheckTelecomBalance_LowBalanceAlert(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	credRows := sqlmock.NewRows([]string{
 		"telecom_provider", "telecom_api_endpoint", "telecom_username",
@@ -258,6 +279,9 @@ func TestCheckTelecomBalance_LowBalanceAlert(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	mock.ExpectExec("UPDATE dedicated_gateways SET telecom_balance").
 		WithArgs(currentBalance, sqlmock.AnyArg(), gatewayID, tenantID).
@@ -269,6 +293,9 @@ func TestCheckTelecomBalance_LowBalanceAlert(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	mock.ExpectExec("INSERT INTO monitoring_alerts").
 		WithArgs(
@@ -316,6 +343,9 @@ func TestUpdateBalance(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock update
 	mock.ExpectExec("UPDATE dedicated_gateways SET telecom_balance").
@@ -349,6 +379,9 @@ func TestUpdateBalance_GatewayNotFound(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+			WithArgs("false").
+			WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock update with no rows affected
 	mock.ExpectExec("UPDATE dedicated_gateways SET telecom_balance").
@@ -417,6 +450,9 @@ func TestGetGatewayInfo(t *testing.T) {
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+		WithArgs("false").
+		WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock query
 	rows := sqlmock.NewRows([]string{
@@ -463,6 +499,9 @@ func TestGetGatewayInfo_NotFound(t *testing.T) {
 	mock.ExpectBegin()
 	mock.ExpectExec("SELECT set_config\\('app.current_tenant', \\$1, true\\)").
 		WithArgs(tenantID.String()).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("SELECT set_config\\('app.is_super_admin', \\$1, true\\)").
+		WithArgs("false").
 		WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Mock query with no rows

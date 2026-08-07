@@ -341,7 +341,7 @@ func setupTestDB(t *testing.T) *pgxpool.Pool {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	connString := "postgres://postgres:postgres@localhost:5432/sms_gateway?sslmode=disable"
+	connString := "postgres://postgres@localhost:5432/sms_gateway?sslmode=disable"
 	
 	pool, err := pgxpool.New(ctx, connString)
 	if err != nil {

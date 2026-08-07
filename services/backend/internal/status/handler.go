@@ -221,7 +221,7 @@ func (h *handler) updateMessageStatus(ctx context.Context, tx *sql.Tx, report St
 		query = `
 			UPDATE messages 
 			SET status = $1, updated_at = $2
-			WHERE id = $3 AND tenant_id = $4
+			WHERE message_id = $3 AND tenant_id = $4
 			  AND status = 'PENDING'
 			RETURNING event_id
 	`
@@ -231,7 +231,7 @@ func (h *handler) updateMessageStatus(ctx context.Context, tx *sql.Tx, report St
 		query = `
 			UPDATE messages 
 			SET status = $1, sent_at = $2, updated_at = $2
-			WHERE id = $3 AND tenant_id = $4
+			WHERE message_id = $3 AND tenant_id = $4
 			  AND status IN ('PENDING', 'BUFFERED')
 			RETURNING event_id
 	`
@@ -241,7 +241,7 @@ func (h *handler) updateMessageStatus(ctx context.Context, tx *sql.Tx, report St
 		query = `
 			UPDATE messages 
 			SET status = $1, delivered_at = $2, updated_at = $2
-			WHERE id = $3 AND tenant_id = $4
+			WHERE message_id = $3 AND tenant_id = $4
 			  AND status NOT IN ('DELIVERED', 'FAILED')
 			RETURNING event_id
 	`
@@ -251,7 +251,7 @@ func (h *handler) updateMessageStatus(ctx context.Context, tx *sql.Tx, report St
 		query = `
 			UPDATE messages 
 			SET status = $1, failed_at = $2, fail_reason = $3, updated_at = $2
-			WHERE id = $4 AND tenant_id = $5
+			WHERE message_id = $4 AND tenant_id = $5
 			  AND status NOT IN ('DELIVERED', 'FAILED')
 			RETURNING event_id
 	`
@@ -320,7 +320,7 @@ func (h *handler) settleFailedMessage(ctx context.Context, tx *sql.Tx, report St
 	err := tx.QueryRowContext(ctx, `
 		SELECT cost, tenant_id 
 		FROM messages 
-		WHERE id = $1 AND tenant_id = $2
+		WHERE message_id = $1 AND tenant_id = $2
 	`, report.MessageID, report.TenantID).Scan(&cost, &tenantID)
 
 	if err != nil {

@@ -2,56 +2,73 @@ import { useState, useEffect } from 'react';
 import apiClient from '../api/axios';
 
 interface Package {
-  id: string;
-  tenant_id: string;
-  service_id: string;
+  id: number;
+  service_id: number;
   name: string;
-  description: string;
-  price: number;
-  currency: string;
-  messages_included: number;
+  code: string;
+  price_usd: number;
+  included_messages: number | null;
   overage_rate: number;
+  is_unlimited: boolean;
+  billing_cycle: string;
   rollover_enabled: boolean;
-  rollover_limit: number;
-  rollover_expiry_months: number;
+  rollover_limit: number | null;
+  rollover_expiry_months: number | null;
   is_active: boolean;
+  display_order: number;
   created_at: string;
   updated_at: string;
 }
 
 interface Subscription {
-  id: string;
+  id: number;
   tenant_id: string;
-  package_id: string;
+  package_id: number;
   start_date: string;
   end_date: string;
-  status: string;
-  messages_included: number;
   messages_used: number;
-  messages_remaining: number;
+  messages_remaining: number | null;
   overage_messages: number;
-  overage_cost: number;
+  overage_cost: string;
+  status: string;
   auto_renew: boolean;
+  grace_period_days: number;
+  last_renewed_at?: string | null;
+  next_renewal_date?: string | null;
+  renewal_attempts: number;
+  last_renewal_attempt?: string | null;
   created_at: string;
   updated_at: string;
-  package?: Package;
 }
 
 interface SubscribeData {
-  package_id: string;
+  package_id: number;
   auto_renew?: boolean;
   idempotency_key?: string;
 }
 
+interface SubscribeResult {
+  success: boolean;
+  subscription_id: number;
+  message: string;
+  old_balance: string;
+  new_balance: string;
+}
+
 interface Usage {
-  subscription_id: string;
-  messages_included: number;
+  subscription_id: number;
+  package_id: number;
+  package_name: string;
   messages_used: number;
-  messages_remaining: number;
-  rollover_messages: number;
+  messages_remaining: number | null;
+  included_messages: number | null;
   overage_messages: number;
-  overage_cost: number;
-  total_available: number;
+  overage_cost: string;
+  overage_rate: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  next_renewal_date?: string;
 }
 
 // Hook لجلب جميع الباقات المتاحة
@@ -64,7 +81,7 @@ export const usePackages = () => {
     const fetchPackages = async () => {
       try {
         setLoading(true);
-        const response = await apiClient.get('/api/packages');
+        const response = await apiClient.get('/api/v1/packages');
 
         setPackages(response.data.packages || []);
         setError(null);
@@ -87,19 +104,19 @@ export const useSubscribe = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const subscribe = async (data: SubscribeData): Promise<Subscription | null> => {
+  const subscribe = async (data: SubscribeData): Promise<SubscribeResult | null> => {
     try {
       setLoading(true);
       setError(null);
       const idempotencyKey = crypto.randomUUID();
-      const response = await apiClient.post('/api/subscriptions', {
+      const response = await apiClient.post('/api/v1/subscriptions', {
         ...data,
         idempotency_key: idempotencyKey
       });
 
-      return response.data.subscription;
+      return response.data as SubscribeResult;
     } catch (err: any) {
-      const errorMsg = err.response?.data?.error || 'فشل في الاشتراك في الباقة';
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || 'فشل في الاشتراك في الباقة';
       setError(errorMsg);
       console.error('Error subscribing:', err);
       return null;
@@ -120,7 +137,7 @@ export const useSubscription = () => {
   const fetchSubscription = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/api/subscriptions/current');
+      const response = await apiClient.get('/api/v1/subscriptions/active');
 
       setSubscription(response.data.subscription);
       setError(null);
@@ -153,7 +170,7 @@ export const useUsage = () => {
   const fetchUsage = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/api/subscriptions/usage');
+      const response = await apiClient.get('/api/v1/subscriptions/usage');
 
       setUsage(response.data.usage);
       setError(null);
@@ -186,14 +203,14 @@ export const useCancelSubscription = () => {
     try {
       setLoading(true);
       setError(null);
-      await apiClient.post(
-        `/api/subscriptions/${subscriptionId}/cancel`,
+      await apiClient.put(
+        `/api/v1/subscriptions/${subscriptionId}/cancel`,
         {}
       );
 
       return true;
     } catch (err: any) {
-      const errorMsg = err.response?.data?.error || 'فشل في إلغاء الاشتراك';
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || 'فشل في إلغاء الاشتراك';
       setError(errorMsg);
       console.error('Error canceling subscription:', err);
       return false;
@@ -217,14 +234,21 @@ export const useUpdateAutoRenew = () => {
     try {
       setLoading(true);
       setError(null);
-      await apiClient.put(
-        `/api/subscriptions/${subscriptionId}/auto-renew`,
-        { auto_renew: autoRenew }
-      );
+      if (autoRenew) {
+        await apiClient.put(
+          `/api/v1/subscriptions/${subscriptionId}/enable-auto-renew`,
+          {}
+        );
+      } else {
+        await apiClient.put(
+          `/api/v1/subscriptions/${subscriptionId}/cancel`,
+          {}
+        );
+      }
 
       return true;
     } catch (err: any) {
-      const errorMsg = err.response?.data?.error || 'فشل في تحديث التجديد التلقائي';
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || 'فشل في تحديث التجديد التلقائي';
       setError(errorMsg);
       console.error('Error updating auto-renew:', err);
       return false;

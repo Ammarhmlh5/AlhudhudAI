@@ -16,6 +16,7 @@ import (
 	"github.com/al-hudhud/backend/internal/database"
 	"github.com/al-hudhud/backend/internal/gateway"
 	"github.com/al-hudhud/backend/internal/status"
+	"github.com/google/uuid"
 	goredis "github.com/redis/go-redis/v9"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
@@ -33,8 +34,9 @@ func TestFailedMessageRefundFlow(t *testing.T) {
 	cfg.Database.Host = "localhost"
 	cfg.Database.Port = "5432"
 	cfg.Database.User = "postgres"
-	cfg.Database.Password = "postgres"
+	cfg.Database.Password = testDBPassword()
 	cfg.Database.Name = "sms_gateway_test"
+	cfg.Database.SSLMode = "disable"
 	cfg.Database.MaxOpenConns = 10
 	cfg.Database.MaxIdleConns = 5
 	cfg.Database.ConnMaxLifetime = time.Hour
@@ -46,9 +48,9 @@ func TestFailedMessageRefundFlow(t *testing.T) {
 
 	redisClient := goredis.NewClient(&goredis.Options{
 		Addr: "localhost:6379",
-		DB:   1,
+		DB:   13, // Dedicated test DB so FlushDB does not collide with other packages
 	})
-	require.NoError(t, redisClient.Ping(ctx).Err())
+	requireRedisPing(t, redisClient)
 	defer redisClient.Close()
 
 	// 2. Setup services
@@ -84,7 +86,7 @@ func TestFailedMessageRefundFlow(t *testing.T) {
 	apiHandler.ReceiveMessage(w, req)
 
 	// Verify API response
-	assert.Equal(t, http.StatusAccepted, w.Code)
+	assert.Equal(t, http.StatusOK, w.Code)
 	var messageResp gateway.MessageResponse
 	err = json.Unmarshal(w.Body.Bytes(), &messageResp)
 	require.NoError(t, err)
@@ -94,6 +96,23 @@ func TestFailedMessageRefundFlow(t *testing.T) {
 	result, err := batchProcessor.ProcessBatch(ctx, tenantID)
 	require.NoError(t, err)
 	assert.Equal(t, 1, result.ProcessedCount)
+
+	// 5b. Deduct the message cost like the production worker does before a
+	// FAILED report, so the refund restores the initial balance.
+	var cost float64
+	err = db.Pool.QueryRow(ctx, "SELECT cost FROM messages WHERE message_id = $1", messageID).Scan(&cost)
+	require.NoError(t, err)
+	msgUUID, err := uuid.Parse(messageID)
+	require.NoError(t, err)
+	_, err = balanceManager.DeductBalance(ctx, balance.BalanceOperation{
+		TenantID:  tenantID,
+		MessageID: &msgUUID,
+		Amount:    decimal.NewFromFloat(cost),
+		Type:      balance.OperationTypeDeduct,
+		Reason:    "MESSAGE_SEND",
+		CreatedBy: "test",
+	})
+	require.NoError(t, err)
 
 	// 6. Simulate Status Report (FAILED)
 	report := status.StatusReport{

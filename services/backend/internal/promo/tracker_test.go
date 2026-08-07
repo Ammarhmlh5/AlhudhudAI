@@ -12,16 +12,29 @@ import (
 func TestRecordUsage(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
-	
+
 	tracker := NewUsageTracker(db)
+	manager := NewManager(db)
 	ctx := context.Background()
 	tenantID := int64(1)
-	
+
 	defer cleanupTestData(t, db, tenantID)
-	
+
+	created, err := manager.CreatePromoCode(ctx, tenantID, &CreatePromoCodeRequest{
+		Code:          "RECORDUSAGE",
+		Description:   "test",
+		DiscountType:  DiscountTypePercentage,
+		DiscountValue: 20.0,
+		ValidFrom:     time.Now(),
+		ValidUntil:    time.Now().Add(30 * 24 * time.Hour),
+		PerUserLimit:  1,
+		ApplicableTo:  ApplicableToAll,
+	})
+	require.NoError(t, err)
+
 	usage := &PromoCodeUsage{
 		TenantID:       tenantID,
-		PromoCodeID:    1,
+		PromoCodeID:    created.ID,
 		UserID:         1,
 		OrderType:      OrderTypeSubscription,
 		OrderID:        nil,
@@ -29,8 +42,8 @@ func TestRecordUsage(t *testing.T) {
 		DiscountAmount: 20.0,
 		FinalAmount:    80.0,
 	}
-	
-	err := tracker.RecordUsage(ctx, usage)
+
+	err = tracker.RecordUsage(ctx, usage)
 	require.NoError(t, err)
 	assert.NotZero(t, usage.ID)
 	assert.NotZero(t, usage.UsedAt)

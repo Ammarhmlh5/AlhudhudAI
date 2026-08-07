@@ -34,6 +34,16 @@ func TestConcurrentTenantOperations(t *testing.T) {
 		tenants[i] = tenantID
 	}
 
+	// Ensure the service referenced by the tariff rows exists (FK constraint)
+	conn, err := db.DB()
+	require.NoError(t, err)
+	_, err = conn.ExecContext(ctx, `
+		INSERT INTO services (id, tenant_id, name, code, type, is_active)
+		VALUES (1, $1, 'Test Service', 'TEST_SVC', 'SMS', true)
+		ON CONFLICT (id) DO NOTHING
+	`, tenants[0])
+	require.NoError(t, err)
+
 	// Number of concurrent operations per tenant
 	opsPerTenant := 50
 
@@ -393,6 +403,7 @@ func TestConcurrentCacheIsolation(t *testing.T) {
 	opsPerTenant := 100
 	var wg sync.WaitGroup
 	errors := make(chan error, numTenants*opsPerTenant)
+	written := make(chan struct{ key, value string }, numTenants*opsPerTenant)
 
 	for _, tenantID := range tenants {
 		for i := 0; i < opsPerTenant; i++ {
@@ -404,7 +415,16 @@ func TestConcurrentCacheIsolation(t *testing.T) {
 				key := fmt.Sprintf("tenant:%s:data:%d", tid.String(), opNum)
 				value := fmt.Sprintf("value-%s-%d", tid.String(), opNum)
 
-				err := redisClient.Set(ctx, key, value, 5*time.Minute).Err()
+				// The full-suite run saturates the WSL2 Redis relay and can
+				// transiently exceed a single round trip. Retry briefly;
+				// isolation is the property under test, not raw throughput.
+				var err error
+				for attempt := 0; attempt < 3; attempt++ {
+					err = redisClient.Set(ctx, key, value, 5*time.Minute).Err()
+					if err == nil {
+						break
+					}
+				}
 				if err != nil {
 					errors <- fmt.Errorf("cache set error: %w", err)
 					return
@@ -419,13 +439,16 @@ func TestConcurrentCacheIsolation(t *testing.T) {
 
 				if retrieved != value {
 					errors <- fmt.Errorf("cache value mismatch: expected %s, got %s", value, retrieved)
+					return
 				}
+				written <- struct{ key, value string }{key, value}
 			}(tenantID, i)
 		}
 	}
 
 	wg.Wait()
 	close(errors)
+	close(written)
 
 	// Check for errors
 	var errorList []error
@@ -434,16 +457,11 @@ func TestConcurrentCacheIsolation(t *testing.T) {
 	}
 	assert.Empty(t, errorList, "Should have no cache isolation errors")
 
-	// Verify no cross-tenant cache pollution
-	for _, tenantID := range tenants {
-		for i := 0; i < opsPerTenant; i++ {
-			key := fmt.Sprintf("tenant:%s:data:%d", tenantID.String(), i)
-			value := fmt.Sprintf("value-%s-%d", tenantID.String(), i)
-
-			retrieved, err := redisClient.Get(ctx, key).Result()
-			require.NoError(t, err)
-			assert.Equal(t, value, retrieved, "Cache value should match for tenant %s", tenantID)
-		}
+	// Verify no cross-tenant cache pollution for the keys that were written
+	for kv := range written {
+		retrieved, err := redisClient.Get(ctx, kv.key).Result()
+		require.NoError(t, err)
+		assert.Equal(t, kv.value, retrieved, "Cache value should match for tenant %s", kv.key)
 	}
 }
 
@@ -615,7 +633,7 @@ func verifyTenantDataIntegrity(t *testing.T, db *sql.DB, tenantID uuid.UUID, exp
 
 func createTestTenant(t *testing.T, db *gorm.DB, name string) uuid.UUID {
 	tenantID := uuid.New()
-	err := db.Exec("INSERT INTO tenants (id, business_name, email, status) VALUES (?, ?, ?, ?)",
+	err := db.Exec("INSERT INTO tenants (id, business_name, contact_name, email, status) VALUES (?, ?, 'Test Contact', ?, ?)",
 		tenantID, name, fmt.Sprintf("%s@example.com", name), "ACTIVE").Error
 	require.NoError(t, err)
 	return tenantID
@@ -623,12 +641,18 @@ func createTestTenant(t *testing.T, db *gorm.DB, name string) uuid.UUID {
 
 func setupTestRedis(t *testing.T) *redis.Client {
 	client := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr:         "localhost:6379",
+		DB:           10, // Dedicated test DB so FlushDB does not collide with other packages
+		DialTimeout:  10 * time.Second,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		PoolSize:     100,
 	})
 	return client
 }
 
 func cleanupTestRedis(t *testing.T, client *redis.Client) {
-	client.FlushAll(context.Background())
+	// FlushDB is contained to this package's dedicated test DB (10).
+	client.FlushDB(context.Background())
 	client.Close()
 }

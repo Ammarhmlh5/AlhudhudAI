@@ -56,12 +56,12 @@ func (tdb *TestDB) CreateTestTenant() uuid.UUID {
 	tdb.tenantID = tenantID
 
 	query := `
-		INSERT INTO tenants (id, name, email, balance, status)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO tenants (id, business_name, contact_name, email, balance, status)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (id) DO NOTHING
 	`
 
-	_, err := tdb.Exec(query, tenantID, "Test Tenant", 
+	_, err := tdb.Exec(query, tenantID, "Test Tenant", "Test Contact",
 		fmt.Sprintf("test-%s@alhudhud.com", tenantID.String()[:8]),
 		decimal.NewFromInt(10000), "ACTIVE")
 	if err != nil {
@@ -72,18 +72,18 @@ func (tdb *TestDB) CreateTestTenant() uuid.UUID {
 }
 
 // CreateTestUser - Create a test user
-func (tdb *TestDB) CreateTestUser(tenantID uuid.UUID) uuid.UUID {
+func (tdb *TestDB) CreateTestUser(_ uuid.UUID) uuid.UUID {
 	userID := uuid.New()
 
 	query := `
-		INSERT INTO users (id, tenant_id, email, password_hash, name, role, status)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO users (id, email, password_hash, user_type, is_active, is_verified, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
 		ON CONFLICT (id) DO NOTHING
 	`
 
-	_, err := tdb.Exec(query, userID, tenantID,
+	_, err := tdb.Exec(query, userID,
 		fmt.Sprintf("user-%s@test.com", userID.String()[:8]),
-		"$2a$10$dummyhash", "Test User", "admin", "ACTIVE")
+		"$2a$10$dummyhash", "ADMIN", true, true)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create test user: %v", err))
 	}
@@ -121,11 +121,10 @@ func (tdb *TestDB) SetTenantBalance(tenantID uuid.UUID, balance decimal.Decimal)
 // Cleanup - Clean up test data
 func (tdb *TestDB) Cleanup() {
 	if tdb.tenantID != uuid.Nil {
-		// Clean up in correct order due to foreign keys
-		tdb.Exec(`DELETE FROM messages WHERE tenant_id = $1`, tdb.tenantID)
-		tdb.Exec(`DELETE FROM balance_history WHERE tenant_id = $1`, tdb.tenantID)
-		tdb.Exec(`DELETE FROM users WHERE tenant_id = $1`, tdb.tenantID)
-		tdb.Exec(`DELETE FROM tenants WHERE id = $1`, tdb.tenantID)
+	// Clean up in correct order due to foreign keys
+	tdb.Exec(`DELETE FROM messages WHERE tenant_id = $1`, tdb.tenantID)
+	tdb.Exec(`DELETE FROM balance_history WHERE tenant_id = $1`, tdb.tenantID)
+	tdb.Exec(`DELETE FROM tenants WHERE id = $1`, tdb.tenantID)
 	}
 }
 
@@ -149,7 +148,7 @@ func (tdb *TestDB) SeedTestData() {
 			INSERT INTO balance_history (id, tenant_id, type, amount, old_balance, new_balance, reason)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)
 		`
-		tdb.Exec(query, uuid.New(), tenantID, "DEDUCTION",
+		tdb.Exec(query, uuid.New(), tenantID, "DEDUCT",
 			decimal.NewFromInt(-10), decimal.NewFromInt(1000), decimal.NewFromInt(990),
 			"Test deduction")
 	}

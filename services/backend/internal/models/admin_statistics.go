@@ -6,7 +6,7 @@ import "time"
 // for the Super Admin dashboard. It is refreshed by a background job, so
 // the dashboard reads it in O(1) instead of expensive full-table COUNTs.
 type AdminStatistics struct {
-	ID int `gorm:"primaryKey;default:1" json:"id"`
+	ID int `gorm:"primaryKey;autoIncrement:false" json:"id"`
 
 	// Tenant metrics
 	TotalTenants  int `gorm:"default:0" json:"total_tenants"`

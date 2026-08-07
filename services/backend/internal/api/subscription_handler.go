@@ -7,7 +7,6 @@ import (
 
 	"github.com/al-hudhud/backend/internal/db"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -66,8 +65,8 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// Extract tenant_id from context (set by middleware)
-	tenantIDStr, exists := c.Get("tenant_id")
-	if !exists {
+	scope := resolveTenantScope(c)
+	if !scope.Exists {
 		h.logger.Error("tenant_id not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
@@ -76,15 +75,22 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 		return
 	}
 
-	tenantID, err := uuid.Parse(tenantIDStr.(string))
-	if err != nil {
-		h.logger.Error("Invalid tenant_id format", zap.Error(err))
+	if !scope.Valid {
+		if scope.IsSuperAdmin {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Super admin has no tenant subscription scope",
+			})
+			return
+		}
+		h.logger.Error("Invalid tenant_id format")
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   "Invalid tenant_id format",
 		})
 		return
 	}
+	tenantID := scope.TenantID
 
 	// Parse request body
 	var req SubscribeRequest
@@ -207,8 +213,8 @@ func (h *SubscriptionHandler) GetUsage(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// Extract tenant_id from context
-	tenantIDStr, exists := c.Get("tenant_id")
-	if !exists {
+	scope := resolveTenantScope(c)
+	if !scope.Exists {
 		h.logger.Error("tenant_id not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
@@ -217,15 +223,22 @@ func (h *SubscriptionHandler) GetUsage(c *gin.Context) {
 		return
 	}
 
-	tenantID, err := uuid.Parse(tenantIDStr.(string))
-	if err != nil {
-		h.logger.Error("Invalid tenant_id format", zap.Error(err))
+	if !scope.Valid {
+		if scope.IsSuperAdmin {
+			c.JSON(http.StatusNotFound, gin.H{
+				"success": false,
+				"error":   "No active subscription found",
+			})
+			return
+		}
+		h.logger.Error("Invalid tenant_id format")
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   "Invalid tenant_id format",
 		})
 		return
 	}
+	tenantID := scope.TenantID
 
 	// Get usage information
 	usage, err := h.subManager.GetUsage(ctx, tenantID)
@@ -298,8 +311,8 @@ func (h *SubscriptionHandler) GetSubscription(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// Extract tenant_id from context
-	tenantIDStr, exists := c.Get("tenant_id")
-	if !exists {
+	scope := resolveTenantScope(c)
+	if !scope.Exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"error":   "Unauthorized: tenant_id not found",
@@ -307,14 +320,21 @@ func (h *SubscriptionHandler) GetSubscription(c *gin.Context) {
 		return
 	}
 
-	tenantID, err := uuid.Parse(tenantIDStr.(string))
-	if err != nil {
+	if !scope.Valid {
+		if scope.IsSuperAdmin {
+			c.JSON(http.StatusNotFound, gin.H{
+				"success": false,
+				"error":   "No active subscription found",
+			})
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   "Invalid tenant_id format",
 		})
 		return
 	}
+	tenantID := scope.TenantID
 
 	// Get active subscription
 	sub, err := h.subManager.GetActiveSubscription(ctx, tenantID)
@@ -342,8 +362,8 @@ func (h *SubscriptionHandler) CancelSubscription(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// Extract tenant_id from context
-	tenantIDStr, exists := c.Get("tenant_id")
-	if !exists {
+	scope := resolveTenantScope(c)
+	if !scope.Exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"error":   "Unauthorized: tenant_id not found",
@@ -351,14 +371,21 @@ func (h *SubscriptionHandler) CancelSubscription(c *gin.Context) {
 		return
 	}
 
-	tenantID, err := uuid.Parse(tenantIDStr.(string))
-	if err != nil {
+	if !scope.Valid {
+		if scope.IsSuperAdmin {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Super admin has no tenant subscription scope",
+			})
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   "Invalid tenant_id format",
 		})
 		return
 	}
+	tenantID := scope.TenantID
 
 	// Parse subscription ID
 	subscriptionIDStr := c.Param("id")
@@ -415,8 +442,8 @@ func (h *SubscriptionHandler) EnableAutoRenew(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// Extract tenant_id from context
-	tenantIDStr, exists := c.Get("tenant_id")
-	if !exists {
+	scope := resolveTenantScope(c)
+	if !scope.Exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"error":   "Unauthorized: tenant_id not found",
@@ -424,14 +451,21 @@ func (h *SubscriptionHandler) EnableAutoRenew(c *gin.Context) {
 		return
 	}
 
-	tenantID, err := uuid.Parse(tenantIDStr.(string))
-	if err != nil {
+	if !scope.Valid {
+		if scope.IsSuperAdmin {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Super admin has no tenant subscription scope",
+			})
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   "Invalid tenant_id format",
 		})
 		return
 	}
+	tenantID := scope.TenantID
 
 	// Parse subscription ID
 	subscriptionIDStr := c.Param("id")

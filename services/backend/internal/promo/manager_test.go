@@ -14,7 +14,7 @@ import (
 // setupTestDB ينشئ اتصال قاعدة بيانات للاختبار
 func setupTestDB(t *testing.T) *sqlx.DB {
 	// استخدام قاعدة بيانات الاختبار
-	db, err := sqlx.Connect("postgres", "postgres://postgres:postgres@localhost:5432/sms_gateway_test?sslmode=disable")
+	db, err := sqlx.Connect("postgres", "postgres://postgres@localhost:5432/sms_gateway_test?sslmode=disable")
 	require.NoError(t, err)
 	
 	// تعيين tenant_id للاختبار

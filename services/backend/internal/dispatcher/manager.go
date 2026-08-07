@@ -55,6 +55,10 @@ func (m *Manager) Start() {
 	// Start monitoring goroutine
 	go m.monitorTenants()
 
+	// Start the stuck "running" job rescuer (River's built-in rescuer is
+	// unreliable in this multi-tenant setup).
+	m.startStuckJobRescuer()
+
 	log.Info("TenantDispatcher Manager started",
 		zap.Int("active_tenants", len(tenants)))
 }

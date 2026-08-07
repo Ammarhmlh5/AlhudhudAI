@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   Server, Plus, Search, Filter, AlertTriangle, 
   CheckCircle, XCircle, Clock, TrendingUp, Activity,
@@ -9,6 +10,7 @@ import { API_BASE_URL } from '../config';
 import apiClient from '../api/axios';
 
 export default function Gateways() {
+  const { t } = useTranslation();
   const [gateways, setGateways] = useState([]);
   const [filteredGateways, setFilteredGateways] = useState([]);
   const [alerts, setAlerts] = useState([]);
@@ -96,7 +98,7 @@ export default function Gateways() {
           onClick={() => setSelectedGateway(null)}
           className="mb-8 px-6 py-2 bg-slate-900 text-slate-400 border border-slate-800 rounded-xl hover:text-white hover:bg-slate-800 transition-all flex items-center gap-2 font-bold uppercase tracking-widest text-xs"
         >
-          ← Back to Network
+          {t('gateways.backToNetwork')}
         </button>
         <GatewayDetails gatewayId={selectedGateway} onClose={() => setSelectedGateway(null)} />
       </div>
@@ -112,10 +114,10 @@ export default function Gateways() {
             <div className="p-3 bg-rose-600 rounded-2xl shadow-lg shadow-rose-900/20">
               <Database className="w-8 h-8 text-white" />
             </div>
-            Dedicated Gateways
+            {t('gateways.title')}
           </h1>
           <p className="mt-2 text-slate-400 font-medium ml-1">
-            Enterprise grade secure messaging infrastructure
+            {t('gateways.subtitle')}
           </p>
         </div>
         <button
@@ -123,7 +125,7 @@ export default function Gateways() {
           className="px-8 py-4 bg-rose-600 text-white rounded-2xl hover:bg-rose-500 shadow-xl shadow-rose-900/20 transition-all flex items-center gap-3 font-black uppercase tracking-widest text-sm"
         >
           <Plus className="w-5 h-5" />
-          Deploy New Gateway
+          {t('gateways.deployNewGateway')}
         </button>
       </div>
 
@@ -134,7 +136,7 @@ export default function Gateways() {
             <AlertTriangle className="w-6 h-6 text-amber-500" />
           </div>
           <div className="flex-1">
-            <h3 className="font-black text-amber-400 uppercase tracking-widest text-sm mb-2">Network Alerts ({alerts.length})</h3>
+            <h3 className="font-black text-amber-400 uppercase tracking-widest text-sm mb-2">{t('gateways.networkAlerts', { count: alerts.length })}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {alerts.slice(0, 3).map((alert, idx) => (
                 <div key={idx} className="text-xs text-slate-400 font-medium flex items-center gap-2">
@@ -149,10 +151,10 @@ export default function Gateways() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <StatCard icon={Database} label="Total Assets" value={gateways.length} color="rose" />
-        <StatCard icon={CheckCircle} label="Active" value={gateways.filter(g => g.status === 'active').length} color="emerald" />
-        <StatCard icon={Clock} label="Suspended" value={gateways.filter(g => g.status === 'suspended').length} color="amber" />
-        <StatCard icon={XCircle} label="Terminated" value={gateways.filter(g => g.status === 'terminated').length} color="slate" />
+        <StatCard icon={Database} label={t('gateways.statTotalAssets')} value={gateways.length} color="rose" />
+        <StatCard icon={CheckCircle} label={t('gateways.statusActive')} value={gateways.filter(g => g.status === 'active').length} color="emerald" />
+        <StatCard icon={Clock} label={t('gateways.statusSuspended')} value={gateways.filter(g => g.status === 'suspended').length} color="amber" />
+        <StatCard icon={XCircle} label={t('gateways.statusTerminated')} value={gateways.filter(g => g.status === 'terminated').length} color="slate" />
       </div>
 
       {/* Filters Bar */}
@@ -162,7 +164,7 @@ export default function Gateways() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-rose-500 transition-colors" />
             <input
               type="text"
-              placeholder="Search by gateway name or tenant..."
+              placeholder={t('gateways.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white placeholder:text-slate-600 focus:outline-none focus:border-rose-500 transition-all shadow-inner"
@@ -176,10 +178,10 @@ export default function Gateways() {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="pl-12 pr-8 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-sm text-slate-300 focus:outline-none focus:border-rose-500 appearance-none cursor-pointer min-w-[180px]"
                 >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="suspended">Suspended</option>
-                <option value="terminated">Terminated</option>
+                <option value="all">{t('gateways.statusAll')}</option>
+                <option value="active">{t('gateways.statusActive')}</option>
+                <option value="suspended">{t('gateways.statusSuspended')}</option>
+                <option value="terminated">{t('gateways.statusTerminated')}</option>
                 </select>
             </div>
           </div>
@@ -191,23 +193,23 @@ export default function Gateways() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-32 space-y-4">
             <div className="w-12 h-12 border-4 border-rose-500/20 border-t-rose-500 rounded-full animate-spin"></div>
-            <p className="text-slate-400 font-bold animate-pulse">Scanning Network Infrastructure...</p>
+            <p className="text-slate-400 font-bold animate-pulse">{t('gateways.scanning')}</p>
           </div>
         ) : filteredGateways.length === 0 ? (
           <div className="text-center py-24">
             <Globe className="w-16 h-16 text-slate-800 mx-auto mb-4" />
-            <p className="text-slate-500 font-bold text-lg">No dedicated gateways deployed.</p>
+            <p className="text-slate-500 font-bold text-lg">{t('gateways.noGateways')}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-slate-950/50 border-b border-slate-800">
-                  <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">Gateway Asset</th>
-                  <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">Owner / Tenant</th>
-                  <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">Live Status</th>
-                  <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">Plan Details</th>
-                  <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">Performance</th>
+                  <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">{t('gateways.colGatewayAsset')}</th>
+                  <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">{t('gateways.colOwnerTenant')}</th>
+                  <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">{t('gateways.colLiveStatus')}</th>
+                  <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">{t('gateways.colPlanDetails')}</th>
+                  <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest">{t('gateways.colPerformance')}</th>
                   <th className="px-8 py-5 text-xs font-black text-slate-500 uppercase tracking-widest"></th>
                 </tr>
               </thead>
@@ -221,7 +223,7 @@ export default function Gateways() {
                         </div>
                         <div>
                           <p className="font-bold text-white group-hover:text-rose-500 transition-colors">{gateway.gateway_name}</p>
-                          <p className="text-[10px] font-mono text-slate-500 mt-0.5">UID: {gateway.id.slice(0, 12)}</p>
+                          <p className="text-[10px] font-mono text-slate-500 mt-0.5">{t('gateways.uidLabel')}: {gateway.id.slice(0, 12)}</p>
                         </div>
                       </div>
                     </td>
@@ -237,10 +239,10 @@ export default function Gateways() {
                     <td className="px-8 py-6">
                       <div className="space-y-1">
                         <span className="text-xs font-black uppercase text-white tracking-tighter bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
-                            {gateway.subscription_type}
+                            {gateway.subscription_type === 'monthly' ? t('gateways.subscriptionMonthly') : t('gateways.subscriptionYearly')}
                         </span>
                         <p className="text-sm font-bold text-slate-500 mt-1">
-                          ${(gateway.subscription_fee + gateway.server_rental_fee).toLocaleString()}/mo
+                          {t('gateways.costPerMonth', { amount: (gateway.subscription_fee + gateway.server_rental_fee).toLocaleString() })}
                         </p>
                       </div>
                     </td>
@@ -248,11 +250,11 @@ export default function Gateways() {
                       <div className="flex items-center gap-6">
                         <div className="text-center">
                             <div className="text-xs font-black text-white">{gateway.uptime_percentage || 0}%</div>
-                            <div className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">Uptime</div>
+                            <div className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">{t('gateways.uptime')}</div>
                         </div>
                         <div className="text-center">
                             <div className="text-xs font-black text-white">{(gateway.messages_sent || 0).toLocaleString()}</div>
-                            <div className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">Throughput</div>
+                            <div className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">{t('gateways.throughput')}</div>
                         </div>
                       </div>
                     </td>
@@ -280,13 +282,13 @@ export default function Gateways() {
                 <X className="w-6 h-6" />
             </button>
 
-            <h2 className="text-3xl font-black text-white mb-2">Deploy Gateway</h2>
-            <p className="text-slate-500 font-medium mb-10">Configure enterprise dedicated messaging node.</p>
+            <h2 className="text-3xl font-black text-white mb-2">{t('gateways.modalTitle')}</h2>
+            <p className="text-slate-500 font-medium mb-10">{t('gateways.modalSubtitle')}</p>
             
             <form onSubmit={handleCreateGateway} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Target Tenant ID</label>
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">{t('gateways.targetTenantId')}</label>
                     <input
                     type="text"
                     required
@@ -296,7 +298,7 @@ export default function Gateways() {
                     />
                 </div>
                 <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Gateway Alias</label>
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">{t('gateways.gatewayAlias')}</label>
                     <input
                     type="text"
                     required
@@ -308,20 +310,20 @@ export default function Gateways() {
               </div>
 
               <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Billing Cycle</label>
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">{t('gateways.billingCycle')}</label>
                 <select
                   value={createForm.subscription_type}
                   onChange={(e) => setCreateForm({...createForm, subscription_type: e.target.value})}
                   className="w-full px-5 py-4 bg-slate-950 border border-slate-800 rounded-2xl text-white focus:outline-none focus:border-rose-500 appearance-none cursor-pointer"
                 >
-                  <option value="monthly">Monthly Subscription</option>
-                  <option value="yearly">Yearly Commitment</option>
+                  <option value="monthly">{t('gateways.subscriptionMonthly')}</option>
+                  <option value="yearly">{t('gateways.subscriptionYearly')}</option>
                 </select>
               </div>
 
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Sub Fee ($)</label>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">{t('gateways.subFee')}</label>
                   <input
                     type="number"
                     step="0.01"
@@ -332,7 +334,7 @@ export default function Gateways() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Rental Fee ($)</label>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">{t('gateways.rentalFee')}</label>
                   <input
                     type="number"
                     step="0.01"
@@ -349,7 +351,7 @@ export default function Gateways() {
                   type="submit"
                   className="w-full py-5 bg-rose-600 hover:bg-rose-500 text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-rose-900/20 transition-all"
                 >
-                  Initiate Deployment
+                  {t('gateways.initiateDeployment')}
                 </button>
               </div>
             </form>
@@ -382,6 +384,7 @@ function StatCard({ icon: Icon, label, value, color }) {
 }
 
 function StatusBadge({ status }) {
+  const { t } = useTranslation();
   const getStatusConfig = (status) => {
     switch (status) {
       case 'active':     return { styles: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', dot: 'bg-emerald-500 shadow-emerald-500/50' };
@@ -393,10 +396,19 @@ function StatusBadge({ status }) {
 
   const config = getStatusConfig(status);
 
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'active':     return t('gateways.statusActive');
+      case 'suspended':  return t('gateways.statusSuspended');
+      case 'terminated': return t('gateways.statusTerminated');
+      default:           return status;
+    }
+  };
+
   return (
     <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase border ${config.styles}`}>
       <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_8px] ${config.dot}`} />
-      {status}
+      {getStatusLabel(status)}
     </span>
   );
 }

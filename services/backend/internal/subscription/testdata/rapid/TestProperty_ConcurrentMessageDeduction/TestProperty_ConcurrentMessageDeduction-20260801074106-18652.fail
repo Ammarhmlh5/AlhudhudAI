@@ -1,0 +1,7 @@
+# 2026/08/01 07:41:06.187541 [TestProperty_ConcurrentMessageDeduction] [rapid] draw concurrency: 5
+# 2026/08/01 07:41:06.189006 [TestProperty_ConcurrentMessageDeduction] Failed to set tenant context: ERROR: syntax error at or near "$1" (SQLSTATE 42601)
+# 
+v0.4.8#2814770226583783060
+0x0
+0x0
+0x0

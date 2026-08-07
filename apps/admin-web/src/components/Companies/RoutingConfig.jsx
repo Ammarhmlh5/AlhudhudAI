@@ -64,11 +64,11 @@ const RoutingConfig = ({ tenantId }) => {
     try {
       setSaving(true);
       await axios.put(`/api/v1/admin/routing/${tenantId}`, config);
-      alert('Routing configuration saved successfully!');
+      alert(t('routingConfig.saveSuccess'));
       fetchMetrics(); // Refresh metrics after save
     } catch (error) {
       console.error('Failed to save routing config:', error);
-      alert('Failed to save routing configuration');
+      alert(t('routingConfig.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -94,6 +94,19 @@ const RoutingConfig = ({ tenantId }) => {
     }
   };
 
+  const getHealthStatusLabel = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'healthy':
+        return t('servers.healthy');
+      case 'degraded':
+        return t('servers.degraded');
+      case 'unhealthy':
+        return t('servers.unhealthy');
+      default:
+        return t('routingConfig.healthUnknown');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -108,7 +121,7 @@ const RoutingConfig = ({ tenantId }) => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Server className="w-6 h-6 text-blue-500" />
-          <h2 className="text-xl font-bold text-white">Routing Configuration</h2>
+          <h2 className="text-xl font-bold text-white">{t('routingConfig.title')}</h2>
         </div>
         <button
           onClick={handleSave}
@@ -116,13 +129,13 @@ const RoutingConfig = ({ tenantId }) => {
           className="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-700 text-white rounded-lg font-medium transition-all"
         >
           <Save className="w-4 h-4" />
-          {saving ? 'Saving...' : 'Save'}
+          {saving ? t('distribution.saving') : t('routingConfig.save')}
         </button>
       </div>
 
       {/* Routing Type Selector */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
-        <h3 className="text-lg font-semibold text-white">Routing Type</h3>
+        <h3 className="text-lg font-semibold text-white">{t('routingConfig.routingType')}</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Shared Routing */}
@@ -144,10 +157,10 @@ const RoutingConfig = ({ tenantId }) => {
                   <div className="w-full h-full rounded-full bg-white scale-50" />
                 )}
               </div>
-              <span className="font-semibold text-white">Shared Routing</span>
+              <span className="font-semibold text-white">{t('routingConfig.sharedRouting')}</span>
             </div>
             <p className="text-sm text-slate-400">
-              Messages are routed through shared infrastructure
+              {t('routingConfig.sharedRoutingDesc')}
             </p>
           </button>
 
@@ -170,10 +183,10 @@ const RoutingConfig = ({ tenantId }) => {
                   <div className="w-full h-full rounded-full bg-white scale-50" />
                 )}
               </div>
-              <span className="font-semibold text-white">Dedicated Server</span>
+              <span className="font-semibold text-white">{t('routingConfig.dedicatedServer')}</span>
             </div>
             <p className="text-sm text-slate-400">
-              Messages are routed to a dedicated server
+              {t('routingConfig.dedicatedServerDesc')}
             </p>
           </button>
         </div>
@@ -182,22 +195,22 @@ const RoutingConfig = ({ tenantId }) => {
       {/* Dedicated Server Configuration */}
       {config.routing_type === 'dedicated' && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
-          <h3 className="text-lg font-semibold text-white">Dedicated Server Settings</h3>
+          <h3 className="text-lg font-semibold text-white">{t('routingConfig.dedicatedServerSettings')}</h3>
           
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-slate-400 mb-2">Server ID</label>
+              <label className="block text-sm text-slate-400 mb-2">{t('servers.server_id')}</label>
               <input
                 type="text"
                 value={config.dedicated_server_id}
                 onChange={(e) => updateConfig('dedicated_server_id', e.target.value)}
-                placeholder="Enter server ID..."
+                placeholder={t('routingConfig.serverIdPlaceholder')}
                 className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm text-slate-400 mb-2">Server URL</label>
+              <label className="block text-sm text-slate-400 mb-2">{t('servers.server_url')}</label>
               <input
                 type="url"
                 value={config.dedicated_server_url}
@@ -210,10 +223,10 @@ const RoutingConfig = ({ tenantId }) => {
             {/* Health Status */}
             {config.dedicated_server_id && (
               <div>
-                <label className="block text-sm text-slate-400 mb-2">Health Status</label>
+                <label className="block text-sm text-slate-400 mb-2">{t('routingConfig.healthStatus')}</label>
                 <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border ${getHealthStatusColor(config.health_status)}`}>
                   <Activity className="w-4 h-4" />
-                  <span className="font-medium capitalize">{config.health_status || 'Unknown'}</span>
+                  <span className="font-medium">{getHealthStatusLabel(config.health_status)}</span>
                 </div>
               </div>
             )}
@@ -225,27 +238,27 @@ const RoutingConfig = ({ tenantId }) => {
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-3 mb-4">
           <TrendingUp className="w-6 h-6 text-emerald-500" />
-          <h3 className="text-lg font-semibold text-white">Routing Metrics</h3>
+          <h3 className="text-lg font-semibold text-white">{t('routingConfig.routingMetrics')}</h3>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-slate-800/50 rounded-lg p-4">
-            <p className="text-sm text-slate-400 mb-1">Total Requests</p>
+            <p className="text-sm text-slate-400 mb-1">{t('routingConfig.totalRequests')}</p>
             <p className="text-2xl font-bold text-white">{metrics.total_requests.toLocaleString()}</p>
           </div>
 
           <div className="bg-slate-800/50 rounded-lg p-4">
-            <p className="text-sm text-slate-400 mb-1">Successful</p>
+            <p className="text-sm text-slate-400 mb-1">{t('routingConfig.successful')}</p>
             <p className="text-2xl font-bold text-emerald-500">{metrics.successful_requests.toLocaleString()}</p>
           </div>
 
           <div className="bg-slate-800/50 rounded-lg p-4">
-            <p className="text-sm text-slate-400 mb-1">Failed</p>
+            <p className="text-sm text-slate-400 mb-1">{t('routingConfig.failed')}</p>
             <p className="text-2xl font-bold text-rose-500">{metrics.failed_requests.toLocaleString()}</p>
           </div>
 
           <div className="bg-slate-800/50 rounded-lg p-4">
-            <p className="text-sm text-slate-400 mb-1">Avg Latency</p>
+            <p className="text-sm text-slate-400 mb-1">{t('routingConfig.avgLatency')}</p>
             <p className="text-2xl font-bold text-blue-500">{metrics.average_latency_ms}ms</p>
           </div>
         </div>
@@ -254,7 +267,7 @@ const RoutingConfig = ({ tenantId }) => {
         {metrics.total_requests > 0 && (
           <div className="mt-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-slate-400">Success Rate</span>
+              <span className="text-sm text-slate-400">{t('routingConfig.successRate')}</span>
               <span className="text-sm font-medium text-white">
                 {((metrics.successful_requests / metrics.total_requests) * 100).toFixed(2)}%
               </span>
@@ -277,10 +290,9 @@ const RoutingConfig = ({ tenantId }) => {
           <div className="flex items-start gap-3">
             <Activity className="w-5 h-5 text-amber-500 mt-0.5" />
             <div>
-              <h4 className="font-semibold text-amber-500 mb-1">No Fallback Policy</h4>
+              <h4 className="font-semibold text-amber-500 mb-1">{t('routingConfig.noFallbackPolicy')}</h4>
               <p className="text-sm text-amber-400/80">
-                Messages will not be automatically routed to shared infrastructure if the dedicated server is unavailable. 
-                Ensure your dedicated server is properly configured and monitored.
+                {t('routingConfig.noFallbackPolicyDesc')}
               </p>
             </div>
           </div>

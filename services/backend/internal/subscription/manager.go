@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/al-hudhud/backend/internal/finance"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -304,9 +305,38 @@ func (m *manager) Subscribe(ctx context.Context, req SubscribeRequest) (*Subscri
 		return nil, fmt.Errorf("failed to record accounting transaction: %w", err)
 	}
 
-	// Commit transaction
+	var tenantName string
+	err = tx.QueryRow(ctx, `
+		SELECT business_name
+		FROM tenants
+		WHERE id = $1
+		  AND deleted_at IS NULL
+	`, req.TenantID).Scan(&tenantName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve tenant business name: %w", err)
+	}
+
+	// Commit transaction before calling the remote finance service.
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	if bridge := finance.Bridge(); bridge != nil {
+		walletAccountID, err := bridge.GetOrCreateWalletAccountID(ctx, "TENANT", req.TenantID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve finance wallet account: %w", err)
+		}
+
+		smsCount := int64(0)
+		if pkg.IncludedMessages != nil {
+			smsCount = *pkg.IncludedMessages
+		}
+
+		if err := bridge.OnPackagePurchased(req.TenantID, walletAccountID, effectivePrice.InexactFloat64(), smsCount, pkg.Name, tenantName); err != nil {
+			return nil, fmt.Errorf("failed to complete finance purchase: %w", err)
+		}
+	} else {
+		m.logger.Warn("Finance bridge not initialized; skipping finance purchase event", zap.String("tenant_id", req.TenantID.String()))
 	}
 
 	m.logger.Info("Subscription created successfully",

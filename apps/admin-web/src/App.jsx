@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, Building2, Globe, Activity, Zap } from 'lucide-react';
+import { Building2, Globe, Activity, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './contexts/AuthContext';
 import apiClient, { initializeAppCSRF } from './api/axios';
@@ -27,6 +27,9 @@ import AlertConfig from './pages/Alerts/AlertConfig';
 import DistributionConfig from './pages/Distribution/DistributionConfig';
 import SignalPushMonitor from './pages/SignalPush/Monitor';
 import NotificationSettingsPage from './pages/NotificationSettingsPage';
+import Cashboxes from './pages/Accounting/Cashboxes';
+import ReceiptVouchers from './pages/Accounting/ReceiptVouchers';
+import PaymentVouchers from './pages/Accounting/PaymentVouchers';
 import { API_BASE_URL } from './config';
 
 class ErrorBoundary extends React.Component {
@@ -151,19 +154,89 @@ function DashboardStat({ icon: Icon, label, value, color }) {
 }
 
 
+const NAV_SECTIONS = [
+  {
+    id: 'general',
+    labelKey: 'nav.general',
+    items: [
+      { id: 'dashboard', labelKey: 'nav.dashboard', path: '/' },
+      { id: 'overview', labelKey: 'nav.overview', path: '/overview' },
+    ],
+  },
+  {
+    id: 'customers',
+    labelKey: 'nav.customers',
+    items: [
+      { id: 'companies', labelKey: 'nav.tenants', path: '/companies' },
+      { id: 'resellers', labelKey: 'nav.resellers', path: '/resellers' },
+    ],
+  },
+  {
+    id: 'financial',
+    labelKey: 'nav.financial',
+    items: [
+      { id: 'finance', labelKey: 'nav.finance', path: '/finance' },
+      { id: 'cashboxes', labelKey: 'nav.cashboxes', path: '/accounting/cashboxes' },
+      { id: 'receipts', labelKey: 'nav.receipts', path: '/accounting/receipts' },
+      { id: 'payments', labelKey: 'nav.payments', path: '/accounting/payments' },
+    ],
+  },
+  {
+    id: 'infrastructure',
+    labelKey: 'nav.infrastructure',
+    items: [
+      { id: 'servers', labelKey: 'nav.servers', path: '/servers' },
+      { id: 'gateways', labelKey: 'nav.gateways', path: '/gateways' },
+      { id: 'alerts', labelKey: 'nav.alerts', path: '/alerts' },
+    ],
+  },
+  {
+    id: 'security',
+    labelKey: 'nav.security',
+    items: [
+      { id: 'staff', labelKey: 'nav.staff', path: '/staff' },
+      { id: 'roles', labelKey: 'nav.roles', path: '/roles' },
+      { id: 'audit', labelKey: 'nav.audit', path: '/audit' },
+    ],
+  },
+  {
+    id: 'system',
+    labelKey: 'nav.system',
+    items: [
+      { id: 'tariffs', labelKey: 'nav.tariffs', path: '/tariffs' },
+      { id: 'support', labelKey: 'nav.support', path: '/support' },
+      { id: 'notifications', labelKey: 'nav.notifications', path: '/notifications' },
+    ],
+  },
+  {
+    id: 'reports',
+    labelKey: 'nav.reports_main',
+    items: [
+      { id: 'reports', labelKey: 'nav.reports', path: '/reports' },
+    ],
+  },
+];
+
+const routeToSubTab = (pathname) => {
+  const first = pathname.split('/')[1];
+  const alias = { distribution: 'companies', signalpush: 'companies', tenants: 'companies' };
+  if (first === 'accounting') {
+    const second = pathname.split('/')[2];
+    if (second === 'cashboxes') return 'cashboxes';
+    if (second === 'receipts') return 'receipts';
+    if (second === 'payments') return 'payments';
+  }
+  return alias[first] || first || 'dashboard';
+};
+
 function MainLayout({ children }) {
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { logout } = useAuth();
+  const { logout, hasPermission } = useAuth();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
 
-  // Sync activeTab with URL
-  useEffect(() => {
-    const path = location.pathname.split('/')[1] || 'dashboard';
-    setActiveTab(path);
-  }, [location.pathname]);
+  const canViewFinance = hasPermission('view_finances') || hasPermission('approve_payments');
+  const visibleNavSections = NAV_SECTIONS.filter(s => s.id !== 'financial' || canViewFinance);
 
   useEffect(() => {
     document.documentElement.dir = i18n.language === 'ar' ? 'rtl' : 'ltr';
@@ -175,82 +248,89 @@ function MainLayout({ children }) {
     navigate('/login');
   };
 
-  const NavItem = useCallback(({ id, label }) => (
-    <button
-      onClick={() => {
-        setIsMobileMenuOpen(false);
-        navigate(`/${id === 'dashboard' ? '' : id}`);
-      }}
-      className={`w-full text-left px-4 py-3 rounded-lg transition-all ${activeTab === id
-        ? 'bg-rose-600 text-white shadow-lg shadow-rose-900/20'
-        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-        }`}
-    >
-      <span className="font-bold text-sm">{label}</span>
-    </button>
-  ), [activeTab, navigate]);
+  const activeSub = routeToSubTab(location.pathname);
+  const activeSection = visibleNavSections.find((s) => s.items.some((i) => i.id === activeSub)) || visibleNavSections[0];
 
   return (
-    <div className="min-h-screen bg-slate-950 flex font-sans w-full">
-      {/* Mobile overlay */}
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/60 z-40 md:hidden" 
-          onClick={() => setIsMobileMenuOpen(false)} 
-        />
-      )}
-
-      <aside className={`w-64 bg-slate-900 border-r border-slate-800 p-6 flex flex-col fixed inset-y-0 start-0 z-50 transition-transform duration-300 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full md:translate-x-0 rtl:md:translate-x-0'}`}>
-        <div className="mb-8 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-white">HUDHUD ADMIN</h1>
-          <button className="md:hidden text-slate-400 hover:text-white" onClick={() => setIsMobileMenuOpen(false)}>
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        <nav className="flex-1 space-y-1 overflow-y-auto pb-4">
-          <NavItem id="dashboard" label={t('nav.dashboard')} />
-          <NavItem id="overview" label={t('nav.overview')} />
-          <NavItem id="companies" label={t('nav.tenants')} />
-          <NavItem id="finance" label={t('nav.finance')} />
-          <NavItem id="reports" label={t('nav.reports')} />
-          <div className="pt-4 pb-2 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Infrastructure</div>
-          <NavItem id="servers" label={t('nav.servers')} />
-          <NavItem id="gateways" label={t('nav.gateways')} />
-          <NavItem id="alerts" label={t('nav.alerts')} />
-          <div className="pt-4 pb-2 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Security & Staff</div>
-          <NavItem id="staff" label={t('nav.staff')} />
-          <NavItem id="roles" label={t('nav.roles')} />
-          <NavItem id="audit" label={t('nav.audit')} />
-          <div className="pt-4 pb-2 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Partners</div>
-          <NavItem id="resellers" label={t('nav.resellers')} />
-          <div className="pt-4 pb-2 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">System</div>
-          <NavItem id="tariffs" label={t('nav.tariffs')} />
-          <NavItem id="support" label={t('nav.support')} />
-          <NavItem id="notifications" label={t('nav.notifications')} />
-        </nav>
-
-        <div className="p-4 flex flex-col gap-3 border-t border-slate-800">
+    <div className="min-h-screen bg-slate-950 flex flex-col font-sans w-full notranslate" translate="no">
+      <div className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 shadow-lg shadow-black/20">
+        <header className="flex items-center justify-between px-6 h-16">
+          <h1 className="text-xl font-bold tracking-tight text-white">HUDHUD ADMIN</h1>
+          <div className="flex items-center gap-4">
             <LanguageSwitcher />
             <button onClick={handleLogout} className="text-left text-rose-400 hover:text-rose-300 font-bold py-2">
               {t('nav.logout')}
             </button>
-        </div>
-      </aside>
+          </div>
+        </header>
 
-      <div className="flex-1 md:ms-64 w-full max-w-full overflow-x-hidden min-h-screen flex flex-col">
-        <div className="md:hidden m-4 flex justify-between items-center bg-slate-900 p-4 rounded-xl border border-slate-800">
-            <span className="text-xl font-bold tracking-tight text-white">HUDHUD ADMIN</span>
-            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors">
-                <Menu className="w-5 h-5 text-white" />
-            </button>
-        </div>
-        <div className="overflow-auto flex-1">
-            {children}
+        <nav className="flex gap-2 overflow-x-auto px-6 py-3 notranslate" translate="no" aria-label="Main sections">
+          {visibleNavSections.map((section) => {
+            const isActive = section.id === activeSection.id;
+            return (
+              <button
+                key={section.id}
+                onClick={() => navigate(section.items[0].path)}
+                className={`shrink-0 px-4 py-2 rounded-lg font-bold text-sm transition-all ${
+                  isActive
+                    ? 'bg-rose-600 text-white shadow-lg shadow-rose-900/20'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                {t(section.labelKey)}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="flex gap-2 overflow-x-auto px-6 py-2 bg-slate-950 border-t border-slate-800/60 notranslate" translate="no" aria-label="Sub sections">
+          {activeSection.items.map((item) => {
+            const isActive = item.id === activeSub;
+            return (
+              <button
+                key={item.id}
+                onClick={() => navigate(item.path)}
+                className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                  isActive
+                    ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white border border-transparent'
+                }`}
+              >
+                {t(item.labelKey)}
+              </button>
+            );
+          })}
         </div>
       </div>
+
+      <main className="flex-1 overflow-auto">
+        {children}
+      </main>
     </div>
   );
+}
+
+// Guards the financial operations section (cashboxes + vouchers + finance).
+// Read access requires view_finances; write access requires approve_payments.
+function FinanceRouteGuard({ children }) {
+  const { hasPermission } = useAuth();
+  const { t } = useTranslation();
+  const allowed = hasPermission('view_finances') || hasPermission('approve_payments');
+
+  if (!allowed) {
+    return (
+      <div className="p-12 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center max-w-md">
+          <div className="p-6 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-3xl">
+            <p className="text-2xl font-black mb-2">{t('permissions.no_access_title')}</p>
+            <p className="text-sm font-bold text-slate-300">{t('permissions.no_access_message')}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return children;
 }
 
 function App() {
@@ -290,7 +370,10 @@ function App() {
                   <Route path="/signalpush/:tenantId" element={<SignalPushMonitor />} />
                   <Route path="/tenants" element={<TenantManager />} />
                   <Route path="/tariffs" element={<TariffManager />} />
-                  <Route path="/finance" element={<FinanceManager />} />
+                  <Route path="/finance" element={<FinanceRouteGuard><FinanceManager /></FinanceRouteGuard>} />
+                  <Route path="/accounting/cashboxes" element={<FinanceRouteGuard><Cashboxes /></FinanceRouteGuard>} />
+                  <Route path="/accounting/receipts" element={<FinanceRouteGuard><ReceiptVouchers /></FinanceRouteGuard>} />
+                  <Route path="/accounting/payments" element={<FinanceRouteGuard><PaymentVouchers /></FinanceRouteGuard>} />
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/support" element={<SupportCenter />} />
                   <Route path="/gateways" element={<Gateways />} />

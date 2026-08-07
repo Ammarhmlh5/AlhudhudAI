@@ -14,7 +14,7 @@ export const usePackages = () => {
         setError(null);
       })
       .catch((err) => {
-        setError(err.response?.data?.error || 'Failed to load packages');
+        setError(err.response?.data?.error || 'packages.error_load');
         console.error('Error fetching packages:', err);
       })
       .finally(() => setLoading(false));
@@ -42,7 +42,7 @@ export const useSubscribe = () => {
       });
       return response.data;
     } catch (err) {
-      const errorMsg = err.response?.data?.error || err.response?.data?.message || 'Failed to subscribe';
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || 'packages.error_subscribe';
       setError(errorMsg);
       console.error('Error subscribing:', err);
       return null;
@@ -71,7 +71,7 @@ export const useSubscription = () => {
           setSubscription(null);
           setError(null);
         } else {
-          setError(err.response?.data?.error || 'Failed to load subscription');
+          setError(err.response?.data?.error || 'packages.error_subscription');
           console.error('Error fetching subscription:', err);
         }
       })
@@ -102,7 +102,7 @@ export const useUsage = () => {
           setUsage(null);
           setError(null);
         } else {
-          setError(err.response?.data?.error || 'Failed to load usage');
+          setError(err.response?.data?.error || 'packages.error_usage');
           console.error('Error fetching usage:', err);
         }
       })
@@ -128,7 +128,7 @@ export const useCancelSubscription = () => {
       await apiClient.put(`/api/v1/reseller/subscriptions/${subscriptionId}/cancel`, {});
       return true;
     } catch (err) {
-      const errorMsg = err.response?.data?.error || err.response?.data?.message || 'Failed to cancel subscription';
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || 'packages.error_cancel';
       setError(errorMsg);
       console.error('Error canceling subscription:', err);
       return false;
@@ -156,7 +156,7 @@ export const useUpdateAutoRenew = () => {
       }
       return true;
     } catch (err) {
-      const errorMsg = err.response?.data?.error || err.response?.data?.message || 'Failed to update auto-renew';
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || 'packages.error_auto_renew';
       setError(errorMsg);
       console.error('Error updating auto-renew:', err);
       return false;

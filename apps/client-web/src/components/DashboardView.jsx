@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
 import { API_BASE_URL } from '../config';
 import apiClient from '../api/axios';
+import { useTranslation } from 'react-i18next';
 
 // ── Dual-Arc Speedometer ──────────────────────────────────────────────────────
 // Outer arc = sرعة الإرسال (red)
@@ -100,6 +101,7 @@ const StatCard = ({ label, value, color, icon }) => (
 
 // ── DashboardView ─────────────────────────────────────────────────────────────
 const DashboardView = () => {
+    const { t } = useTranslation();
     const [metrics, setMetrics] = useState(null);
     const [usage, setUsage] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -202,7 +204,7 @@ const DashboardView = () => {
                     </h2>
                     <div className="flex items-center gap-2 mt-1">
                         <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                        <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">{isConnected ? 'Server Connected' : 'Server Disconnected'}</span>
+                        <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">{isConnected ? t('dashboard.connected') : t('dashboard.disconnected')}</span>
                     </div>
                 </div>
 
@@ -220,7 +222,7 @@ const DashboardView = () => {
                             {sendingMode === 'SIGNAL' ? 'SIGNAL' : 'PUSH'}
                         </button>
                         <span className={`text-[10px] font-black uppercase mt-1 tracking-widest ${sendingMode === 'SIGNAL' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                            {sendingMode === 'SIGNAL' ? 'وضع السجنل' : 'وضع البوش'}
+                            {sendingMode === 'SIGNAL' ? t('dashboard.signal_mode') : t('dashboard.push_mode')}
                         </span>
                     </div>
                 </div>

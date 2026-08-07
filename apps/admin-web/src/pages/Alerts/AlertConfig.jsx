@@ -58,10 +58,10 @@ const AlertConfig = () => {
     try {
       setSaving(true);
       await axios.post('/api/v1/admin/alerts/config', config);
-      alert('Configuration saved successfully!');
+      alert(t('alertConfig.saveSuccess'));
     } catch (error) {
       console.error('Failed to save alert config:', error);
-      alert('Failed to save configuration');
+      alert(t('alertConfig.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -105,8 +105,8 @@ const AlertConfig = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Alert Configuration</h1>
-          <p className="text-slate-400 mt-1">Configure alert thresholds and notification channels</p>
+          <h1 className="text-3xl font-bold text-white">{t('alertConfig.title')}</h1>
+          <p className="text-slate-400 mt-1">{t('alertConfig.description')}</p>
         </div>
         <button
           onClick={handleSave}
@@ -114,7 +114,7 @@ const AlertConfig = () => {
           className="flex items-center gap-2 px-6 py-3 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-700 text-white rounded-xl font-bold transition-all"
         >
           <Save className="w-5 h-5" />
-          {saving ? 'Saving...' : 'Save Configuration'}
+          {saving ? t('distribution.saving') : t('distribution.save_config')}
         </button>
       </div>
 
@@ -122,43 +122,43 @@ const AlertConfig = () => {
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
         <div className="flex items-center gap-3 pb-4 border-b border-slate-800">
           <AlertTriangle className="w-6 h-6 text-amber-500" />
-          <h2 className="text-xl font-bold text-white">Alert Thresholds</h2>
+          <h2 className="text-xl font-bold text-white">{t('alertConfig.thresholds')}</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Response Time Thresholds */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-white">Response Time (ms)</h3>
+            <h3 className="text-lg font-semibold text-white">{t('alertConfig.responseTime')}</h3>
             
             <div>
-              <label className="block text-sm text-slate-400 mb-2">Warning Threshold</label>
+              <label className="block text-sm text-slate-400 mb-2">{t('alertConfig.warningThreshold')}</label>
               <input
                 type="number"
                 value={config.thresholds.response_time_warning}
                 onChange={(e) => updateThreshold('response_time_warning', e.target.value)}
                 className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-500"
               />
-              <p className="text-xs text-slate-500 mt-1">Trigger warning alert when response time exceeds this value</p>
+              <p className="text-xs text-slate-500 mt-1">{t('alertConfig.responseTimeWarningHint')}</p>
             </div>
 
             <div>
-              <label className="block text-sm text-slate-400 mb-2">Critical Threshold</label>
+              <label className="block text-sm text-slate-400 mb-2">{t('alertConfig.criticalThreshold')}</label>
               <input
                 type="number"
                 value={config.thresholds.response_time_critical}
                 onChange={(e) => updateThreshold('response_time_critical', e.target.value)}
                 className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-rose-500"
               />
-              <p className="text-xs text-slate-500 mt-1">Trigger critical alert when response time exceeds this value</p>
+              <p className="text-xs text-slate-500 mt-1">{t('alertConfig.responseTimeCriticalHint')}</p>
             </div>
           </div>
 
           {/* Error Rate Thresholds */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-white">Error Rate (%)</h3>
+            <h3 className="text-lg font-semibold text-white">{t('alertConfig.errorRate')}</h3>
             
             <div>
-              <label className="block text-sm text-slate-400 mb-2">Warning Threshold</label>
+              <label className="block text-sm text-slate-400 mb-2">{t('alertConfig.warningThreshold')}</label>
               <input
                 type="number"
                 step="0.1"
@@ -166,11 +166,11 @@ const AlertConfig = () => {
                 onChange={(e) => updateThreshold('error_rate_warning', e.target.value)}
                 className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-500"
               />
-              <p className="text-xs text-slate-500 mt-1">Trigger warning alert when error rate exceeds this percentage</p>
+              <p className="text-xs text-slate-500 mt-1">{t('alertConfig.errorRateWarningHint')}</p>
             </div>
 
             <div>
-              <label className="block text-sm text-slate-400 mb-2">Critical Threshold</label>
+              <label className="block text-sm text-slate-400 mb-2">{t('alertConfig.criticalThreshold')}</label>
               <input
                 type="number"
                 step="0.1"
@@ -178,16 +178,16 @@ const AlertConfig = () => {
                 onChange={(e) => updateThreshold('error_rate_critical', e.target.value)}
                 className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-rose-500"
               />
-              <p className="text-xs text-slate-500 mt-1">Trigger critical alert when error rate exceeds this percentage</p>
+              <p className="text-xs text-slate-500 mt-1">{t('alertConfig.errorRateCriticalHint')}</p>
             </div>
           </div>
 
           {/* Success Rate Thresholds */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-white">Success Rate (%)</h3>
+            <h3 className="text-lg font-semibold text-white">{t('alertConfig.successRate')}</h3>
             
             <div>
-              <label className="block text-sm text-slate-400 mb-2">Warning Threshold</label>
+              <label className="block text-sm text-slate-400 mb-2">{t('alertConfig.warningThreshold')}</label>
               <input
                 type="number"
                 step="0.1"
@@ -195,11 +195,11 @@ const AlertConfig = () => {
                 onChange={(e) => updateThreshold('success_rate_warning', e.target.value)}
                 className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-500"
               />
-              <p className="text-xs text-slate-500 mt-1">Trigger warning alert when success rate falls below this percentage</p>
+              <p className="text-xs text-slate-500 mt-1">{t('alertConfig.successRateWarningHint')}</p>
             </div>
 
             <div>
-              <label className="block text-sm text-slate-400 mb-2">Critical Threshold</label>
+              <label className="block text-sm text-slate-400 mb-2">{t('alertConfig.criticalThreshold')}</label>
               <input
                 type="number"
                 step="0.1"
@@ -207,7 +207,7 @@ const AlertConfig = () => {
                 onChange={(e) => updateThreshold('success_rate_critical', e.target.value)}
                 className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-rose-500"
               />
-              <p className="text-xs text-slate-500 mt-1">Trigger critical alert when success rate falls below this percentage</p>
+              <p className="text-xs text-slate-500 mt-1">{t('alertConfig.successRateCriticalHint')}</p>
             </div>
           </div>
         </div>
@@ -217,7 +217,7 @@ const AlertConfig = () => {
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
         <div className="flex items-center gap-3 pb-4 border-b border-slate-800">
           <Bell className="w-6 h-6 text-blue-500" />
-          <h2 className="text-xl font-bold text-white">Notification Channels</h2>
+          <h2 className="text-xl font-bold text-white">{t('alertConfig.notificationChannels')}</h2>
         </div>
 
         <div className="space-y-4">
@@ -226,7 +226,7 @@ const AlertConfig = () => {
             <Mail className="w-6 h-6 text-blue-500 mt-1" />
             <div className="flex-1">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-lg font-semibold text-white">Email Notifications</h3>
+                <h3 className="text-lg font-semibold text-white">{t('alertConfig.emailNotifications')}</h3>
                 <button
                   onClick={() => toggleChannel('email')}
                   className={`px-4 py-2 rounded-lg font-medium transition-all ${
@@ -235,10 +235,10 @@ const AlertConfig = () => {
                       : 'bg-slate-700 text-slate-400'
                   }`}
                 >
-                  {config.notification_channels.email.enabled ? 'Enabled' : 'Disabled'}
+                  {config.notification_channels.email.enabled ? t('alertConfig.enabled') : t('alertConfig.disabled')}
                 </button>
               </div>
-              <p className="text-sm text-slate-400">Send alert notifications via email</p>
+              <p className="text-sm text-slate-400">{t('alertConfig.emailNotificationsDesc')}</p>
             </div>
           </div>
 
@@ -247,7 +247,7 @@ const AlertConfig = () => {
             <MessageSquare className="w-6 h-6 text-emerald-500 mt-1" />
             <div className="flex-1">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-lg font-semibold text-white">SMS Notifications</h3>
+                <h3 className="text-lg font-semibold text-white">{t('alertConfig.smsNotifications')}</h3>
                 <button
                   onClick={() => toggleChannel('sms')}
                   className={`px-4 py-2 rounded-lg font-medium transition-all ${
@@ -256,10 +256,10 @@ const AlertConfig = () => {
                       : 'bg-slate-700 text-slate-400'
                   }`}
                 >
-                  {config.notification_channels.sms.enabled ? 'Enabled' : 'Disabled'}
+                  {config.notification_channels.sms.enabled ? t('alertConfig.enabled') : t('alertConfig.disabled')}
                 </button>
               </div>
-              <p className="text-sm text-slate-400">Send alert notifications via SMS</p>
+              <p className="text-sm text-slate-400">{t('alertConfig.smsNotificationsDesc')}</p>
             </div>
           </div>
 
@@ -268,7 +268,7 @@ const AlertConfig = () => {
             <Bell className="w-6 h-6 text-purple-500 mt-1" />
             <div className="flex-1">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-lg font-semibold text-white">In-App Notifications</h3>
+                <h3 className="text-lg font-semibold text-white">{t('alertConfig.inAppNotifications')}</h3>
                 <button
                   onClick={() => toggleChannel('in_app')}
                   className={`px-4 py-2 rounded-lg font-medium transition-all ${
@@ -277,10 +277,10 @@ const AlertConfig = () => {
                       : 'bg-slate-700 text-slate-400'
                   }`}
                 >
-                  {config.notification_channels.in_app.enabled ? 'Enabled' : 'Disabled'}
+                  {config.notification_channels.in_app.enabled ? t('alertConfig.enabled') : t('alertConfig.disabled')}
                 </button>
               </div>
-              <p className="text-sm text-slate-400">Show alert notifications in the admin interface</p>
+              <p className="text-sm text-slate-400">{t('alertConfig.inAppNotificationsDesc')}</p>
             </div>
           </div>
         </div>

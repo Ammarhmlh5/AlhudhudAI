@@ -32,6 +32,7 @@ import (
 	"github.com/al-hudhud/backend/internal/config"
 	"github.com/al-hudhud/backend/internal/contact"
 	"github.com/al-hudhud/backend/internal/db"
+	"github.com/al-hudhud/backend/internal/finance"
 	"github.com/al-hudhud/backend/internal/device"
 	"github.com/al-hudhud/backend/internal/dispatcher"
 	"github.com/al-hudhud/backend/internal/dlr"
@@ -39,6 +40,7 @@ import (
 	"github.com/al-hudhud/backend/internal/metrics"
 	"github.com/al-hudhud/backend/internal/middleware"
 	"github.com/al-hudhud/backend/internal/orchestrator"
+	"github.com/al-hudhud/backend/internal/payment"
 	"github.com/al-hudhud/backend/internal/provider"
 	"github.com/al-hudhud/backend/internal/queue"
 	"github.com/al-hudhud/backend/internal/receiver"
@@ -115,6 +117,9 @@ func main() {
 	log.Info("Initializing database connection...")
 	db.InitDB()
 	db.InitGormDB()
+
+	// Initialize Finance Bridge for the isolated finance microservice
+	finance.Init(cfg.Finance.ServiceURL, db.DB)
 
 	// Seed Database (Idempotent)
 	db.SeedDatabase()
@@ -254,7 +259,7 @@ func main() {
 	receiverHandler := receiver.NewHandler(redisClient)
 	// Excel import from the mobile app — isolated feature (internal/excelimport).
 	excelHandler := excelimport.NewHandler(receiver.NewService(redisClient), excelimport.NewStore())
-	tenantHandler := tenant.NewHandler(tenantSvc)
+	tenantHandler := tenant.NewHandler(tenantSvc, balanceManager)
 	deviceHandler := device.NewHandler()
 	metricsHandler := metrics.NewHandler()
 	// channelHandler already initialized above for health check
@@ -289,6 +294,45 @@ func main() {
 	strategySelector := adminDist.NewStrategySelector(db.GormDB, poolManager, deviceFailureHandler)
 
 	alertManager := adminAlerts.NewManager(sqlxDB, log)
+
+	// Accounting (cashboxes & vouchers) manager
+	accountingManager := accounting.NewManager(sqlxDB, balanceManager, log)
+
+	// Payment Gateway clients + manager (Requirements 39.x)
+	stripeClient := payment.NewStripeClient(
+		os.Getenv("STRIPE_API_KEY"),
+		os.Getenv("STRIPE_WEBHOOK_SECRET"),
+	)
+	paypalClient := payment.NewPayPalClient(
+		os.Getenv("PAYPAL_CLIENT_ID"),
+		os.Getenv("PAYPAL_CLIENT_SECRET"),
+		os.Getenv("PAYPAL_SANDBOX") == "true",
+	)
+
+	// balanceTopup credits the tenant wallet after a successful gateway payment.
+	balanceTopup := func(ctx context.Context, tenantID uuid.UUID, amount float64, currency, reason string) error {
+		_, err := balanceManager.CreditBalance(ctx, balance.BalanceOperation{
+			TenantID:  tenantID,
+			Amount:    decimal.NewFromFloat(amount),
+			Type:      balance.OperationTypeCharge,
+			Reason:    reason,
+			CreatedBy: "payment-gateway",
+		})
+		return err
+	}
+
+	// notifier emits a log-level notification for payment events (WS/email stub).
+	notifier := func(ctx context.Context, tenantID uuid.UUID, notificationType, message string) error {
+		log.Info("Payment notification",
+			zap.String("tenant_id", tenantID.String()),
+			zap.String("type", notificationType),
+			zap.String("message", message),
+		)
+		return nil
+	}
+
+	paymentManager := payment.NewManager(sqlxDB, log, stripeClient, paypalClient, balanceTopup, notifier)
+	paymentHandler := api.NewPaymentHandler(paymentManager, stripeClient, paypalClient)
 
 	// Health Checker sub-components
 	healthClassifier := adminHealth.NewStatusClassifier()
@@ -349,6 +393,7 @@ func main() {
 
 	// Initialize Granular Admin Handlers
 	adminAlertsH := api.NewAdminAlertsHandler(alertManager)
+	adminAccountingH := api.NewAdminAccountingHandler(accountingManager)
 	adminDashboardH := api.NewAdminDashboardHandler(ratingEngine, metricsRepo, routingEngine, poolManager, healthChecker, alertManager)
 	adminHealthH := api.NewAdminHealthHandler(healthChecker)
 	adminMetricsH := api.NewAdminMetricsHandler(metricsRepo)
@@ -562,6 +607,10 @@ func main() {
 		// This endpoint provides CSRF tokens to authenticated clients
 		api.GET("/csrf-token", csrfHandler.GetCSRFToken)
 
+		// Payment Gateway Webhooks (no authentication - signature/event verified in handler)
+		api.POST("/webhooks/stripe", paymentHandler.StripeWebhook)
+		api.POST("/webhooks/paypal", paymentHandler.PayPalWebhook)
+
 		// Metrics & Monitoring (Tenant Isolated)
 		authenticated := api.Group("/")
 		authenticated.Use(auth.AuthMiddleware())
@@ -685,6 +734,16 @@ func main() {
 			financeGroup.GET("/balance", tenantHandler.GetBalance)
 		}
 
+		// Payments (Tenant and Super Admin) - Requirements 39.x
+		paymentsGroup := api.Group("/payments")
+		paymentsGroup.Use(auth.AuthMiddleware(), auth.RequireUserType("TENANT", "SUPER_ADMIN"), auth.TenantIsolationMiddleware(), middleware.PreventCrossTenantAccess(db.GormDB), middleware.CSRFProtection())
+		{
+			paymentsGroup.POST("/initiate", paymentHandler.InitiatePayment)
+			paymentsGroup.GET("/:transaction_id", paymentHandler.GetPaymentStatus)
+			paymentsGroup.GET("", paymentHandler.ListPaymentTransactions)
+			paymentsGroup.POST("/paypal/capture/:order_id", paymentHandler.PayPalCapturePayment)
+		}
+
 		// Packages (Tenant and Super Admin) - Requirements 3.6, 18.5, 18.6
 		packagesGroup := api.Group("/packages")
 		packagesGroup.Use(auth.AuthMiddleware(), auth.RequireUserType("TENANT", "SUPER_ADMIN"), auth.TenantIsolationMiddleware(), middleware.PreventCrossTenantAccess(db.GormDB), middleware.CSRFProtection())
@@ -758,6 +817,7 @@ func main() {
 			adminGroup.POST("/tenants", tenantHandler.AdminCreateTenant)
 			adminGroup.GET("/tenants/:id/subscription", tenantHandler.GetTenantSubscription)
 			adminGroup.POST("/tenants/:id/subscribe", adminSubscriptionH.Subscribe)
+			adminGroup.POST("/tenants/:id/balance", tenantHandler.AdminAddBalance)
 			adminGroup.PUT("/tenants/:id/subscription/auto-renew", adminSubscriptionH.SetAutoRenew)
 			adminGroup.GET("/tenants/:id/transactions", tenantHandler.GetTenantTransactions)
 			adminGroup.GET("/tenants/:id/impersonate", tenantHandler.ImpersonateTenant)
@@ -805,6 +865,25 @@ func main() {
 			adminGroup.PUT("/alerts/:alert_id/resolve", adminAlertsH.ResolveAlert)
 			adminGroup.GET("/alerts/config", adminAlertsH.ConfigureAlerts)
 			adminGroup.POST("/alerts/config", adminAlertsH.ConfigureAlerts)
+
+			// Accounting (Cashboxes & Vouchers)
+			adminGroup.GET("/accounting/cashboxes", adminAccountingH.ListCashboxes)
+			adminGroup.POST("/accounting/cashboxes", adminAccountingH.CreateCashbox)
+			adminGroup.GET("/accounting/cashboxes/:id", adminAccountingH.GetCashbox)
+			adminGroup.PUT("/accounting/cashboxes/:id", adminAccountingH.UpdateCashbox)
+			adminGroup.PUT("/accounting/cashboxes/:id/status", adminAccountingH.SetCashboxStatus)
+			adminGroup.POST("/accounting/cashboxes/:id/statement", adminAccountingH.GetCashboxStatement)
+			adminGroup.GET("/accounting/receipts", adminAccountingH.ListReceipts)
+			adminGroup.POST("/accounting/receipts", adminAccountingH.CreateReceipt)
+			adminGroup.GET("/accounting/receipts/:id", adminAccountingH.GetReceipt)
+			adminGroup.POST("/accounting/receipts/:id/post", adminAccountingH.PostReceipt)
+			adminGroup.POST("/accounting/receipts/:id/reverse", adminAccountingH.ReverseReceipt)
+			adminGroup.GET("/accounting/payments", adminAccountingH.ListPayments)
+			adminGroup.POST("/accounting/payments", adminAccountingH.CreatePayment)
+			adminGroup.GET("/accounting/payments/:id", adminAccountingH.GetPayment)
+			adminGroup.POST("/accounting/payments/:id/post", adminAccountingH.PostPayment)
+			adminGroup.POST("/accounting/payments/:id/reverse", adminAccountingH.ReversePayment)
+			adminGroup.GET("/accounting/numbering/:type", adminAccountingH.PreviewNextNumber)
 
 			// Reports
 			adminGroup.GET("/reports", adminReportH.GetReports)

@@ -21,7 +21,7 @@ export default function Overview() {
         setStats(response.data);
         setError(null);
       } catch (err) {
-        setError(err.response?.data?.error || 'Failed to load dashboard statistics');
+        setError(err.response?.data?.error || t('overview.error_loading_stats'));
       } finally {
         setLoading(false);
       }
@@ -48,10 +48,10 @@ export default function Overview() {
       <div className="flex items-center justify-center min-h-[60vh] p-6">
         <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-8 max-w-md text-center">
           <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">Error Loading Dashboard</h2>
+          <h2 className="text-xl font-bold text-white mb-2">{t('overview.error_title')}</h2>
           <p className="text-slate-400 mb-6">{error}</p>
           <button onClick={() => window.location.reload()} className="px-6 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl transition-all font-bold">
-            Retry Now
+            {t('overview.retry')}
           </button>
         </div>
       </div>
@@ -73,10 +73,10 @@ export default function Overview() {
         <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 p-2 rounded-2xl">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 rounded-xl">
             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-            <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Live System</span>
+            <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">{t('overview.live_system')}</span>
           </div>
           <div className="text-xs text-slate-500 font-mono px-2">
-            Last Update: {new Date().toLocaleTimeString()}
+            {t('overview.last_update')} {new Date().toLocaleTimeString()}
           </div>
         </div>
       </div>
@@ -137,7 +137,7 @@ export default function Overview() {
               {t('dashboard.server_health')}
             </h2>
             <div className="px-4 py-1.5 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-400 font-bold">
-              {stats?.servers?.length || 0} Total Nodes
+              {t('overview.total_nodes', { count: stats?.servers?.length || 0 })}
             </div>
           </div>
           <ServerHealthSummary servers={stats?.servers} />
@@ -157,6 +157,7 @@ export default function Overview() {
 }
 
 function StatCard({ title, value, icon: Icon, color, trend }) {
+  const { t } = useTranslation();
   const colors = {
     rose:    'from-rose-500/20 to-rose-500/5 text-rose-500 border-rose-500/20',
     blue:    'from-blue-500/20 to-blue-500/5 text-blue-500 border-blue-500/20',
@@ -178,7 +179,7 @@ function StatCard({ title, value, icon: Icon, color, trend }) {
             <div className={`mt-4 flex items-center gap-1.5 text-sm font-bold ${trend >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
               {trend >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
               {Math.abs(trend).toFixed(1)}%
-              <span className="text-slate-500 font-medium ml-1">vs last week</span>
+              <span className="text-slate-500 font-medium ml-1">{t('overview.vs_last_week')}</span>
             </div>
           )}
         </div>
@@ -191,13 +192,14 @@ function StatCard({ title, value, icon: Icon, color, trend }) {
 }
 
 function RatingDistributionChart({ data }) {
-  if (!data) return <div className="text-slate-500">No data available</div>;
+  const { t } = useTranslation();
+  if (!data) return <div className="text-slate-500">{t('overview.no_data')}</div>;
 
   const categories = [
-    { name: 'Excellent', value: data.excellent || 0, color: 'bg-emerald-500', shadow: 'shadow-emerald-500/20' },
-    { name: 'Good',      value: data.good || 0,      color: 'bg-blue-500',    shadow: 'shadow-blue-500/20'    },
-    { name: 'Average',   value: data.average || 0,   color: 'bg-amber-500',   shadow: 'shadow-amber-500/20'   },
-    { name: 'Poor',      value: data.poor || 0,      color: 'bg-rose-500',    shadow: 'shadow-rose-500/20'    },
+    { name: t('companies.excellent'), value: data.excellent || 0, color: 'bg-emerald-500', shadow: 'shadow-emerald-500/20' },
+    { name: t('companies.good'),      value: data.good || 0,      color: 'bg-blue-500',    shadow: 'shadow-blue-500/20'    },
+    { name: t('companies.average'),   value: data.average || 0,   color: 'bg-amber-500',   shadow: 'shadow-amber-500/20'   },
+    { name: t('companies.poor'),      value: data.poor || 0,      color: 'bg-rose-500',    shadow: 'shadow-rose-500/20'    },
   ];
 
   const total = categories.reduce((sum, cat) => sum + cat.value, 0);
@@ -228,11 +230,12 @@ function RatingDistributionChart({ data }) {
 }
 
 function ActiveAlertsPanel({ alerts }) {
+  const { t } = useTranslation();
   if (!alerts || alerts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-slate-600 bg-slate-950/30 rounded-2xl border border-dashed border-slate-800">
         <ShieldCheck className="w-12 h-12 mb-3 opacity-20" />
-        <p className="font-medium">System is running smooth. No active alerts.</p>
+        <p className="font-medium">{t('overview.no_alerts_smooth')}</p>
       </div>
     );
   }
@@ -267,7 +270,8 @@ function ActiveAlertsPanel({ alerts }) {
 }
 
 function ServerHealthSummary({ servers }) {
-  if (!servers || servers.length === 0) return <div className="text-slate-500">No servers available</div>;
+  const { t } = useTranslation();
+  if (!servers || servers.length === 0) return <div className="text-slate-500">{t('overview.no_servers')}</div>;
 
   const healthCounts = servers.reduce((acc, s) => {
     acc[s.health_status] = (acc[s.health_status] || 0) + 1;
@@ -279,15 +283,15 @@ function ServerHealthSummary({ servers }) {
       <div className="grid grid-cols-3 gap-6">
         <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 text-center">
           <div className="text-3xl font-black text-emerald-400 mb-1">{healthCounts.healthy || 0}</div>
-          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Healthy</div>
+          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t('servers.healthy')}</div>
         </div>
         <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 text-center">
           <div className="text-3xl font-black text-amber-400 mb-1">{healthCounts.degraded || 0}</div>
-          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Degraded</div>
+          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t('servers.degraded')}</div>
         </div>
         <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 text-center">
           <div className="text-3xl font-black text-rose-500 mb-1">{healthCounts.unhealthy || 0}</div>
-          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Down</div>
+          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t('servers.unhealthy')}</div>
         </div>
       </div>
 
@@ -302,7 +306,7 @@ function ServerHealthSummary({ servers }) {
               <span className="text-sm font-bold text-slate-300 group-hover:text-white transition-colors">{server.name}</span>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-[10px] font-mono text-slate-500 uppercase tracking-tighter">{server.location || 'Global'}</span>
+              <span className="text-[10px] font-mono text-slate-500 uppercase tracking-tighter">{server.location || t('overview.global')}</span>
               <span className="text-xs font-bold text-slate-400">{server.response_time_ms}ms</span>
             </div>
           </div>

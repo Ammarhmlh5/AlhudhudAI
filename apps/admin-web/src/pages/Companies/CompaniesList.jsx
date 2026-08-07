@@ -69,7 +69,7 @@ export default function CompaniesList() {
       setTotalPages(Math.ceil((response.data.total_count || 0) / itemsPerPage));
       setError(null);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to load companies');
+      setError(err.response?.data?.error || t('companiesList.load_failed'));
     } finally {
       setLoading(false);
     }
@@ -103,19 +103,19 @@ export default function CompaniesList() {
         setNewCompany({ business_name: '', contact_name: '', email: '', phone: '', country_code: 'YE', password: '' });
         fetchCompanies();
     } catch (err) {
-        alert(err.response?.data?.error || 'Failed to create company');
+        alert(err.response?.data?.error || t('companiesList.create_failed'));
     } finally {
         setCreating(false);
     }
   };
 
   const handleDeleteCompanyRow = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this company?')) return;
+    if (!window.confirm(t('companiesList.delete_confirm'))) return;
     try {
         await apiClient.post('/api/v1/admin/tenants/bulk-delete', { ids: [id] });
         fetchCompanies();
     } catch (err) {
-        alert(err.response?.data?.error || 'Failed to delete company');
+        alert(err.response?.data?.error || t('companiesList.delete_failed'));
     }
   };
 
@@ -141,11 +141,11 @@ export default function CompaniesList() {
                 className="px-6 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-bold uppercase tracking-widest text-xs transition-all flex items-center gap-2 shadow-lg shadow-rose-900/20"
             >
                 <Plus className="w-4 h-4" />
-                Add Company
+                {t('companiesList.add_company')}
             </button>
             <div className="bg-slate-900 border border-slate-800 p-1.5 rounded-2xl flex items-center gap-2">
                 <div className="px-4 py-2 bg-slate-950 rounded-xl border border-slate-800 text-sm font-bold text-white">
-                    {totalPages * itemsPerPage}+ Registered
+                    {t('companiesList.registered', { count: totalPages * itemsPerPage })}
                 </div>
             </div>
         </div>
@@ -159,8 +159,8 @@ export default function CompaniesList() {
                 
                 <div className="flex justify-between items-center mb-8">
                     <div>
-                        <h2 className="text-3xl font-black text-white tracking-tight">Create Company</h2>
-                        <p className="text-slate-500 text-sm font-bold uppercase tracking-widest mt-1">Onboard New Enterprise Tenant</p>
+                        <h2 className="text-3xl font-black text-white tracking-tight">{t('companiesList.create_company')}</h2>
+                        <p className="text-slate-500 text-sm font-bold uppercase tracking-widest mt-1">{t('companiesList.onboard_enterprise')}</p>
                     </div>
                     <button onClick={() => setShowCreateModal(false)} className="p-3 bg-slate-950 border border-slate-800 rounded-2xl text-slate-500 hover:text-white transition-all">
                         <X className="w-6 h-6" />
@@ -170,32 +170,32 @@ export default function CompaniesList() {
                 <form onSubmit={handleCreateCompany} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Business Name</label>
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{t('companiesList.business_name')}</label>
                             <input
                                 type="text"
                                 required
                                 value={newCompany.business_name}
                                 onChange={e => setNewCompany({ ...newCompany, business_name: e.target.value })}
                                 className="w-full px-5 py-4 bg-slate-950 border border-slate-800 rounded-2xl text-white focus:outline-none focus:border-rose-500 transition-all font-bold"
-                                placeholder="e.g. Acme Corp"
+                                placeholder={t('companiesList.business_placeholder')}
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Contact Name</label>
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{t('companiesList.contact_name')}</label>
                             <input
                                 type="text"
                                 required
                                 value={newCompany.contact_name}
                                 onChange={e => setNewCompany({ ...newCompany, contact_name: e.target.value })}
                                 className="w-full px-5 py-4 bg-slate-950 border border-slate-800 rounded-2xl text-white focus:outline-none focus:border-rose-500 transition-all font-bold"
-                                placeholder="John Doe"
+                                placeholder={t('companiesList.contact_placeholder')}
                             />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Email Address</label>
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{t('companiesList.email_address')}</label>
                             <input
                                 type="email"
                                 required
@@ -206,7 +206,7 @@ export default function CompaniesList() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Phone Number</label>
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{t('companiesList.phone_number')}</label>
                             <input
                                 type="text"
                                 required
@@ -220,28 +220,28 @@ export default function CompaniesList() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Country Code</label>
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{t('companiesList.country_code')}</label>
                             <select
                                 value={newCompany.country_code}
                                 onChange={e => setNewCompany({ ...newCompany, country_code: e.target.value })}
                                 className="w-full px-5 py-4 bg-slate-950 border border-slate-800 rounded-2xl text-white focus:outline-none focus:border-rose-500 transition-all font-bold appearance-none cursor-pointer"
                             >
-                                <option value="YE">Yemen (+967)</option>
-                                <option value="SA">Saudi Arabia (+966)</option>
-                                <option value="AE">UAE (+971)</option>
-                                <option value="EG">Egypt (+20)</option>
-                                <option value="JO">Jordan (+962)</option>
+                                <option value="YE">{t('companiesList.country_ye')}</option>
+                                <option value="SA">{t('companiesList.country_sa')}</option>
+                                <option value="AE">{t('companiesList.country_ae')}</option>
+                                <option value="EG">{t('companiesList.country_eg')}</option>
+                                <option value="JO">{t('companiesList.country_jo')}</option>
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Initial Password</label>
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{t('companiesList.initial_password')}</label>
                             <input
                                 type="password"
                                 required
                                 value={newCompany.password}
                                 onChange={e => setNewCompany({ ...newCompany, password: e.target.value })}
                                 className="w-full px-5 py-4 bg-slate-950 border border-slate-800 rounded-2xl text-white focus:outline-none focus:border-rose-500 transition-all font-bold"
-                                placeholder="Min 8 characters"
+                                placeholder={t('companiesList.password_placeholder')}
                             />
                         </div>
                     </div>
@@ -252,7 +252,7 @@ export default function CompaniesList() {
                             disabled={creating}
                             className="flex-1 bg-rose-600 hover:bg-rose-500 disabled:bg-rose-900 disabled:opacity-50 text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] transition-all shadow-xl shadow-rose-900/20"
                         >
-                            {creating ? 'Initializing...' : 'Confirm Onboarding'}
+                            {creating ? t('companiesList.initializing') : t('companiesList.confirm_onboarding')}
                         </button>
                     </div>
                 </form>
@@ -329,7 +329,7 @@ export default function CompaniesList() {
         {loading && companies.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 space-y-4">
             <div className="w-12 h-12 border-4 border-rose-500/20 border-t-rose-500 rounded-full animate-spin"></div>
-            <p className="text-slate-400 font-bold animate-pulse">Syncing Company Data...</p>
+            <p className="text-slate-400 font-bold animate-pulse">{t('companiesList.syncing')}</p>
           </div>
         ) : error ? (
           <div className="p-12 text-center">
@@ -384,7 +384,7 @@ export default function CompaniesList() {
                                 {company.tenant_name}
                             </div>
                             <div className="text-xs text-slate-500 font-mono mt-0.5">
-                                ID: {company.tenant_id.slice(0, 8)}...
+                                {t('companiesList.id_label')} {company.tenant_id.slice(0, 8)}...
                             </div>
                         </div>
                       </div>
@@ -415,7 +415,7 @@ export default function CompaniesList() {
                     <td className="px-8 py-6">
                       <div className="w-32 space-y-1.5">
                         <div className="flex justify-between text-[10px] font-black uppercase">
-                            <span className="text-slate-500">Success Rate</span>
+                            <span className="text-slate-500">{t('companies.success_rate')}</span>
                             <span className={company.success_rate > 90 ? 'text-emerald-400' : 'text-amber-400'}>{company.success_rate?.toFixed(1)}%</span>
                         </div>
                         <div className="h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
@@ -434,13 +434,13 @@ export default function CompaniesList() {
                             handleDeleteCompanyRow(company.tenant_id);
                           }}
                           className="p-2 bg-slate-950 text-rose-500 hover:text-white hover:bg-rose-600 rounded-xl transition-all border border-slate-800"
-                          title="Delete Company"
+                          title={t('companiesList.delete_company')}
                         >
                           <Trash2 className="w-5 h-5" />
                         </button>
                         <button
                           className="p-2 bg-slate-950 text-slate-500 hover:text-white hover:bg-rose-600 rounded-xl transition-all border border-slate-800"
-                          title="View Details"
+                          title={t('companies.view_details')}
                         >
                           <ChevronRight className="w-5 h-5" />
                         </button>
@@ -457,7 +457,7 @@ export default function CompaniesList() {
         {totalPages > 1 && (
           <div className="bg-slate-950/80 px-8 py-6 flex items-center justify-between border-t border-slate-800 backdrop-blur-md">
             <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-              Page <span className="text-white">{currentPage}</span> of <span className="text-white">{totalPages}</span>
+              {t('companies.page')} <span className="text-white">{currentPage}</span> {t('companies.of')} <span className="text-white">{totalPages}</span>
             </div>
             <div className="flex gap-3">
               <button
@@ -482,9 +482,9 @@ export default function CompaniesList() {
       {companies.length === 0 && !loading && (
           <div className="flex flex-col items-center justify-center py-24 bg-slate-900/50 border border-slate-800 border-dashed rounded-3xl">
               <Globe className="w-16 h-16 text-slate-800 mb-4" />
-              <p className="text-slate-500 font-bold text-lg">No companies found in this galaxy.</p>
+              <p className="text-slate-500 font-bold text-lg">{t('companiesList.no_companies')}</p>
               <button onClick={() => { setSearchTerm(''); setFilters({ rating_category: '', date_from: '', date_to: '' }); }} className="mt-4 text-rose-500 font-bold hover:underline">
-                  Reset all filters
+                  {t('companiesList.reset_filters')}
               </button>
           </div>
       )}

@@ -1,0 +1,49 @@
+# 2026/08/01 10:51:11.119894 [TestProperty_Bug2_GormQueriesContinueToWork] [rapid] draw tenantName: "A妜\x00᪾\x1b<"
+# 2026/08/01 10:51:11.123954 [TestProperty_Bug2_GormQueriesContinueToWork] 
+# 	Error Trace:	C:/ALHudhud/ALHudhud/ALHudhudAI/services/backend/internal/worker/fast_processor_bug2_preservation_test.go:77
+# 	            				C:/Users/Admin/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:371
+# 	            				C:/Users/Admin/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:380
+# 	            				C:/Users/Admin/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:205
+# 	            				C:/Users/Admin/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:120
+# 	            				C:/ALHudhud/ALHudhud/ALHudhudAI/services/backend/internal/worker/fast_processor_bug2_preservation_test.go:44
+# 	            				C:/Program Files/Go/src/runtime/asm_amd64.s:1771
+# 	Error:      	Received unexpected error:
+# 	            	ERROR: invalid byte sequence for encoding "UTF8": 0x00 (SQLSTATE 22021)
+# 	Test:       	TestProperty_Bug2_GormQueriesContinueToWork
+# 	Messages:   	Preservation: GORM Create operation should continue to work. This test verifies that adding PgxPool does not break GORM.
+# 
+v0.4.8#16842351082096022791
+0x144b3afa596801
+0x30
+0x6
+0x2d56f2ea576a1
+0x0
+0x11fca31fc3a484
+0x18
+0x1c5c30e2f866f4
+0x2d13f
+0x37548
+0x3c1d3
+0x347b
+0x139146898e8a79
+0x5
+0x1c906160f7444f
+0x22
+0xbe949cda3d246
+0x2a
+0x2a
+0x28
+0x22
+0x16b394d0564670
+0x2
+0x11bf44746567f3
+0x3f
+0x35
+0x25
+0xc100d3d57b6ec
+0x1b
+0x1fd7c463212b08
+0xf
+0x16991530bb9eaa
+0x1e
+0xff3845a2c9e9

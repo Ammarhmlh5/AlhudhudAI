@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Network, Server, Globe, Activity, Power, RefreshCw } from 'lucide-react';
 
 export default function GatewayManager() {
+    const { t } = useTranslation();
     const [gateways, setGateways] = useState([
         { id: 1, name: 'Sawa SMSC 01', type: 'SMPP v3.4', region: 'السعودية - الرياض', ip: '10.20.30.41', status: 'Connected', ping: '12ms' },
         { id: 2, name: 'Mobily Direct', type: 'HTTP API', region: 'السعودية - جدة', ip: '192.168.1.55', status: 'Connected', ping: '45ms' },
@@ -15,12 +17,12 @@ export default function GatewayManager() {
                 <div>
                     <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                         <Network className="w-6 h-6 text-rose-500" />
-                        Gateway Connections
+                        {t('gatewayManager.title')}
                     </h2>
-                    <p className="text-slate-400 text-sm mt-1">Manage direct connections to telecom operators (SMSC).</p>
+                    <p className="text-slate-400 text-sm mt-1">{t('gatewayManager.subtitle')}</p>
                 </div>
                 <button className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition-colors text-sm font-bold">
-                    <RefreshCw className="w-4 h-4" /> Refresh Status
+                    <RefreshCw className="w-4 h-4" /> {t('gatewayManager.refreshStatus')}
                 </button>
             </div>
 
@@ -46,22 +48,22 @@ export default function GatewayManager() {
 
                         <div className="space-y-3 mb-6 bg-slate-950/50 p-4 rounded-xl border border-slate-800/50">
                             <div className="flex justify-between text-xs">
-                                <span className="text-slate-500">Protocol</span>
+                                <span className="text-slate-500">{t('gatewayManager.protocol')}</span>
                                 <span className="text-rose-400 font-bold">{gw.type}</span>
                             </div>
                             <div className="flex justify-between text-xs">
-                                <span className="text-slate-500">Host / IP</span>
+                                <span className="text-slate-500">{t('gatewayManager.hostIp')}</span>
                                 <span className="text-slate-300 font-mono">{gw.ip}</span>
                             </div>
                             <div className="flex justify-between text-xs">
-                                <span className="text-slate-500">Latency</span>
+                                <span className="text-slate-500">{t('gatewayManager.latency')}</span>
                                 <span className={`${gw.status === 'Connected' ? 'text-emerald-400' : 'text-slate-600'} font-bold`}>{gw.ping}</span>
                             </div>
                         </div>
 
                         <div className="flex gap-2">
                             <button className="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors">
-                                Configure
+                                {t('gatewayManager.configure')}
                             </button>
                             <button className="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 transition-colors">
                                 <Power className="w-4 h-4" />
@@ -76,7 +78,7 @@ export default function GatewayManager() {
                     <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center group-hover:scale-110 transition-transform">
                         <Plus className="w-8 h-8" />
                     </div>
-                    <span className="font-bold text-sm">Add New Gateway</span>
+                    <span className="font-bold text-sm">{t('gatewayManager.addNewGateway')}</span>
                 </button>
             </div>
 

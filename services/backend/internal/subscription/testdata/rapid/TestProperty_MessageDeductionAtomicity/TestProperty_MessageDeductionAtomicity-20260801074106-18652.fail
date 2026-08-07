@@ -1,0 +1,7 @@
+# 2026/08/01 07:41:06.483279 [TestProperty_MessageDeductionAtomicity] [rapid] draw message_count: 1
+# 2026/08/01 07:41:06.484262 [TestProperty_MessageDeductionAtomicity] Failed to set tenant context: ERROR: syntax error at or near "$1" (SQLSTATE 42601)
+# 
+v0.4.8#1816137102263123920
+0x0
+0x0
+0x0

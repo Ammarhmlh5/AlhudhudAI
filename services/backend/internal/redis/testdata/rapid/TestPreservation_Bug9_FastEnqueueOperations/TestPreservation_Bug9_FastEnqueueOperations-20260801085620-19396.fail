@@ -1,0 +1,18 @@
+# 2026/08/01 08:56:20.824000 [TestPreservation_Bug9_FastEnqueueOperations] [rapid] draw priority: 2
+# 2026/08/01 08:56:20.824000 [TestPreservation_Bug9_FastEnqueueOperations] [rapid] draw messageCount: 1
+# 2026/08/01 08:56:20.824000 [TestPreservation_Bug9_FastEnqueueOperations] [rapid] draw content: "$"
+# 2026/08/01 08:56:20.828690 [TestPreservation_Bug9_FastEnqueueOperations] ✓ Preservation verified: Enqueued 1 messages in 3.5288ms (avg: 3.5288ms per message)
+# 
+v0.4.8#18942264648679147
+0x171aa992f4ff7a
+0xa86a2697f45c1
+0x1
+0x8ee3aace2ed3b
+0x259bdc17f3198
+0x0
+0x1fd8a8fc0d0ddb
+0x2d
+0x1e
+0x8200b70e39f22
+0x0
+0x1d9b260151a26

@@ -1,0 +1,17 @@
+﻿
+Rule Name:                            ALHudhud Backend 8085
+----------------------------------------------------------------------
+Enabled:                              Yes
+Direction:                            In
+Profiles:                             Domain,Private,Public
+Grouping:                             
+LocalIP:                              Any
+RemoteIP:                             Any
+Protocol:                             TCP
+LocalPort:                            8085
+RemotePort:                           Any
+Edge traversal:                       No
+Action:                               Allow
+Ok.
+
+desktop-sdo1g31\admin

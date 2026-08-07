@@ -5,8 +5,10 @@ import {
     Search, LayoutList, Columns, FileText, CheckCircle2, XCircle, Clock
 } from 'lucide-react';
 import { useSocket } from '../contexts/SocketContext';
+import { useTranslation } from 'react-i18next';
 
 const MessagesReport = () => {
+    const { t } = useTranslation();
     const [viewMode, setViewMode] = useState('flat'); // 'flat' or 'grouped' (batch view)
     const [data, setData] = useState([]);
     const [summary, setSummary] = useState({ total_messages: 0, delivered: 0, failed: 0, pending: 0, total_cost: 0 });
@@ -102,7 +104,7 @@ const MessagesReport = () => {
     };
 
     const formatDate = (dateString) => {
-        if (!dateString) return 'N/A';
+        if (!dateString) return t('common.n/a');
         return new Date(dateString).toLocaleString('ar-SA', {
             year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
         });
@@ -131,8 +133,8 @@ const MessagesReport = () => {
             <td className={`py-4 ${isSubRow ? 'pl-6 pr-10' : 'px-6'}`}>
                 <div className="flex flex-col">
                     <span className="font-mono text-xs text-slate-300">{msg.msg_ref}</span>
-                    {msg.ext_ref && <span className="font-mono text-[10px] text-rose-400">EXT: {msg.ext_ref}</span>}
-                    {!isSubRow && viewMode === 'flat' && <span className="font-mono text-[10px] text-slate-500 mt-1">Batch: {msg.batch_ref}</span>}
+                    {msg.ext_ref && <span className="font-mono text-[10px] text-rose-400">{t('messagesReport.ext_prefix')} {msg.ext_ref}</span>}
+                    {!isSubRow && viewMode === 'flat' && <span className="font-mono text-[10px] text-slate-500 mt-1">{t('messagesReport.batch_prefix')} {msg.batch_ref}</span>}
                 </div>
             </td>
             <td className="px-6 py-4 font-mono text-sm">{msg.phone_number}</td>
@@ -163,14 +165,14 @@ const MessagesReport = () => {
                             className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === 'flat' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'}`}
                         >
                             <LayoutList className="w-4 h-4" />
-                            رسائل فردية
+                            {t('messagesReport.flat_view')}
                         </button>
                         <button
                             onClick={() => { setViewMode('grouped'); setCurrentPage(1); }}
                             className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === 'grouped' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'}`}
                         >
                             <Columns className="w-4 h-4" />
-                            دفعات الإرسال (Batches)
+                            {t('messagesReport.grouped_view')}
                         </button>
                     </div>
 
@@ -214,7 +216,7 @@ const MessagesReport = () => {
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
                 <div className="flex flex-wrap items-end gap-4">
                     <div className="flex-1 min-w-[200px]">
-                        <label className="block text-xs text-slate-400 font-bold mb-1">رقم عملية الإرسال (Batch Ref)</label>
+                        <label className="block text-xs text-slate-400 font-bold mb-1">{t('messagesReport.batch_ref')}</label>
                         <div className="relative">
                             <Search className="w-4 h-4 text-slate-500 absolute top-2.5 right-3" />
                             <input type="text" name="batch_ref" placeholder="بحث..." value={filters.batch_ref} onChange={handleFilterChange}
@@ -224,7 +226,7 @@ const MessagesReport = () => {
                     {viewMode === 'flat' && (
                         <>
                             <div className="flex-1 min-w-[200px]">
-                                <label className="block text-xs text-slate-400 font-bold mb-1">مرجع الرسالة (Msg / Ext Ref)</label>
+                                <label className="block text-xs text-slate-400 font-bold mb-1">{t('messagesReport.msg_ref')}</label>
                                 <div className="relative">
                                     <Search className="w-4 h-4 text-slate-500 absolute top-2.5 right-3" />
                                     <input type="text" name={filters.msg_ref ? "msg_ref" : "ext_ref"} placeholder="رقم رسالة المنصة او رقم المحاسبة" value={filters.msg_ref || filters.ext_ref} onChange={(e) => {
@@ -280,7 +282,7 @@ const MessagesReport = () => {
                             ) : (
                                 <tr>
                                     <th className="px-6 py-4 text-xs font-black text-slate-400 tracking-wider w-10"></th>
-                                    <th className="px-6 py-4 text-xs font-black text-slate-400 tracking-wider">بيانات الدفعة (Batch)</th>
+                                    <th className="px-6 py-4 text-xs font-black text-slate-400 tracking-wider">{t('messagesReport.batch_data')}</th>
                                     <th className="px-6 py-4 text-xs font-black text-slate-400 tracking-wider">النوع</th>
                                     <th className="px-6 py-4 text-xs font-black text-slate-400 tracking-wider">الكمية</th>
                                     <th className="px-6 py-4 text-xs font-black text-slate-400 tracking-wider">الحالة العامة</th>
@@ -307,7 +309,7 @@ const MessagesReport = () => {
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col">
                                                     <span className="font-mono text-sm text-white">{batch.batch_ref}</span>
-                                                    <span className="text-xs text-slate-500 mt-0.5">Device: {batch.sent_from_device || 'System'}</span>
+                                                    <span className="text-xs text-slate-500 mt-0.5">{t('messagesReport.device_prefix')} {batch.sent_from_device || t('messagesReport.system')}</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
@@ -381,7 +383,7 @@ const MessagesReport = () => {
                     <MessageSquare className="w-6 h-6 text-blue-400" />
                 </div>
                 <div>
-                    <h4 className="text-white font-bold text-sm">مزامنة الأنظمة المحاسبية (API)</h4>
+                    <h4 className="text-white font-bold text-sm">{t('messagesReport.api_sync')}</h4>
                     <p className="text-slate-400 text-xs mt-1 max-w-2xl leading-relaxed">
                         نظام "الهدهد" يدعم الآن استعلامات مباشرة للأنظمة المحاسبية (ERP) بربط فوري لمعرفة حالة الرسائل.
                         يمكن لبرنامجكم المحاسبي التواصل مباشرة مع <code className="text-rose-400 bg-rose-500/10 px-1 py-0.5 rounded mx-1">/api/v1/accounting/messages</code> 

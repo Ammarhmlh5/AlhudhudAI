@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Headphones, MessageSquare, Archive, MoreHorizontal, Send, User } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 
 export default function SupportCenter() {
+    const { t } = useTranslation();
     const [tickets, setTickets] = useState([]);
     const [activeTicket, setActiveTicket] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -20,11 +22,12 @@ export default function SupportCenter() {
                 if (!data) data = [];
                 const mapped = data.map(t => ({
                     id: t.id,
-                    user: `User ID: ${t.user_id}`,
-                    subject: t.subject || 'No Subject',
+                    user: t('supportCenter.user_id', { id: t.user_id }),
+                    subject: t.subject || t('supportCenter.no_subject'),
                     status: mapStatus(t.status),
                     priority: mapPriority(t.priority),
-                    last_msg: t.description || 'No description provided.',
+                    priorityNum: t.priority,
+                    last_msg: t.description || t('supportCenter.no_description'),
                     time: new Date(t.created_at).toLocaleDateString()
                 }));
                 setTickets(mapped);
@@ -39,22 +42,22 @@ export default function SupportCenter() {
 
     const mapStatus = (s) => {
         switch(s) {
-            case 1: return 'Open';
-            case 2: return 'In Progress';
-            case 3: return 'Pending';
-            case 4: return 'Resolved';
-            case 5: return 'Closed';
-            default: return 'Open';
+            case 1: return t('supportCenter.status_open');
+            case 2: return t('supportCenter.status_in_progress');
+            case 3: return t('supportCenter.status_pending');
+            case 4: return t('supportCenter.status_resolved');
+            case 5: return t('supportCenter.status_closed');
+            default: return t('supportCenter.status_open');
         }
     };
 
     const mapPriority = (p) => {
         switch(p) {
-            case 1: return 'Low';
-            case 2: return 'Medium';
-            case 3: return 'High';
-            case 4: return 'Urgent';
-            default: return 'Medium';
+            case 1: return t('supportCenter.priority_low');
+            case 2: return t('supportCenter.priority_medium');
+            case 3: return t('supportCenter.priority_high');
+            case 4: return t('supportCenter.priority_urgent');
+            default: return t('supportCenter.priority_medium');
         }
     };
 
@@ -65,13 +68,13 @@ export default function SupportCenter() {
             <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden flex flex-col">
                 <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/50">
                     <h3 className="font-bold text-white flex items-center gap-2">
-                        <Archive className="w-4 h-4 text-slate-400" /> Inbox
+                        <Archive className="w-4 h-4 text-slate-400" /> {t('supportCenter.inbox')}
                     </h3>
-                    <span className="text-xs bg-rose-600 text-white px-2 py-0.5 rounded-full">{tickets.length} Total</span>
+                    <span className="text-xs bg-rose-600 text-white px-2 py-0.5 rounded-full">{t('supportCenter.total', { count: tickets.length })}</span>
                 </div>
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
-                    {loading && <div className="p-4 text-slate-500 text-sm">Loading tickets...</div>}
-                    {!loading && tickets.length === 0 && <div className="p-4 text-slate-500 text-sm">No tickets found.</div>}
+                    {loading && <div className="p-4 text-slate-500 text-sm">{t('supportCenter.loading_tickets')}</div>}
+                    {!loading && tickets.length === 0 && <div className="p-4 text-slate-500 text-sm">{t('supportCenter.no_tickets_found')}</div>}
                     {!loading && tickets.map(ticket => (
                         <div
                             key={ticket.id}
@@ -86,7 +89,7 @@ export default function SupportCenter() {
                             <p className="text-xs text-rose-400 font-medium mb-1">{ticket.subject}</p>
                             <p className="text-xs text-slate-400 truncate">{ticket.last_msg}</p>
                             <div className="mt-2 flex gap-2">
-                                <span className={`text-[9px] px-1.5 py-0.5 rounded uppercase font-bold ${ticket.priority === 'High' ? 'bg-rose-500/10 text-rose-500' : 'bg-slate-700 text-slate-400'
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded uppercase font-bold ${ticket.priorityNum >= 3 ? 'bg-rose-500/10 text-rose-500' : 'bg-slate-700 text-slate-400'
                                     }`}>{ticket.priority}</span>
                             </div>
                         </div>
@@ -130,10 +133,10 @@ export default function SupportCenter() {
 
                     <div className="flex gap-4 flex-row-reverse">
                         <div className="w-8 h-8 rounded-full bg-rose-600 flex-shrink-0 flex items-center justify-center text-xs font-bold text-white">
-                            You
+                            {t('supportCenter.you')}
                         </div>
                         <div className="bg-rose-600/10 border border-rose-600/20 rounded-2xl p-4 rounded-tr-none max-w-lg text-sm text-rose-100">
-                            <p>Hello! I'm looking into this issue right now. Can you categorize which endpoint is failing?</p>
+                            <p>{t('supportCenter.demo_reply')}</p>
                             <span className="text-[10px] text-rose-400/50 mt-2 block">10:45 AM</span>
                         </div>
                     </div>
@@ -144,7 +147,7 @@ export default function SupportCenter() {
                     <div className="relative">
                         <input
                             type="text"
-                            placeholder="Type your reply..."
+                            placeholder={t('supportCenter.reply_placeholder')}
                             className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-4 pr-12 py-3 text-sm text-white focus:ring-1 focus:ring-rose-500 outline-none transition-all"
                         />
                         <button className="absolute right-2 top-2 p-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg transition-colors">
@@ -156,8 +159,8 @@ export default function SupportCenter() {
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center text-slate-500 p-8">
                         <MessageSquare className="w-16 h-16 mb-4 opacity-50 text-slate-600" />
-                        <h2 className="text-xl font-bold text-white mb-2">No Ticket Selected</h2>
-                        <p className="text-center max-w-sm">Select a ticket from the inbox list on the left to view details and respond to customer inquiries.</p>
+                        <h2 className="text-xl font-bold text-white mb-2">{t('supportCenter.no_ticket_selected')}</h2>
+                        <p className="text-center max-w-sm">{t('supportCenter.no_ticket_selected_hint')}</p>
                     </div>
                 )}
             </div>

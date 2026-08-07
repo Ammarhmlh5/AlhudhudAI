@@ -11,6 +11,7 @@ import (
 	"github.com/al-hudhud/backend/internal/auth"
 	"github.com/al-hudhud/backend/internal/cache"
 	"github.com/al-hudhud/backend/internal/db"
+	"github.com/al-hudhud/backend/internal/finance"
 	"github.com/al-hudhud/backend/internal/models"
 	"github.com/al-hudhud/backend/internal/redis"
 	"github.com/al-hudhud/backend/internal/subscription"
@@ -394,22 +395,18 @@ func (s *Service) RegisterTenantStep2(req RegisterStep2Request) (*models.Tenant,
 		zap.String("company_serial", tenant.CompanySerial),
 	)
 
-	// Send Accounting Key to Email (Simulated)
-	s.sendAPIKeyByEmail(tenant.Email, tenant.APIKeyAccounting)
-
-	// Create and Migrate Tenant Schema
-	if err := db.CreateTenantSchema(tenant.ID); err != nil {
-		log.Error("Failed to create tenant schema", zap.Error(err))
-		// We log error but don't fail the request as tenant is created.
-		// Admin intervention might be needed.
-	} else {
-		if err := db.MigrateTenantSchema(tenant.ID); err != nil {
-			log.Error("Failed to migrate tenant schema", zap.Error(err))
+	// [Finance] Auto-create accounting wallet for the new tenant
+	go func() {
+		if bridge := finance.Bridge(); bridge != nil {
+			bridge.OnTenantRegistered(tenant.ID, tenant.BusinessName)
+		} else {
+			log.Warn("Finance bridge not initialized; skipping wallet account creation for new tenant", zap.String("tenant_id", tenant.ID.String()))
 		}
-	}
+	}()
 
 	return tenant, nil
 }
+
 
 // AdminCreateTenant allows an admin to create a new tenant directly
 func (s *Service) AdminCreateTenant(req AdminCreateTenantRequest) (*models.Tenant, error) {
@@ -494,6 +491,21 @@ func (s *Service) AdminCreateTenant(req AdminCreateTenantRequest) (*models.Tenan
 		if err := db.MigrateTenantSchema(tenant.ID); err != nil {
 			log.Error("Failed to migrate tenant schema", zap.Error(err))
 		}
+	}
+
+	// [Finance] Auto-create accounting wallet for the new tenant
+	refType := "TENANT"
+	if req.IsReseller {
+		refType = "RESELLER"
+	}
+	if bridge := finance.Bridge(); bridge != nil {
+		if refType == "RESELLER" {
+			go bridge.OnResellerRegistered(tenant.ID, tenant.BusinessName)
+		} else {
+			go bridge.OnTenantRegistered(tenant.ID, tenant.BusinessName)
+		}
+	} else {
+		log.Warn("Finance bridge not initialized; skipping wallet account creation for admin tenant", zap.String("tenant_id", tenant.ID.String()), zap.String("ref_type", refType))
 	}
 
 	log.Info("AdminCreateTenant service completed successfully")
@@ -771,6 +783,15 @@ func (s *Service) RegisterTenant(req RegisterRequest) (*models.LoginResponse, er
 			log.Error("Failed to migrate tenant schema", zap.Error(err))
 		}
 	}
+
+	// [Finance] Auto-create accounting wallet for the new tenant
+	go func() {
+		if bridge := finance.Bridge(); bridge != nil {
+			bridge.OnTenantRegistered(tenant.ID, tenant.BusinessName)
+		} else {
+			log.Warn("Finance bridge not initialized; skipping wallet account creation for registration tenant", zap.String("tenant_id", tenant.ID.String()))
+		}
+	}()
 
 	return &models.LoginResponse{
 		Token:        token,

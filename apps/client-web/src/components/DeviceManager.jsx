@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../api/axios';
 import { Copy } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const DeviceManager = () => {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState('channels'); // 'channels' or 'phones'
     const [channels, setChannels] = useState([]);
     const [devices, setDevices] = useState([]);
@@ -59,7 +61,7 @@ const DeviceManager = () => {
             // If the user just wants a generic channel, they'd use channels/create
             // But here the UI seems to expect a device_pair_key
             const res = await apiClient.post('/api/v1/devices/pair', {
-                device_name: channelForm.name || 'Phone Channel',
+                device_name: channelForm.name || t('deviceManager.default_name'),
                 hardware_id: 'PENDING_' + Math.random().toString(36).substr(2, 9),
                 phone_number: 'PENDING',
                 is_primary: true
@@ -143,13 +145,13 @@ const DeviceManager = () => {
                             onClick={() => setActiveTab('channels')}
                             className={`pb-2 px-1 font-bold ${activeTab === 'channels' ? 'text-rose-500 border-b-2 border-rose-500' : 'text-slate-500 hover:text-white transition-colors'}`}
                         >
-                            قنوات الهواتف (Channels)
+                            {t('deviceManager.tab_channels')}
                         </button>
                         <button
                             onClick={() => setActiveTab('phones')}
                             className={`pb-2 px-1 font-bold ${activeTab === 'phones' ? 'text-rose-500 border-b-2 border-rose-500' : 'text-slate-500 hover:text-white transition-colors'}`}
                         >
-                            الهواتف المسجلة (Phones)
+                            {t('deviceManager.tab_phones')}
                         </button>
                     </div>
                 </div>
@@ -188,7 +190,7 @@ const DeviceManager = () => {
                                         </div>
                                     </div>
                                     <span className={`px-2 py-1 rounded text-[10px] font-bold ${channel.is_default ? 'bg-amber-500/10 text-amber-500' : 'bg-slate-800 text-slate-400'}`}>
-                                        {channel.is_default ? 'DEFAULT' : 'EXTRA'}
+                                        {channel.is_default ? t('deviceManager.default_badge') : t('deviceManager.extra_badge')}
                                     </span>
                                 </div>
                                 <div className="space-y-2 mb-6 text-sm">

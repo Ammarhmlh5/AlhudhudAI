@@ -1,0 +1,23 @@
+# 2026/08/01 07:41:06.690442 [TestProperty_MessageDeductionInvariant] [rapid] draw included_messages: 50
+# 2026/08/01 07:41:06.690442 [TestProperty_MessageDeductionInvariant] [rapid] draw num_operations: 3
+# 2026/08/01 07:41:06.690442 [TestProperty_MessageDeductionInvariant] [rapid] draw message_count_0: 1
+# 2026/08/01 07:41:06.690442 [TestProperty_MessageDeductionInvariant] [rapid] draw message_count_1: 1
+# 2026/08/01 07:41:06.690442 [TestProperty_MessageDeductionInvariant] [rapid] draw message_count_2: 1
+# 2026/08/01 07:41:06.691587 [TestProperty_MessageDeductionInvariant] Failed to set tenant context: ERROR: syntax error at or near "$1" (SQLSTATE 42601)
+# 
+v0.4.8#3081451935269783588
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

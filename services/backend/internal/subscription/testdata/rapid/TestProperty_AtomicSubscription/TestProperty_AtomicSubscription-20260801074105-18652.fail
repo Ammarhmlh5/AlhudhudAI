@@ -1,0 +1,3 @@
+# 2026/08/01 07:41:05.500384 [TestProperty_AtomicSubscription] Failed to set tenant context: ERROR: syntax error at or near "$1" (SQLSTATE 42601)
+# 
+v0.4.8#9279682439504265878

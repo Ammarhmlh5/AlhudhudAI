@@ -1,0 +1,21 @@
+# 2026/08/01 08:25:36.144722 [TestProperty_UseRolloverMessages_FIFO] [rapid] draw num_records: 2
+# 2026/08/01 08:25:36.144722 [TestProperty_UseRolloverMessages_FIFO] [rapid] draw messages_0: 50
+# 2026/08/01 08:25:36.145842 [TestProperty_UseRolloverMessages_FIFO] 
+# 	Error Trace:	C:/ALHudhud/ALHudhud/ALHudhudAI/services/backend/internal/rollover/manager_property_test.go:744
+# 	            				C:/ALHudhud/ALHudhud/ALHudhudAI/services/backend/internal/rollover/manager_property_test.go:525
+# 	            				C:/Users/Admin/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:371
+# 	            				C:/Users/Admin/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:380
+# 	            				C:/Users/Admin/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:205
+# 	            				C:/Users/Admin/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:120
+# 	            				C:/ALHudhud/ALHudhud/ALHudhudAI/services/backend/internal/rollover/manager_property_test.go:506
+# 	Error:      	Received unexpected error:
+# 	            	ERROR: null value in column "messages_remaining" of relation "rollover_messages" violates not-null constraint (SQLSTATE 23502)
+# 	Test:       	TestProperty_UseRolloverMessages_FIFO
+# 
+v0.4.8#1230851482587689375
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

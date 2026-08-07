@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Package, Plus, Edit, Trash2, Users, Check, X, DollarSign, MessageSquare, Info, ToggleLeft, ToggleRight } from 'lucide-react';
 import { API_BASE_URL } from '../config';
+import { useTranslation } from 'react-i18next';
 
 export default function PackageSettings() {
+    const { t } = useTranslation();
     const [packages, setPackages] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -83,7 +85,7 @@ export default function PackageSettings() {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('Are you sure you want to delete this package?')) return;
+        if (!confirm(t('packageSettings.delete_confirm'))) return;
 
         try {
             const res = await fetch(`${API_BASE_URL}/api/v1/admin/packages/${id}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
@@ -117,7 +119,7 @@ export default function PackageSettings() {
 
     if (loading) {
         return (
-            <div className="text-center py-12 text-slate-500">Loading packages...</div>
+            <div className="text-center py-12 text-slate-500">{t('packageSettings.loading_packages')}</div>
         );
     }
 
@@ -126,15 +128,15 @@ export default function PackageSettings() {
             <div className="flex justify-between items-center">
                 <div>
                     <h3 className="text-xl font-black text-rose-500">
-                        Package Management
+                        {t('packageSettings.title')}
                     </h3>
-                    <p className="text-sm text-slate-400 mt-1">Configure subscription packages and pricing plans</p>
+                    <p className="text-sm text-slate-400 mt-1">{t('packageSettings.description')}</p>
                 </div>
                 <button
                     onClick={() => setShowModal(true)}
                     className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold text-sm transition-colors shadow-lg shadow-rose-900/20 flex items-center gap-2"
                 >
-                    + Add Package
+                    + {t('packageSettings.add_package')}
                 </button>
             </div>
 
@@ -142,7 +144,7 @@ export default function PackageSettings() {
                 {packages.length === 0 ? (
                     <div className="col-span-full text-center py-12 text-slate-500 border border-dashed border-slate-800 rounded-3xl">
                         <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                        <p>No packages configured yet</p>
+                        <p>{t('packageSettings.no_packages')}</p>
                     </div>
                 ) : (
                     packages.map((pkg) => (
@@ -156,40 +158,40 @@ export default function PackageSettings() {
                                 </div>
                                 <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${pkg.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-500'
                                     }`}>
-                                    {pkg.is_active ? 'Active' : 'Inactive'}
+                                    {pkg.is_active ? t('packageSettings.active') : t('packageSettings.inactive')}
                                 </span>
                             </div>
 
                             <h3 className="text-lg font-bold text-white mb-1">{pkg.name}</h3>
-                            <p className="text-xs text-slate-500 mb-4 line-clamp-2">{pkg.description || 'No description'}</p>
+                            <p className="text-xs text-slate-500 mb-4 line-clamp-2">{pkg.description || t('packageSettings.no_description')}</p>
 
                             <div className="space-y-3 mb-6">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs text-slate-500">Monthly Fee</span>
+                                    <span className="text-xs text-slate-500">{t('packageSettings.monthly_fee')}</span>
                                     <span className="font-mono text-emerald-400 font-bold">
                                         ${parseFloat(pkg.monthly_fee || 0).toFixed(2)}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs text-slate-500">Messages</span>
+                                    <span className="text-xs text-slate-500">{t('packageSettings.messages')}</span>
                                     <span className="text-white font-bold">
-                                        {pkg.messages_included ? pkg.messages_included.toLocaleString() : 'Unlimited'}
+                                        {pkg.messages_included ? pkg.messages_included.toLocaleString() : t('packageSettings.unlimited')}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs text-slate-500">Rollover</span>
+                                    <span className="text-xs text-slate-500">{t('packageSettings.rollover')}</span>
                                     <span className={`text-xs font-bold ${pkg.rollover_enabled ? 'text-emerald-400' : 'text-slate-500'}`}>
-                                        {pkg.rollover_enabled ? 'Enabled' : 'Disabled'}
+                                        {pkg.rollover_enabled ? t('packageSettings.enabled') : t('packageSettings.disabled')}
                                     </span>
                                 </div>
                                 {pkg.rollover_enabled && pkg.conditional_rollover_enabled && (
                                     <div className="flex items-center gap-2 p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
                                         <Info className="w-3 h-3 text-blue-400 shrink-0" />
-                                        <span className="text-[10px] text-blue-400 font-bold">Conditional Rollover Active</span>
+                                        <span className="text-[10px] text-blue-400 font-bold">{t('packageSettings.conditional_rollover_active')}</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs text-slate-500">Subscribers</span>
+                                    <span className="text-xs text-slate-500">{t('packageSettings.subscribers')}</span>
                                     <span className="flex items-center gap-1 text-white font-bold">
                                         <Users className="w-3 h-3" />
                                         {pkg.subscriber_count || 0}
@@ -202,13 +204,13 @@ export default function PackageSettings() {
                                     onClick={() => handleEdit(pkg)}
                                     className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2"
                                 >
-                                    <Edit className="w-3 h-3" /> Edit
+                                    <Edit className="w-3 h-3" /> {t('packageSettings.edit')}
                                 </button>
                                 <button
                                     onClick={() => handleDelete(pkg.id)}
                                     className="flex-1 py-2 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2"
                                 >
-                                    <Trash2 className="w-3 h-3" /> Delete
+                                    <Trash2 className="w-3 h-3" /> {t('packageSettings.delete')}
                                 </button>
                             </div>
                         </div>
@@ -227,9 +229,9 @@ export default function PackageSettings() {
                                 </div>
                                 <div>
                                     <h3 className="text-xl font-bold text-white">
-                                        {editingPackage ? 'Edit Package' : 'Add New Package'}
+                                        {editingPackage ? t('packageSettings.edit_package') : t('packageSettings.add_new_package')}
                                     </h3>
-                                    <p className="text-xs text-slate-500">Configure subscription package</p>
+                                    <p className="text-xs text-slate-500">{t('packageSettings.configure_package')}</p>
                                 </div>
                             </div>
                             <button
@@ -244,34 +246,34 @@ export default function PackageSettings() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="col-span-2">
                                     <label className="text-xs font-bold text-slate-500 uppercase block mb-2">
-                                        Package Name
+                                        {t('packageSettings.package_name')}
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500"
-                                        placeholder="e.g., Basic Plan"
+                                        placeholder={t('packageSettings.name_placeholder')}
                                         required
                                     />
                                 </div>
 
                                 <div className="col-span-2">
                                     <label className="text-xs font-bold text-slate-500 uppercase block mb-2">
-                                        Description
+                                        {t('packageSettings.description_label')}
                                     </label>
                                     <textarea
                                         value={formData.description}
                                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500 resize-none"
                                         rows="2"
-                                        placeholder="Brief description of the package"
+                                        placeholder={t('packageSettings.description_placeholder')}
                                     />
                                 </div>
 
                                 <div>
                                     <label className="text-xs font-bold text-slate-500 uppercase block mb-2">
-                                        Monthly Fee ($)
+                                        {t('packageSettings.monthly_fee_label')}
                                     </label>
                                     <input
                                         type="number"
@@ -286,28 +288,28 @@ export default function PackageSettings() {
 
                                 <div>
                                     <label className="text-xs font-bold text-slate-500 uppercase block mb-2">
-                                        Messages Included
+                                        {t('packageSettings.messages_included')}
                                     </label>
                                     <input
                                         type="number"
                                         value={formData.messages_included}
                                         onChange={(e) => setFormData({ ...formData, messages_included: e.target.value })}
                                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500"
-                                        placeholder="Leave empty for unlimited"
+                                        placeholder={t('packageSettings.messages_placeholder')}
                                     />
                                 </div>
 
                                 <div className="col-span-2">
                                     <label className="text-xs font-bold text-slate-500 uppercase block mb-2">
-                                        Billing Cycle
+                                        {t('packageSettings.billing_cycle')}
                                     </label>
                                     <select
                                         value={formData.billing_cycle}
                                         onChange={(e) => setFormData({ ...formData, billing_cycle: e.target.value })}
                                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500"
                                     >
-                                        <option value="monthly">Monthly</option>
-                                        <option value="yearly">Yearly</option>
+                                        <option value="monthly">{t('packageSettings.monthly')}</option>
+                                        <option value="yearly">{t('packageSettings.yearly')}</option>
                                     </select>
                                 </div>
                             </div>
@@ -324,7 +326,7 @@ export default function PackageSettings() {
                                             className="w-5 h-5 rounded bg-slate-800 border-slate-700 text-rose-500 focus:ring-rose-500"
                                         />
                                         <label htmlFor="rollover_enabled" className="text-sm text-white font-medium cursor-pointer">
-                                            Enable Message Rollover
+                                            {t('packageSettings.enable_message_rollover')}
                                         </label>
                                     </div>
                                 </div>
@@ -334,20 +336,20 @@ export default function PackageSettings() {
                                         <div className="grid grid-cols-2 gap-4 pl-8">
                                             <div>
                                                 <label className="text-xs font-bold text-slate-500 uppercase block mb-2">
-                                                    Rollover Limit
+                                                    {t('packageSettings.rollover_limit')}
                                                 </label>
                                                 <input
                                                     type="number"
                                                     value={formData.rollover_limit}
                                                     onChange={(e) => setFormData({ ...formData, rollover_limit: e.target.value })}
                                                     className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500"
-                                                    placeholder="Leave empty for no limit"
+                                                    placeholder={t('packageSettings.rollover_limit_placeholder')}
                                                 />
                                             </div>
 
                                             <div>
                                                 <label className="text-xs font-bold text-slate-500 uppercase block mb-2">
-                                                    Expiry (Months)
+                                                    {t('packageSettings.expiry_months')}
                                                 </label>
                                                 <input
                                                     type="number"
@@ -371,7 +373,7 @@ export default function PackageSettings() {
                                                                 <ToggleLeft className="w-6 h-6 text-slate-500" />
                                                             )}
                                                             <span className="text-sm font-bold text-white">
-                                                                Conditional Rollover Policy
+                                                                {t('packageSettings.conditional_rollover_policy')}
                                                             </span>
                                                         </div>
                                                         <button
@@ -385,12 +387,11 @@ export default function PackageSettings() {
                                                                 : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
                                                                 }`}
                                                         >
-                                                            {formData.conditional_rollover_enabled ? 'Enabled' : 'Disabled'}
+                                                            {formData.conditional_rollover_enabled ? t('packageSettings.enabled') : t('packageSettings.disabled')}
                                                         </button>
                                                     </div>
                                                     <p className="text-xs text-slate-400 leading-relaxed">
-                                                        When enabled, rollover messages are only activated upon successful automatic payment.
-                                                        If payment fails, messages are forfeited to prevent losses.
+                                                        {t('packageSettings.conditional_rollover_desc')}
                                                     </p>
                                                 </div>
                                             </div>
@@ -408,7 +409,7 @@ export default function PackageSettings() {
                                     className="w-5 h-5 rounded bg-slate-800 border-slate-700 text-rose-500 focus:ring-rose-500"
                                 />
                                 <label htmlFor="is_active" className="text-sm text-white font-medium cursor-pointer">
-                                    Active (Make this package available for subscription)
+                                    {t('packageSettings.active_label')}
                                 </label>
                             </div>
 
@@ -418,14 +419,14 @@ export default function PackageSettings() {
                                     onClick={handleCloseModal}
                                     className="flex-1 py-3 text-slate-400 font-bold hover:text-white transition-colors"
                                 >
-                                    Cancel
+                                    {t('packageSettings.cancel')}
                                 </button>
                                 <button
                                     type="submit"
                                     className="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold transition-colors shadow-lg shadow-rose-900/20 flex items-center justify-center gap-2"
                                 >
                                     <Check className="w-4 h-4" />
-                                    {editingPackage ? 'Update Package' : 'Create Package'}
+                                    {editingPackage ? t('packageSettings.update_package') : t('packageSettings.create_package')}
                                 </button>
                             </div>
                         </form>

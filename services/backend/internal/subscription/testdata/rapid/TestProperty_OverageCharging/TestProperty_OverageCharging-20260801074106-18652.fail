@@ -1,0 +1,11 @@
+# 2026/08/01 07:41:06.794641 [TestProperty_OverageCharging] [rapid] draw initial_balance: 0
+# 2026/08/01 07:41:06.794641 [TestProperty_OverageCharging] [rapid] draw overage_messages: 1
+# 2026/08/01 07:41:06.795966 [TestProperty_OverageCharging] Failed to set tenant context: ERROR: syntax error at or near "$1" (SQLSTATE 42601)
+# 
+v0.4.8#15031191889107180053
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

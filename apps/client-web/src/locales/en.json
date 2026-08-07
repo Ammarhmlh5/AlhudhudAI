@@ -14,5 +14,146 @@
   "app": {
     "welcome": "Welcome back",
     "coming_soon": "This page is under development and will be available soon..."
+  },
+  "common": {
+    "search": "Search",
+    "cancel": "Cancel",
+    "save": "Save",
+    "active": "Active",
+    "inactive": "Inactive",
+    "status": "Status",
+    "actions": "Actions",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "n/a": "N/A",
+    "none": "None",
+    "close": "Close",
+    "confirm": "Confirm",
+    "back": "Back"
+  },
+  "settingsManager": {
+    "title": "Advanced Settings",
+    "profile": "Company Profile",
+    "security": "Security & API",
+    "billing": "Financial Hub",
+    "alerts": "Alerts",
+    "business_name": "Business Name",
+    "contact_email": "Contact Email",
+    "serial_number": "Serial Number",
+    "subscription_plan": "Subscription Plan",
+    "basic_plan": "Basic Plan",
+    "contact_support_note": "* To update company details, please contact support.",
+    "api_key_title": "Accounting System API Key",
+    "api_key_desc": "Use this key to link your ERP/Accounting software.",
+    "regenerate": "Regenerate",
+    "change_password": "Change Password",
+    "current_password": "Current Password",
+    "new_password": "New Password (min 8 chars)",
+    "password_changed": "Password changed successfully!",
+    "updating": "Updating...",
+    "save_changes": "Save Changes",
+    "error_connecting": "Error connecting to server",
+    "payment_methods": "Payment Methods",
+    "loading_payment_methods": "Loading payment methods...",
+    "card_ending_in": "Ending in {{last4}}",
+    "expires_on": "Expires {{month}}/{{year}}",
+    "primary": "Primary",
+    "no_payment_methods": "No payment methods stored.",
+    "add_payment_service": "Add Payment Service",
+    "auto_recharge_active": "Auto-Recharge Active",
+    "auto_recharge_desc": "Recharge $50 when balance falls below $10.",
+    "notifications_admin": "Notification settings are managed by your administrator."
+  },
+  "waitingMessages": {
+    "title": "Messages Awaiting Connection",
+    "subtitle": "Messages pending in the system awaiting your devices to connect.",
+    "status_hibernate": "Status: Hibernate",
+    "messages_buffered": "{{count}} Messages Buffered",
+    "search_placeholder": "Search waiting messages...",
+    "recipient": "Recipient",
+    "content": "Content",
+    "wait_reason": "Wait Reason",
+    "age": "Age",
+    "empty": "No messages are currently in wait mode.",
+    "offline_device": "OFFLINE Device",
+    "note_label": "Note:",
+    "note_prefix": "Messages in",
+    "note_suffix": "are queued locally on the server. They will be automatically pushed (Fast-Forward) to your devices as soon as a connection is established. Financial settlement occurs only upon successful delivery.",
+    "wait_mode": "Wait Mode"
+  },
+  "deviceManager": {
+    "title": "Devices & Channels Management",
+    "tab_channels": "Phone Channels",
+    "tab_phones": "Registered Phones",
+    "create_channel": "Create New Phone Channel",
+    "default_badge": "DEFAULT",
+    "extra_badge": "EXTRA",
+    "default_name": "Phone Channel"
+  },
+  "messagesReport": {
+    "flat_view": "Individual Messages",
+    "grouped_view": "Send Batches",
+    "batch_prefix": "Batch:",
+    "ext_prefix": "EXT:",
+    "device_prefix": "Device:",
+    "system": "System",
+    "batch_ref": "Batch Reference",
+    "msg_ref": "Message Reference",
+    "batch_data": "Batch Data",
+    "api_sync": "Accounting Systems Sync"
+  },
+  "financeDashboard": {
+    "tab_balance": "Balance",
+    "tab_packages": "Packages"
+  },
+  "login": {
+    "subtitle": "Tenant Dashboard Login",
+    "business_email": "Business Email",
+    "password": "Password",
+    "authenticating": "Authenticating...",
+    "sign_in": "Sign In",
+    "no_account": "Don't have an account?",
+    "register_now": "Register Now",
+    "invalid_credentials": "Invalid email or password"
+  },
+  "register": {
+    "subtitle": "Create Business Account",
+    "business_email": "Business Email",
+    "code": "Code",
+    "phone_number": "Phone Number",
+    "password": "Password",
+    "confirm_password": "Confirm Password",
+    "creating": "Creating Account...",
+    "register_now": "Register Now",
+    "have_account": "Already have an account?",
+    "sign_in": "Sign In",
+    "passwords_mismatch": "Passwords do not match",
+    "registration_failed": "Registration failed"
+  },
+  "protectedRoute": {
+    "loading_dashboard": "Loading Dashboard...",
+    "unauthorized": "Unauthorized Access",
+    "not_authorized": "You are not authorized to access this tenant dashboard. This area is reserved for business owners and authorized staff.",
+    "switch_account": "Switch Account"
+  },
+  "customers": {
+    "title": "Customers"
+  },
+  "subscriptionInfo": {
+    "cash_balance": "Cash Balance",
+    "quota_balance": "Message Quota"
+  },
+  "dashboard": {
+    "connected": "Server Connected",
+    "disconnected": "Server Disconnected",
+    "signal_mode": "Signal Mode",
+    "push_mode": "Push Mode"
+  },
+  "excelImport": {
+    "no_valid_rows": "No valid rows found. Please check mapping.",
+    "column_mapping": "Column Mapping",
+    "phone_badge": "Phone",
+    "message_badge": "Message"
   }
 }

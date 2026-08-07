@@ -9,8 +9,11 @@ import {
   X,
   LogOut,
   Receipt,
+  FileText,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import apiClient from '../api/axios';
 
 function formatDate(value) {
@@ -24,6 +27,8 @@ function formatDate(value) {
 
 export default function Dashboard() {
   const { user, tenant, logout, checkAuth } = useAuth();
+  const { t } = useTranslation();
+  const navigate = useNavigate();
   const [balance, setBalance] = useState(null);
   const [packages, setPackages] = useState([]);
   const [active, setActive] = useState(null);
@@ -50,11 +55,11 @@ export default function Dashboard() {
       setUsage(usg?.data?.usage || null);
       setTransactions(txn.data.transactions || []);
     } catch (err) {
-      setError('تعذّر تحميل البيانات من الخادم.');
+      setError(t('common.error'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadData();
@@ -72,7 +77,7 @@ export default function Dashboard() {
       await checkAuth();
       await loadData();
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'فشل الاشتراك.');
+      setError(err.response?.data?.message || err.response?.data?.error || t('dashboard.error_subscribe'));
     } finally {
       setBusy(false);
     }
@@ -88,7 +93,7 @@ export default function Dashboard() {
       await apiClient.put(path);
       await loadData();
     } catch (err) {
-      setError('تعذّر تحديث التجديد التلقائي.');
+      setError(t('dashboard.error_auto_renew'));
     } finally {
       setBusy(false);
     }
@@ -109,7 +114,7 @@ export default function Dashboard() {
               <Building2 className="w-6 h-6 text-rose-500" />
             </div>
             <div>
-              <h1 className="text-lg font-black text-white">بوابة الشركات</h1>
+              <h1 className="text-lg font-black text-white">{t('dashboard.title')}</h1>
               <p className="text-xs text-slate-400">{tenant?.business_name || user?.email}</p>
             </div>
           </div>
@@ -118,7 +123,7 @@ export default function Dashboard() {
             className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm text-slate-300 transition-colors"
           >
             <LogOut className="w-4 h-4" />
-            خروج
+            {t('nav.logout')}
           </button>
         </div>
       </header>
@@ -143,12 +148,12 @@ export default function Dashboard() {
                   <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
                     <Wallet className="w-6 h-6 text-emerald-400" />
                   </div>
-                  <h2 className="text-lg font-bold text-white">الرصيد الحالي</h2>
+                  <h2 className="text-lg font-bold text-white">{t('dashboard.balance')}</h2>
                 </div>
                 <p className="text-4xl font-black text-emerald-400" dir="ltr">
                   ${balance}
                 </p>
-                <p className="text-sm text-slate-400 mt-2">متاح للاشتراك في الباقات ودفع رسوم الخدمات</p>
+                <p className="text-sm text-slate-400 mt-2">{t('dashboard.balance_description')}</p>
               </div>
 
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
@@ -156,19 +161,19 @@ export default function Dashboard() {
                   <div className="p-3 bg-sky-500/10 rounded-xl border border-sky-500/20">
                     <MessageSquare className="w-6 h-6 text-sky-400" />
                   </div>
-                  <h2 className="text-lg font-bold text-white">استهلاك الباقة</h2>
+                  <h2 className="text-lg font-bold text-white">{t('dashboard.usage')}</h2>
                 </div>
                 {usage ? (
                   <>
                     <p className="text-3xl font-black text-white" dir="ltr">
-                      {usage.messages_used} / {usage.included_messages ?? '∞'}
+                      {usage.messages_used} / {usage.included_messages ?? t('dashboard.messages_unlimited')}
                     </p>
                     <p className="text-sm text-slate-400 mt-2">
-                      باقة {usage.package_name} • متبقي {usage.messages_remaining ?? '∞'} رسالة
+                      {t('dashboard.package')} {usage.package_name} • {t('dashboard.remaining')} {usage.messages_remaining ?? t('dashboard.messages_unlimited')} {t('dashboard.messages')}
                     </p>
                   </>
                 ) : (
-                  <p className="text-slate-400">لا توجد اشتراك نشط حالياً.</p>
+                  <p className="text-slate-400">{t('dashboard.usage_no_subscription')}</p>
                 )}
               </div>
             </section>
@@ -180,7 +185,7 @@ export default function Dashboard() {
                   <div className="p-3 bg-violet-500/10 rounded-xl border border-violet-500/20">
                     <RefreshCcw className="w-6 h-6 text-violet-400" />
                   </div>
-                  <h2 className="text-lg font-bold text-white">الاشتراك الحالي</h2>
+                  <h2 className="text-lg font-bold text-white">{t('dashboard.subscription')}</h2>
                 </div>
                 {active && (
                   <button
@@ -193,31 +198,31 @@ export default function Dashboard() {
                     }`}
                   >
                     {active.auto_renew ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
-                    {active.auto_renew ? 'إيقاف التجديد التلقائي' : 'تفعيل التجديد التلقائي'}
+                    {active.auto_renew ? t('dashboard.disable_auto_renew') : t('dashboard.enable_auto_renew')}
                   </button>
                 )}
               </div>
               {active ? (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="bg-slate-800/50 rounded-xl p-4">
-                    <p className="text-xs text-slate-400 mb-1">حالة الاشتراك</p>
+                    <p className="text-xs text-slate-400 mb-1">{t('dashboard.status')}</p>
                     <p className="font-bold text-white capitalize">{active.status}</p>
                   </div>
                   <div className="bg-slate-800/50 rounded-xl p-4">
-                    <p className="text-xs text-slate-400 mb-1">بداية الفترة</p>
+                    <p className="text-xs text-slate-400 mb-1">{t('dashboard.start_date')}</p>
                     <p className="font-bold text-white">{formatDate(active.start_date)}</p>
                   </div>
                   <div className="bg-slate-800/50 rounded-xl p-4">
-                    <p className="text-xs text-slate-400 mb-1">نهاية الفترة</p>
+                    <p className="text-xs text-slate-400 mb-1">{t('dashboard.end_date')}</p>
                     <p className="font-bold text-white">{formatDate(active.end_date)}</p>
                   </div>
                   <div className="bg-slate-800/50 rounded-xl p-4">
-                    <p className="text-xs text-slate-400 mb-1">التجديد التلقائي</p>
-                    <p className="font-bold text-white">{active.auto_renew ? 'مفعّل' : 'متوقف'}</p>
+                    <p className="text-xs text-slate-400 mb-1">{t('dashboard.auto_renew')}</p>
+                    <p className="font-bold text-white">{active.auto_renew ? t('common.enabled') : t('common.disabled')}</p>
                   </div>
                 </div>
               ) : (
-                <p className="text-slate-400">لا يوجد اشتراك نشط. اختر باقة من الأسفل للاشتراك.</p>
+                <p className="text-slate-400">{t('dashboard.subscription_no')}</p>
               )}
             </section>
 
@@ -227,7 +232,7 @@ export default function Dashboard() {
                 <div className="p-3 bg-rose-500/10 rounded-xl border border-rose-500/20">
                   <Package className="w-6 h-6 text-rose-400" />
                 </div>
-                <h2 className="text-lg font-bold text-white">باقات الاشتراك</h2>
+                <h2 className="text-lg font-bold text-white">{t('dashboard.packages')}</h2>
               </div>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {packages.map((pkg) => (
@@ -242,27 +247,27 @@ export default function Dashboard() {
                       </div>
                       {active?.package_id === pkg.id && (
                         <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-xs font-bold text-emerald-300">
-                          الاشتراك الحالي
+                          {t('dashboard.current_subscription')}
                         </span>
                       )}
                     </div>
                     <p className="text-3xl font-black text-white" dir="ltr">
                       ${pkg.price_usd}
-                      <span className="text-sm text-slate-400 font-normal"> / شهرياً</span>
+                      <span className="text-sm text-slate-400 font-normal"> / {t('dashboard.monthly')}</span>
                     </p>
                     <ul className="text-sm text-slate-300 space-y-2">
                       <li className="flex items-center gap-2">
                         <Check className="w-4 h-4 text-emerald-400" />
-                        {pkg.is_unlimited ? 'رسائل غير محدودة' : `${pkg.included_messages.toLocaleString('en')} رسالة`}
+                        {pkg.is_unlimited ? t('dashboard.messages_unlimited') : `${pkg.included_messages.toLocaleString('en')} ${t('dashboard.messages')}`}
                       </li>
                       <li className="flex items-center gap-2">
                         <Check className="w-4 h-4 text-emerald-400" />
-                        رسوم إضافية ${pkg.overage_rate} لكل رسالة زائدة
+                        {t('dashboard.overage_rate', { rate: `$${pkg.overage_rate}` })}
                       </li>
                       {pkg.rollover_enabled && (
                         <li className="flex items-center gap-2">
                           <Check className="w-4 h-4 text-emerald-400" />
-                          ترحيل الرسائل المتبقية
+                          {t('dashboard.rollover')}
                         </li>
                       )}
                     </ul>
@@ -272,7 +277,7 @@ export default function Dashboard() {
                         disabled={busy}
                         className="mt-auto w-full px-4 py-3 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 rounded-xl text-white font-bold transition-colors"
                       >
-                        اشترك الآن
+                        {t('dashboard.subscribe_now')}
                       </button>
                     )}
                   </div>
@@ -282,23 +287,32 @@ export default function Dashboard() {
 
             {/* Transactions */}
             <section>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-cyan-500/10 rounded-xl border border-cyan-500/20">
-                  <Receipt className="w-6 h-6 text-cyan-400" />
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-cyan-500/10 rounded-xl border border-cyan-500/20">
+                    <Receipt className="w-6 h-6 text-cyan-400" />
+                  </div>
+                  <h2 className="text-lg font-bold text-white">{t('dashboard.transactions')}</h2>
                 </div>
-                <h2 className="text-lg font-bold text-white">آخر العمليات</h2>
+                <button
+                  onClick={() => navigate('/invoices')}
+                  className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm text-slate-300 transition-colors"
+                >
+                  <FileText className="w-4 h-4" />
+                  {t('dashboard.view_all_invoices')}
+                </button>
               </div>
               <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
                 {transactions.length === 0 ? (
-                  <p className="p-6 text-slate-400">لا توجد عمليات بعد.</p>
+                  <p className="p-6 text-slate-400">{t('dashboard.no_transactions')}</p>
                 ) : (
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-slate-800/50 text-slate-400">
-                        <th className="text-right px-6 py-3 font-semibold">النوع</th>
-                        <th className="text-right px-6 py-3 font-semibold">المبلغ</th>
-                        <th className="text-right px-6 py-3 font-semibold">الحالة</th>
-                        <th className="text-right px-6 py-3 font-semibold">التاريخ</th>
+                        <th className="text-right px-6 py-3 font-semibold">{t('dashboard.type')}</th>
+                        <th className="text-right px-6 py-3 font-semibold">{t('dashboard.amount')}</th>
+                        <th className="text-right px-6 py-3 font-semibold">{t('dashboard.status')}</th>
+                        <th className="text-right px-6 py-3 font-semibold">{t('dashboard.date')}</th>
                       </tr>
                     </thead>
                     <tbody>

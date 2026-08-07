@@ -1,0 +1,7 @@
+# 2026/08/01 07:41:07.037042 [TestProperty_ConcurrentOverageCharges] [rapid] draw concurrency: 3
+# 2026/08/01 07:41:07.038460 [TestProperty_ConcurrentOverageCharges] Failed to set tenant context: ERROR: syntax error at or near "$1" (SQLSTATE 42601)
+# 
+v0.4.8#18121110914219889320
+0x0
+0x0
+0x0

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   TrendingUp, DollarSign, Users, Package, Download, Calendar,
   BarChart3, PieChart, Activity, FileText, ArrowUpRight, ArrowDownRight
@@ -14,6 +15,7 @@ const REPORTS_DEFAULTS = {
 };
 
 export default function Reports() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dateRange, setDateRange] = useState('month');
@@ -57,8 +59,8 @@ export default function Reports() {
     } catch (err) {
       console.error("Failed to fetch reports", err);
       setError(err.response?.status === 404
-        ? 'Reports API not found — the endpoint may not be deployed yet.'
-        : err.message || 'Failed to load reports');
+        ? t('reports.api_not_found')
+        : err.message || t('reports.load_failed'));
       setReports(REPORTS_DEFAULTS);
     } finally {
       setLoading(false);
@@ -80,7 +82,7 @@ export default function Reports() {
   if (loading) {
     return (
       <div className="space-y-8">
-        <div className="text-center py-12 text-slate-500">Loading reports...</div>
+        <div className="text-center py-12 text-slate-500">{t('reports.loading')}</div>
       </div>
     );
   }
@@ -89,7 +91,7 @@ export default function Reports() {
     return (
       <div className="space-y-8">
         <div className="text-center py-12">
-          <p className="text-rose-400 font-bold mb-2">Failed to load reports</p>
+          <p className="text-rose-400 font-bold mb-2">{t('reports.load_failed')}</p>
           <p className="text-slate-500 text-sm">{error}</p>
         </div>
       </div>
@@ -101,8 +103,8 @@ export default function Reports() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-black text-white mb-2">Financial Reports</h1>
-          <p className="text-slate-400">Comprehensive financial analytics and insights</p>
+          <h1 className="text-3xl font-black text-white mb-2">{t('reports.title')}</h1>
+          <p className="text-slate-400">{t('reports.subtitle')}</p>
         </div>
         <div className="flex items-center gap-4">
           {/* Date Range Selector */}
@@ -111,10 +113,10 @@ export default function Reports() {
             onChange={(e) => setDateRange(e.target.value)}
             className="px-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white font-bold focus:outline-none focus:border-rose-500"
           >
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
-            <option value="quarter">This Quarter</option>
-            <option value="year">This Year</option>
+            <option value="week">{t('reports.this_week')}</option>
+            <option value="month">{t('reports.this_month')}</option>
+            <option value="quarter">{t('reports.this_quarter')}</option>
+            <option value="year">{t('reports.this_year')}</option>
           </select>
 
           {/* Export Buttons */}
@@ -124,21 +126,21 @@ export default function Reports() {
               className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold flex items-center gap-2 transition-colors"
             >
               <Download className="w-4 h-4" />
-              PDF
+              {t('reports.export_pdf')}
             </button>
             <button
               onClick={() => handleExport('excel')}
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center gap-2 transition-colors"
             >
               <Download className="w-4 h-4" />
-              Excel
+              {t('reports.export_excel')}
             </button>
             <button
               onClick={() => handleExport('csv')}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center gap-2 transition-colors"
             >
               <Download className="w-4 h-4" />
-              CSV
+              {t('reports.export_csv')}
             </button>
           </div>
         </div>
@@ -148,7 +150,7 @@ export default function Reports() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <SummaryCard
           icon={DollarSign}
-          label="Total Revenue"
+          label={t('reports.total_revenue')}
           value={`$${reports.revenue.total.toFixed(2)}`}
           color="from-emerald-500 to-teal-500"
           trend="+12.5%"
@@ -156,7 +158,7 @@ export default function Reports() {
         />
         <SummaryCard
           icon={TrendingUp}
-          label="Total Costs"
+          label={t('reports.total_costs')}
           value={`$${reports.costs.total.toFixed(2)}`}
           color="from-rose-500 to-pink-500"
           trend="+5.2%"
@@ -164,7 +166,7 @@ export default function Reports() {
         />
         <SummaryCard
           icon={Activity}
-          label="Profit Margin"
+          label={t('reports.profit_margin')}
           value={`$${profitMargin.toFixed(2)}`}
           color="from-blue-500 to-cyan-500"
           trend={`${profitPercentage}%`}
@@ -172,7 +174,7 @@ export default function Reports() {
         />
         <SummaryCard
           icon={Users}
-          label="Total Customers"
+          label={t('reports.total_customers')}
           value={reports.customers.total}
           color="from-amber-500 to-orange-500"
           trend="+8.3%"
@@ -188,32 +190,32 @@ export default function Reports() {
               <DollarSign className="w-6 h-6 text-emerald-500" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-white">Revenue Breakdown</h2>
-              <p className="text-xs text-slate-500">Income by source</p>
+              <h2 className="text-xl font-black text-white">{t('reports.revenue_breakdown')}</h2>
+              <p className="text-xs text-slate-500">{t('reports.income_by_source')}</p>
             </div>
           </div>
 
           <div className="space-y-4">
             <RevenueItem
-              label="Subscriptions"
+              label={t('reports.subscriptions')}
               amount={reports.revenue.subscriptions}
               percentage={(reports.revenue.subscriptions / reports.revenue.total * 100).toFixed(1)}
               color="bg-emerald-500"
             />
             <RevenueItem
-              label="Overage Usage"
+              label={t('reports.overage_usage')}
               amount={reports.revenue.overage}
               percentage={(reports.revenue.overage / reports.revenue.total * 100).toFixed(1)}
               color="bg-blue-500"
             />
             <RevenueItem
-              label="Gateway Rentals"
+              label={t('reports.gateway_rentals')}
               amount={reports.revenue.gateways}
               percentage={(reports.revenue.gateways / reports.revenue.total * 100).toFixed(1)}
               color="bg-purple-500"
             />
             <RevenueItem
-              label="Direct Top-ups"
+              label={t('reports.direct_topups')}
               amount={reports.revenue.topups}
               percentage={(reports.revenue.topups / reports.revenue.total * 100).toFixed(1)}
               color="bg-amber-500"
@@ -224,7 +226,7 @@ export default function Reports() {
           <div className="mt-6 pt-6 border-t border-slate-800">
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <div className="text-xs text-slate-500 w-24">Subscriptions</div>
+                <div className="text-xs text-slate-500 w-24">{t('reports.subscriptions')}</div>
                 <div className="flex-1 h-8 bg-slate-950 rounded-lg overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 flex items-center justify-end px-2"
@@ -237,7 +239,7 @@ export default function Reports() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="text-xs text-slate-500 w-24">Overage</div>
+                <div className="text-xs text-slate-500 w-24">{t('reports.overage')}</div>
                 <div className="flex-1 h-8 bg-slate-950 rounded-lg overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-end px-2"
@@ -250,7 +252,7 @@ export default function Reports() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="text-xs text-slate-500 w-24">Gateways</div>
+                <div className="text-xs text-slate-500 w-24">{t('reports.gateways')}</div>
                 <div className="flex-1 h-8 bg-slate-950 rounded-lg overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-end px-2"
@@ -273,20 +275,20 @@ export default function Reports() {
               <TrendingUp className="w-6 h-6 text-rose-500" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-white">Cost Breakdown</h2>
-              <p className="text-xs text-slate-500">Expenses by category</p>
+              <h2 className="text-xl font-black text-white">{t('reports.cost_breakdown')}</h2>
+              <p className="text-xs text-slate-500">{t('reports.expenses_by_category')}</p>
             </div>
           </div>
 
           <div className="space-y-4">
             <CostItem
-              label="Message Costs"
+              label={t('reports.message_costs')}
               amount={reports.costs.messages}
               percentage={(reports.costs.messages / reports.costs.total * 100).toFixed(1)}
               color="bg-rose-500"
             />
             <CostItem
-              label="Infrastructure"
+              label={t('reports.infrastructure')}
               amount={reports.costs.infrastructure}
               percentage={(reports.costs.infrastructure / reports.costs.total * 100).toFixed(1)}
               color="bg-orange-500"
@@ -296,13 +298,13 @@ export default function Reports() {
           {/* Profit Summary */}
           <div className="mt-6 pt-6 border-t border-slate-800">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-slate-400 font-bold">Net Profit</span>
+              <span className="text-slate-400 font-bold">{t('reports.net_profit')}</span>
               <span className={`text-2xl font-black ${profitMargin > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 ${profitMargin.toFixed(2)}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-slate-400 font-bold">Profit Margin</span>
+              <span className="text-slate-400 font-bold">{t('reports.profit_margin')}</span>
               <span className={`text-xl font-black ${profitMargin > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 {profitPercentage}%
               </span>
@@ -320,8 +322,8 @@ export default function Reports() {
               <Package className="w-6 h-6 text-blue-500" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-white">Customer Distribution</h2>
-              <p className="text-xs text-slate-500">By package type</p>
+              <h2 className="text-xl font-black text-white">{t('reports.customer_distribution')}</h2>
+              <p className="text-xs text-slate-500">{t('reports.by_package_type')}</p>
             </div>
           </div>
 
@@ -337,7 +339,7 @@ export default function Reports() {
                   </div>
                   <div>
                     <div className="font-bold text-white">{pkg.name}</div>
-                    <div className="text-xs text-slate-500">{pkg.count} customers</div>
+                    <div className="text-xs text-slate-500">{t('reports.customers_count', { count: pkg.count })}</div>
                   </div>
                 </div>
                 <div className="text-right">
@@ -357,27 +359,27 @@ export default function Reports() {
               <Activity className="w-6 h-6 text-purple-500" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-white">Subscription Stats</h2>
-              <p className="text-xs text-slate-500">Renewals and cancellations</p>
+              <h2 className="text-xl font-black text-white">{t('reports.subscription_stats')}</h2>
+              <p className="text-xs text-slate-500">{t('reports.renewals_and_cancellations')}</p>
             </div>
           </div>
 
           <div className="space-y-6">
             <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-slate-400 font-bold">Renewals</span>
+                <span className="text-slate-400 font-bold">{t('reports.renewals')}</span>
                 <div className="flex items-center gap-2 text-emerald-400">
                   <ArrowUpRight className="w-4 h-4" />
                   <span className="font-bold">{reports.subscriptions.renewals}</span>
                 </div>
               </div>
               <div className="text-2xl font-black text-white">{reports.subscriptions.renewalRate}%</div>
-              <div className="text-xs text-slate-500 mt-1">Renewal rate</div>
+              <div className="text-xs text-slate-500 mt-1">{t('reports.renewal_rate')}</div>
             </div>
 
             <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-slate-400 font-bold">Cancellations</span>
+                <span className="text-slate-400 font-bold">{t('reports.cancellations')}</span>
                 <div className="flex items-center gap-2 text-rose-400">
                   <ArrowDownRight className="w-4 h-4" />
                   <span className="font-bold">{reports.subscriptions.cancellations}</span>
@@ -386,7 +388,7 @@ export default function Reports() {
               <div className="text-2xl font-black text-white">
                 {(100 - reports.subscriptions.renewalRate).toFixed(1)}%
               </div>
-              <div className="text-xs text-slate-500 mt-1">Cancellation rate</div>
+              <div className="text-xs text-slate-500 mt-1">{t('reports.cancellation_rate')}</div>
             </div>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   Server, Cpu, HardDrive, Network, AlertTriangle, 
   CheckCircle, XCircle, Settings, TrendingUp, Clock, Activity,
@@ -8,6 +9,7 @@ import { API_BASE_URL } from '../config';
 import apiClient from '../api/axios';
 
 export default function GatewayDetails({ gatewayId, onClose }) {
+  const { t } = useTranslation();
   const [gateway, setGateway] = useState(null);
   const [quotas, setQuotas] = useState(null);
   const [usage, setUsage] = useState(null);
@@ -56,7 +58,7 @@ export default function GatewayDetails({ gatewayId, onClose }) {
     return (
       <div className="flex flex-col items-center justify-center py-20 space-y-4">
         <div className="w-12 h-12 border-4 border-rose-500/20 border-t-rose-500 rounded-full animate-spin"></div>
-        <p className="text-slate-500 font-bold animate-pulse">Accessing Secure Node Details...</p>
+        <p className="text-slate-500 font-bold animate-pulse">{t('gatewayDetails.loading')}</p>
       </div>
     );
   }
@@ -65,7 +67,7 @@ export default function GatewayDetails({ gatewayId, onClose }) {
     return (
       <div className="text-center py-24 bg-slate-950 rounded-3xl border border-slate-800 border-dashed">
         <XCircle className="w-16 h-16 text-slate-800 mx-auto mb-4" />
-        <p className="text-slate-500 font-bold">Node not found in local grid.</p>
+        <p className="text-slate-500 font-bold">{t('gatewayDetails.notFound')}</p>
       </div>
     );
   }
@@ -76,6 +78,15 @@ export default function GatewayDetails({ gatewayId, onClose }) {
       case 'suspended':  return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
       case 'terminated': return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
       default:           return 'bg-slate-500/10 text-slate-400 border-slate-800';
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'active':     return t('gatewayDetails.statusActive');
+      case 'suspended':  return t('gatewayDetails.statusSuspended');
+      case 'terminated': return t('gatewayDetails.statusTerminated');
+      default:           return status;
     }
   };
 
@@ -96,7 +107,7 @@ export default function GatewayDetails({ gatewayId, onClose }) {
               <div className="flex items-center gap-3 mb-1">
                 <h2 className="text-3xl font-black text-white">{gateway.gateway_name}</h2>
                 <span className={`px-3 py-1 text-[10px] font-black uppercase rounded-xl border ${getStatusStyles(gateway.status)}`}>
-                    {gateway.status}
+                    {getStatusLabel(gateway.status)}
                 </span>
               </div>
               <p className="text-slate-500 font-bold flex items-center gap-2">
@@ -107,10 +118,10 @@ export default function GatewayDetails({ gatewayId, onClose }) {
           </div>
           
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-            <InfoBox label="Network Type" value={gateway.subscription_type} />
-            <InfoBox label="Deployment" value={new Date(gateway.created_at).toLocaleDateString()} />
-            <InfoBox label="Latency" value="12ms" />
-            <InfoBox label="Uptime" value={`${gateway.uptime_percentage || 0}%`} />
+            <InfoBox label={t('gatewayDetails.networkType')} value={gateway.subscription_type} />
+            <InfoBox label={t('gatewayDetails.deployment')} value={new Date(gateway.created_at).toLocaleDateString()} />
+            <InfoBox label={t('gatewayDetails.latency')} value="12ms" />
+            <InfoBox label={t('gatewayDetails.uptime')} value={`${gateway.uptime_percentage || 0}%`} />
           </div>
         </div>
       </div>
@@ -123,14 +134,14 @@ export default function GatewayDetails({ gatewayId, onClose }) {
                     <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-500">
                         <Settings className="w-5 h-5" />
                     </div>
-                    Resource Quotas
+                    {t('gatewayDetails.resourceQuotas')}
                 </h3>
                 {!editMode ? (
                     <button
                         onClick={() => setEditMode(true)}
                         className="px-6 py-2.5 bg-slate-950 border border-slate-800 text-slate-400 hover:text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all"
                     >
-                        Modify Node
+                        {t('gatewayDetails.modifyNode')}
                     </button>
                 ) : (
                     <div className="flex gap-3">
@@ -152,10 +163,10 @@ export default function GatewayDetails({ gatewayId, onClose }) {
 
             {quotas && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <QuotaInput icon={Cpu} label="CPU Capacity" value={editMode ? quotaForm.max_cpu_percent : quotas.max_cpu_percent} unit="%" editMode={editMode} onChange={(val) => setQuotaForm({...quotaForm, max_cpu_percent: val})} />
-                    <QuotaInput icon={HardDrive} label="Memory Cap" value={editMode ? quotaForm.max_memory_mb : quotas.max_memory_mb} unit="MB" editMode={editMode} onChange={(val) => setQuotaForm({...quotaForm, max_memory_mb: val})} />
-                    <QuotaInput icon={Network} label="Network BW" value={editMode ? quotaForm.max_bandwidth_mbps : quotas.max_bandwidth_mbps} unit="Mbps" editMode={editMode} onChange={(val) => setQuotaForm({...quotaForm, max_bandwidth_mbps: val})} />
-                    <QuotaInput icon={TrendingUp} label="Request Limit" value={editMode ? quotaForm.api_rate_limit : quotas.api_rate_limit} unit="R/M" editMode={editMode} onChange={(val) => setQuotaForm({...quotaForm, api_rate_limit: val})} />
+                    <QuotaInput icon={Cpu} label={t('gatewayDetails.cpuCapacity')} value={editMode ? quotaForm.max_cpu_percent : quotas.max_cpu_percent} unit="%" editMode={editMode} onChange={(val) => setQuotaForm({...quotaForm, max_cpu_percent: val})} />
+                    <QuotaInput icon={HardDrive} label={t('gatewayDetails.memoryCap')} value={editMode ? quotaForm.max_memory_mb : quotas.max_memory_mb} unit="MB" editMode={editMode} onChange={(val) => setQuotaForm({...quotaForm, max_memory_mb: val})} />
+                    <QuotaInput icon={Network} label={t('gatewayDetails.networkBw')} value={editMode ? quotaForm.max_bandwidth_mbps : quotas.max_bandwidth_mbps} unit="Mbps" editMode={editMode} onChange={(val) => setQuotaForm({...quotaForm, max_bandwidth_mbps: val})} />
+                    <QuotaInput icon={TrendingUp} label={t('gatewayDetails.requestLimit')} value={editMode ? quotaForm.api_rate_limit : quotas.api_rate_limit} unit="R/M" editMode={editMode} onChange={(val) => setQuotaForm({...quotaForm, api_rate_limit: val})} />
                 </div>
             )}
           </div>
@@ -166,14 +177,14 @@ export default function GatewayDetails({ gatewayId, onClose }) {
                 <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-500">
                     <Activity className="w-5 h-5" />
                 </div>
-                Live Utilization
+                {t('gatewayDetails.liveUtilization')}
             </h3>
 
             <div className="space-y-8">
-                <UsageMeter label="CPU Allocation" used={usage?.cpu_usage || 0} limit={quotas?.max_cpu_percent} unit="%" />
-                <UsageMeter label="Memory Buffer" used={usage?.memory_usage_mb || 0} limit={quotas?.max_memory_mb} unit="MB" />
-                <UsageMeter label="Bandwidth Flow" used={usage?.bandwidth_usage_mbps || 0} limit={quotas?.max_bandwidth_mbps} unit="Mbps" />
-                <UsageMeter label="API Throughput" used={usage?.api_requests_per_min || 0} limit={quotas?.api_rate_limit} unit="R/M" />
+                <UsageMeter label={t('gatewayDetails.cpuAllocation')} used={usage?.cpu_usage || 0} limit={quotas?.max_cpu_percent} unit="%" />
+                <UsageMeter label={t('gatewayDetails.memoryBuffer')} used={usage?.memory_usage_mb || 0} limit={quotas?.max_memory_mb} unit="MB" />
+                <UsageMeter label={t('gatewayDetails.bandwidthFlow')} used={usage?.bandwidth_usage_mbps || 0} limit={quotas?.max_bandwidth_mbps} unit="Mbps" />
+                <UsageMeter label={t('gatewayDetails.apiThroughput')} used={usage?.api_requests_per_min || 0} limit={quotas?.api_rate_limit} unit="R/M" />
             </div>
           </div>
       </div>

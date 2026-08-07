@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 
 export default function Login() {
+    const { t } = useTranslation();
     const { user, login, loginWithToken } = useAuth();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -44,7 +46,7 @@ export default function Login() {
             if (err.isRateLimitError) {
                 setError(`تم تجاوز الحد المسموح من الطلبات. يرجى المحاولة بعد ${err.retryAfter} ثانية.`);
             } else {
-                setError(err.response?.data?.error || err.message || 'Invalid email or password');
+                setError(err.response?.data?.error || err.message || t('login.invalid_credentials'));
             }
             setLoading(false);
         }
@@ -59,7 +61,7 @@ export default function Login() {
                         <span className="text-white text-3xl font-bold">H</span>
                     </div>
                     <h1 className="text-4xl font-black text-white mb-2">ALHudhudAI</h1>
-                    <p className="text-slate-400 text-sm font-medium">Tenant Dashboard Login</p>
+                    <p className="text-slate-400 text-sm font-medium">{t('login.subtitle')}</p>
                 </div>
 
                 {/* Login Card */}
@@ -75,7 +77,7 @@ export default function Login() {
                         {/* Email Input */}
                         <div>
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                                Business Email
+                                {t('login.business_email')}
                             </label>
                             <input
                                 type="email"
@@ -91,7 +93,7 @@ export default function Login() {
                         {/* Password Input */}
                         <div>
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                                Password
+                                {t('login.password')}
                             </label>
                             <input
                                 type="password"
@@ -110,13 +112,13 @@ export default function Login() {
                             disabled={loading}
                             className="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 rounded-lg transition-all disabled:opacity-50"
                         >
-                            {loading ? 'Authenticating...' : 'Sign In'}
+                            {loading ? t('login.authenticating') : t('login.sign_in')}
                         </button>
                     </form>
 
                     <div className="mt-6 pt-6 border-t border-slate-800">
                         <p className="text-xs text-slate-500 text-center">
-                            Don't have an account? <Link to="/register" className="text-rose-500 font-bold hover:text-rose-400">Register Now</Link>
+                            {t('login.no_account')} <Link to="/register" className="text-rose-500 font-bold hover:text-rose-400">{t('login.register_now')}</Link>
                         </p>
                     </div>
                 </div>

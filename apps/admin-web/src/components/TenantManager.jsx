@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Users, Search, Smartphone, Filter, MoreVertical, Shield, Battery, Wifi, WifiOff, FileText, Wallet, Clock, CheckCircle, XCircle, ChevronRight, ArrowLeft, Key, Lock, Trash2, Edit, Plus, DollarSign, Download } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Users, Search, Smartphone, Shield, Battery, Wifi, WifiOff, Wallet, Clock, CheckCircle, XCircle, ChevronRight, ArrowLeft, Key, Lock, Trash2, Plus, DollarSign, Download } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import apiClient from '../api/axios';
 
 export default function TenantManager() {
+    const { t } = useTranslation();
     const [view, setView] = useState('list'); // 'list' or 'detail'
     const [selectedTenant, setSelectedTenant] = useState(null);
     const [activeTab, setActiveTab] = useState('overview'); // for detail view: 'overview', 'devices', 'subscription', 'finance'
@@ -156,7 +158,7 @@ export default function TenantManager() {
 
     const handleBulkAction = async (action) => {
         if (!selectedIds.length) return;
-        if (!confirm(`Are you sure you want to ${action} ${selectedIds.length} tenants?`)) return;
+        if (!confirm(t('tenantManager.confirm_bulk', { action: t(`tenantManager.${action}`), count: selectedIds.length }))) return;
 
         try {
             const url = action === 'delete' 
@@ -256,16 +258,16 @@ export default function TenantManager() {
                         <div>
                             <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                                 <Users className="w-6 h-6 text-rose-500" />
-                                Tenant Management
+                                {t('tenantManager.title')}
                             </h2>
-                            <p className="text-slate-400 text-sm mt-1">Monitor users, manage subscriptions, and oversee connected devices.</p>
+                            <p className="text-slate-400 text-sm mt-1">{t('tenantManager.description')}</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-3">
                             <div className="relative">
                                 <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3.5" />
                                 <input
                                     type="text"
-                                    placeholder="Search tenants..."
+                                    placeholder={t('tenantManager.search_placeholder')}
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-rose-500 outline-none w-64"
@@ -277,10 +279,10 @@ export default function TenantManager() {
                                 onChange={handleFilterChange}
                                 className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-300 focus:ring-1 focus:ring-rose-500 outline-none"
                             >
-                                <option value="">All Statuses</option>
-                                <option value="ACTIVE">Active</option>
-                                <option value="SUSPENDED">Suspended</option>
-                                <option value="PENDING_SETUP">Pending Setup</option>
+                                <option value="">{t('tenantManager.all_statuses')}</option>
+                                <option value="ACTIVE">{t('tenantManager.active')}</option>
+                                <option value="SUSPENDED">{t('tenantManager.suspended')}</option>
+                                <option value="PENDING_SETUP">{t('tenantManager.pending_setup')}</option>
                             </select>
                             <select
                                 name="sector"
@@ -288,15 +290,15 @@ export default function TenantManager() {
                                 onChange={handleFilterChange}
                                 className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-300 focus:ring-1 focus:ring-rose-500 outline-none"
                             >
-                                <option value="">All Sectors</option>
-                                <option value="Retail">Retail</option>
-                                <option value="Healthcare">Healthcare</option>
-                                <option value="Education">Education</option>
-                                <option value="Finance">Finance</option>
-                                <option value="Technology">Technology</option>
-                                <option value="Other">Other</option>
+                                <option value="">{t('tenantManager.all_sectors')}</option>
+                                <option value="Retail">{t('tenantManager.retail')}</option>
+                                <option value="Healthcare">{t('tenantManager.healthcare')}</option>
+                                <option value="Education">{t('tenantManager.education')}</option>
+                                <option value="Finance">{t('tenantManager.finance')}</option>
+                                <option value="Technology">{t('tenantManager.technology')}</option>
+                                <option value="Other">{t('tenantManager.other')}</option>
                             </select>
-                            <button onClick={exportToCSV} className="p-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition-colors" title="Export to CSV">
+                            <button onClick={exportToCSV} className="p-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition-colors" title={t('tenantManager.export_csv')}>
                                 <Download className="w-4 h-4" />
                             </button>
                             <button 
@@ -304,7 +306,7 @@ export default function TenantManager() {
                                 className="flex items-center gap-2 px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-rose-900/20"
                             >
                                 <Plus className="w-4 h-4" />
-                                Add Tenant
+                                {t('tenantManager.add_tenant')}
                             </button>
                         </div>
                     </div>
@@ -319,26 +321,26 @@ export default function TenantManager() {
                                             {selectedIds.length === tenants.length && tenants.length > 0 ? <CheckCircle className="w-5 h-5 text-rose-500" /> : <Shield className="w-5 h-5 opacity-20" />}
                                         </button>
                                     </th>
-                                    <th className="px-6 py-4">Tenant Info</th>
-                                    <th className="px-6 py-4">Subscription</th>
-                                    <th className="px-6 py-4">Status</th>
-                                    <th className="px-6 py-4">Devices</th>
-                                    <th className="px-6 py-4">Balance</th>
-                                    <th className="px-6 py-4 text-right">Action</th>
+                                    <th className="px-6 py-4">{t('tenantManager.tenant_info')}</th>
+                                    <th className="px-6 py-4">{t('tenantManager.subscription')}</th>
+                                    <th className="px-6 py-4">{t('tenantManager.status')}</th>
+                                    <th className="px-6 py-4">{t('tenantManager.devices')}</th>
+                                    <th className="px-6 py-4">{t('tenantManager.balance')}</th>
+                                    <th className="px-6 py-4 text-right">{t('tenantManager.action')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-800 text-slate-300">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan="6" className="px-6 py-8 text-center text-slate-500">Loading tenants...</td>
+                                        <td colSpan="6" className="px-6 py-8 text-center text-slate-500">{t('tenantManager.loading')}</td>
                                     </tr>
                                 ) : error ? (
                                     <tr>
-                                        <td colSpan="6" className="px-6 py-8 text-center text-rose-500">Error: {error}</td>
+                                        <td colSpan="6" className="px-6 py-8 text-center text-rose-500">{t('tenantManager.error')} {error}</td>
                                     </tr>
                                 ) : tenants.length === 0 ? (
                                     <tr>
-                                        <td colSpan="6" className="px-6 py-8 text-center text-slate-500">No tenants found.</td>
+                                        <td colSpan="6" className="px-6 py-8 text-center text-slate-500">{t('tenantManager.no_tenants')}</td>
                                     </tr>
                                 ) : tenants.map((tenant) => (
                                     <tr key={tenant.id} onClick={() => handleViewTenant(tenant)} className={`hover:bg-slate-800/30 transition-colors cursor-pointer group ${selectedIds.includes(tenant.id) ? 'bg-rose-500/5' : ''}`}>
@@ -376,7 +378,7 @@ export default function TenantManager() {
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-1 text-xs font-medium text-slate-400">
                                                 <Smartphone className="w-4 h-4 text-slate-500" />
-                                                {tenant.devices} Linked
+                                                {t('tenantManager.linked_devices', { count: tenant.devices })}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 font-mono text-emerald-400 font-bold">
@@ -395,14 +397,14 @@ export default function TenantManager() {
                     {selectedIds.length > 0 && (
                         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-700 shadow-2xl rounded-2xl p-4 flex items-center gap-6 animate-in slide-in-from-bottom-8 z-50">
                             <div className="text-sm font-bold text-white pl-2">
-                                <span className="text-rose-500">{selectedIds.length}</span> Tenants Selected
+                                <span className="text-rose-500">{selectedIds.length}</span> {t('tenantManager.tenants_selected')}
                             </div>
                             <div className="h-8 w-px bg-slate-800" />
                             <div className="flex gap-2">
-                                <button onClick={() => handleBulkAction('activate')} className="px-4 py-2 bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-xl text-xs font-bold transition-all">Activate</button>
-                                <button onClick={() => handleBulkAction('suspend')} className="px-4 py-2 bg-amber-600/10 text-amber-400 hover:bg-amber-600 hover:text-white rounded-xl text-xs font-bold transition-all">Suspend</button>
+                                <button onClick={() => handleBulkAction('activate')} className="px-4 py-2 bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-xl text-xs font-bold transition-all">{t('tenantManager.activate')}</button>
+                                <button onClick={() => handleBulkAction('suspend')} className="px-4 py-2 bg-amber-600/10 text-amber-400 hover:bg-amber-600 hover:text-white rounded-xl text-xs font-bold transition-all">{t('tenantManager.suspend')}</button>
                                 <button onClick={() => handleBulkAction('delete')} className="px-4 py-2 bg-rose-600/10 text-rose-400 hover:bg-rose-600 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2">
-                                    <Trash2 className="w-3 h-3" /> Delete
+                                    <Trash2 className="w-3 h-3" /> {t('tenantManager.delete')}
                                 </button>
                             </div>
                             <button onClick={() => setSelectedIds([])} className="p-2 text-slate-500 hover:text-white transition-colors">
@@ -414,7 +416,11 @@ export default function TenantManager() {
                     {/* Pagination Controls */}
                     <div className="flex items-center justify-between px-2">
                         <p className="text-xs text-slate-500">
-                            Showing <span className="text-white">{(page - 1) * pageSize + 1}</span> to <span className="text-white">{Math.min(page * pageSize, totalCount)}</span> of <span className="text-white">{totalCount}</span> tenants
+                            {t('tenantManager.showing', {
+                                from: (page - 1) * pageSize + 1,
+                                to: Math.min(page * pageSize, totalCount),
+                                total: totalCount
+                            })}
                         </p>
                         <div className="flex gap-2">
                             <button
@@ -422,7 +428,7 @@ export default function TenantManager() {
                                 disabled={page === 1}
                                 className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-xs font-bold text-white transition-colors"
                             >
-                                Previous
+                                {t('tenantManager.previous')}
                             </button>
                             <div className="flex items-center gap-1">
                                 {[...Array(Math.ceil(totalCount / pageSize))].map((_, i) => (
@@ -440,7 +446,7 @@ export default function TenantManager() {
                                 disabled={page >= Math.ceil(totalCount / pageSize)}
                                 className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-xs font-bold text-white transition-colors"
                             >
-                                Next
+                                {t('tenantManager.next')}
                             </button>
                         </div>
                     </div>
@@ -449,7 +455,7 @@ export default function TenantManager() {
                 <div className="space-y-6">
                     {/* Detail View Header */}
                     <button onClick={() => setView('list')} className="text-slate-400 hover:text-white flex items-center gap-2 text-sm font-bold transition-colors mb-2">
-                        <ArrowLeft className="w-4 h-4" /> Back to Tenants List
+                        <ArrowLeft className="w-4 h-4" /> {t('tenantManager.back_to_list')}
                     </button>
 
                     <div className="glass-card border border-slate-800 bg-slate-900/40 rounded-3xl p-6 relative overflow-hidden">
@@ -465,7 +471,7 @@ export default function TenantManager() {
                                         <h2 className="text-3xl font-bold text-white mb-2">{selectedTenant.business}</h2>
                                         <div className="flex items-center gap-4 text-sm text-slate-400">
                                             <span className="flex items-center gap-1"><Users className="w-4 h-4" /> {selectedTenant.name}</span>
-                                            <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> Joined: {selectedTenant.joined}</span>
+                                            <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> {t('tenantManager.joined')} {selectedTenant.joined}</span>
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
@@ -473,33 +479,33 @@ export default function TenantManager() {
                                             onClick={() => setShowPaymentModal(true)}
                                             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-sm transition-colors shadow-lg shadow-emerald-900/20 flex items-center gap-2"
                                         >
-                                            <DollarSign className="w-4 h-4" /> Manual Top-Up
+                                            <DollarSign className="w-4 h-4" /> {t('tenantManager.manual_top_up')}
                                         </button>
                                         <button 
                                             onClick={() => handleImpersonate(selectedTenant.id)}
                                             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm transition-colors shadow-lg shadow-indigo-900/20 flex items-center gap-2"
                                         >
-                                            <Lock className="w-4 h-4" /> Login
+                                            <Lock className="w-4 h-4" /> {t('tenantManager.login')}
                                         </button>
-                                        <button className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold text-sm transition-colors shadow-lg shadow-rose-900/20">Suspend Account</button>
+                                        <button className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold text-sm transition-colors shadow-lg shadow-rose-900/20">{t('tenantManager.suspend_account')}</button>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
                                     <div className="bg-slate-950/50 p-4 rounded-xl border border-slate-800/50">
-                                        <p className="text-xs text-slate-500 uppercase font-bold">Current Balance</p>
+                                        <p className="text-xs text-slate-500 uppercase font-bold">{t('tenantManager.current_balance')}</p>
                                         <p className="text-xl font-bold text-emerald-400 mt-1">${selectedTenant.balance.toFixed(2)}</p>
                                     </div>
                                     <div className="bg-slate-950/50 p-4 rounded-xl border border-slate-800/50">
-                                        <p className="text-xs text-slate-500 uppercase font-bold">Plan</p>
+                                        <p className="text-xs text-slate-500 uppercase font-bold">{t('tenantManager.plan')}</p>
                                         <p className="text-xl font-bold text-white mt-1">{selectedTenant.plan}</p>
                                     </div>
                                     <div className="bg-slate-950/50 p-4 rounded-xl border border-slate-800/50">
-                                        <p className="text-xs text-slate-500 uppercase font-bold">Devices</p>
+                                        <p className="text-xs text-slate-500 uppercase font-bold">{t('tenantManager.devices_count')}</p>
                                         <p className="text-xl font-bold text-white mt-1">{selectedTenant.devices} / 10</p>
                                     </div>
                                     <div className="bg-slate-950/50 p-4 rounded-xl border border-slate-800/50">
-                                        <p className="text-xs text-slate-500 uppercase font-bold">Status</p>
+                                        <p className="text-xs text-slate-500 uppercase font-bold">{t('tenantManager.status')}</p>
                                         <p className={`text-xl font-bold mt-1 ${selectedTenant.status === 'Active' ? 'text-emerald-400' : 'text-rose-400'}`}>{selectedTenant.status}</p>
                                     </div>
                                 </div>
@@ -516,7 +522,7 @@ export default function TenantManager() {
                                 className={`px-6 py-3 text-sm font-bold capitalize transition-colors relative ${activeTab === tab ? 'text-rose-500' : 'text-slate-500 hover:text-white'
                                     }`}
                             >
-                                {tab}
+                                {t(`tenantManager.tabs.${tab}`)}
                                 {activeTab === tab && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-rose-500 rounded-t-full" />}
                             </button>
                         ))}
@@ -528,28 +534,28 @@ export default function TenantManager() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-bottom-2 fade-in">
                                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
                                     <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-                                        <Shield className="w-5 h-5 text-rose-500" /> Security & Access
+                                        <Shield className="w-5 h-5 text-rose-500" /> {t('tenantManager.security_access')}
                                     </h3>
                                     <div className="space-y-4">
                                         <div className="flex justify-between items-center p-4 bg-slate-950 rounded-xl border border-slate-800">
                                             <div className="flex items-center gap-3">
                                                 <Key className="w-5 h-5 text-slate-500" />
                                                 <div>
-                                                    <p className="text-sm font-bold text-white">Password Reset</p>
-                                                    <p className="text-xs text-slate-500">Send a password reset link to user email</p>
+                                                    <p className="text-sm font-bold text-white">{t('tenantManager.password_reset')}</p>
+                                                    <p className="text-xs text-slate-500">{t('tenantManager.password_reset_desc')}</p>
                                                 </div>
                                             </div>
-                                            <button className="text-xs font-bold text-white bg-slate-800 px-3 py-2 rounded-lg hover:bg-slate-700">Send Link</button>
+                                            <button className="text-xs font-bold text-white bg-slate-800 px-3 py-2 rounded-lg hover:bg-slate-700">{t('tenantManager.send_link')}</button>
                                         </div>
                                         <div className="flex justify-between items-center p-4 bg-slate-950 rounded-xl border border-slate-800">
                                             <div className="flex items-center gap-3">
                                                 <Lock className="w-5 h-5 text-slate-500" />
                                                 <div>
-                                                    <p className="text-sm font-bold text-white">API Access</p>
-                                                    <p className="text-xs text-slate-500">Manage API keys and developer access</p>
+                                                    <p className="text-sm font-bold text-white">{t('tenantManager.api_access')}</p>
+                                                    <p className="text-xs text-slate-500">{t('tenantManager.api_access_desc')}</p>
                                                 </div>
                                             </div>
-                                            <button className="text-xs font-bold text-white bg-slate-800 px-3 py-2 rounded-lg hover:bg-slate-700">Manage Keys</button>
+                                            <button className="text-xs font-bold text-white bg-slate-800 px-3 py-2 rounded-lg hover:bg-slate-700">{t('tenantManager.manage_keys')}</button>
                                         </div>
                                     </div>
                                 </div>
@@ -576,26 +582,26 @@ export default function TenantManager() {
 
                                         <div className="space-y-2 mb-6">
                                             <div className="flex justify-between text-xs">
-                                                <span className="text-slate-500">Battery</span>
+                                                <span className="text-slate-500">{t('tenantManager.battery')}</span>
                                                 <span className={`font-bold flex items-center gap-1 ${device.battery < 20 ? 'text-rose-400' : 'text-emerald-400'}`}>
                                                     <Battery className="w-3 h-3" /> {device.battery}%
                                                 </span>
                                             </div>
                                             <div className="flex justify-between text-xs">
-                                                <span className="text-slate-500">Last Seen</span>
+                                                <span className="text-slate-500">{t('tenantManager.last_seen')}</span>
                                                 <span className="text-slate-400">{device.last_seen}</span>
                                             </div>
                                         </div>
 
                                         <button className="w-full py-2 rounded-xl text-rose-500 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-xs font-bold flex items-center justify-center gap-2 transition-colors">
-                                            <Trash2 className="w-4 h-4" /> Unlink Device
+                                            <Trash2 className="w-4 h-4" /> {t('tenantManager.unlink_device')}
                                         </button>
                                     </div>
                                 ))}
                                 {selectedTenant.device_list.length === 0 && (
                                     <div className="col-span-full py-12 text-center text-slate-500 border border-dashed border-slate-800 rounded-3xl">
                                         <Smartphone className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                                        <p>No devices linked to this account.</p>
+                                        <p>{t('tenantManager.no_devices')}</p>
                                     </div>
                                 )}
                             </div>
@@ -604,53 +610,53 @@ export default function TenantManager() {
                         {activeTab === 'subscription' && (
                             <div className="animate-in slide-in-from-bottom-2 fade-in">
                                 {detailLoading ? (
-                                    <div className="py-20 text-center text-slate-500">Loading subscription details...</div>
+                                    <div className="py-20 text-center text-slate-500">{t('tenantManager.loading_subscription')}</div>
                                 ) : subscriptionData ? (
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                         <div className="md:col-span-2 bg-slate-900 border border-slate-800 rounded-3xl p-6">
                                             <h3 className="font-bold text-white mb-6 flex items-center gap-2 text-lg">
-                                                <CheckCircle className="w-5 h-5 text-emerald-500" /> Active Subscription
+                                                <CheckCircle className="w-5 h-5 text-emerald-500" /> {t('tenantManager.active_subscription')}
                                             </h3>
                                             <div className="grid grid-cols-2 gap-8">
                                                 <div>
-                                                    <p className="text-xs text-slate-500 uppercase font-bold mb-1">Package Name</p>
+                                                    <p className="text-xs text-slate-500 uppercase font-bold mb-1">{t('tenantManager.package_name')}</p>
                                                     <p className="text-xl font-bold text-white">{subscriptionData.package?.name || 'N/A'}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-xs text-slate-500 uppercase font-bold mb-1">Status</p>
+                                                    <p className="text-xs text-slate-500 uppercase font-bold mb-1">{t('tenantManager.status')}</p>
                                                     <span className="px-2 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-xs font-bold uppercase">
                                                         {subscriptionData.subscription?.status}
                                                     </span>
                                                 </div>
                                                 <div>
-                                                    <p className="text-xs text-slate-500 uppercase font-bold mb-1">Start Date</p>
+                                                    <p className="text-xs text-slate-500 uppercase font-bold mb-1">{t('tenantManager.start_date')}</p>
                                                     <p className="text-white font-medium">{new Date(subscriptionData.subscription?.start_date).toLocaleDateString()}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-xs text-slate-500 uppercase font-bold mb-1">Expiry Date</p>
+                                                    <p className="text-xs text-slate-500 uppercase font-bold mb-1">{t('tenantManager.expiry_date')}</p>
                                                     <p className="text-white font-medium">{new Date(subscriptionData.subscription?.end_date).toLocaleDateString()}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-xs text-slate-500 uppercase font-bold mb-1">Auto Renew</p>
-                                                    <p className="text-white font-medium">{subscriptionData.subscription?.auto_renew ? 'Enabled' : 'Disabled'}</p>
+                                                    <p className="text-xs text-slate-500 uppercase font-bold mb-1">{t('tenantManager.auto_renew')}</p>
+                                                    <p className="text-white font-medium">{subscriptionData.subscription?.auto_renew ? t('tenantManager.enabled') : t('tenantManager.disabled')}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-xs text-slate-500 uppercase font-bold mb-1">Messages Used</p>
+                                                    <p className="text-xs text-slate-500 uppercase font-bold mb-1">{t('tenantManager.messages_used')}</p>
                                                     <p className="text-white font-medium">{subscriptionData.subscription?.messages_used} / {subscriptionData.package?.included_messages || 'Unlimited'}</p>
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
-                                            <h3 className="font-bold text-white mb-4">Quick Actions</h3>
+                                            <h3 className="font-bold text-white mb-4">{t('tenantManager.quick_actions')}</h3>
                                             <div className="space-y-3">
-                                                <button className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-bold transition-colors">Change Package</button>
-                                                <button className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-bold transition-colors">Cancel Subscription</button>
-                                                <button className="w-full py-3 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-xl text-sm font-bold transition-colors">Terminate Immediately</button>
+                                                <button className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-bold transition-colors">{t('tenantManager.change_package')}</button>
+                                                <button className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-bold transition-colors">{t('tenantManager.cancel_subscription')}</button>
+                                                <button className="w-full py-3 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-xl text-sm font-bold transition-colors">{t('tenantManager.terminate_immediately')}</button>
                                             </div>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="py-20 text-center text-slate-500">No active subscription found.</div>
+                                    <div className="py-20 text-center text-slate-500">{t('tenantManager.no_active_subscription')}</div>
                                 )}
                             </div>
                         )}
@@ -658,24 +664,24 @@ export default function TenantManager() {
                         {activeTab === 'finance' && (
                             <div className="animate-in slide-in-from-bottom-2 fade-in">
                                 {detailLoading ? (
-                                    <div className="py-20 text-center text-slate-500">Loading transactions...</div>
+                                    <div className="py-20 text-center text-slate-500">{t('tenantManager.loading_transactions')}</div>
                                 ) : (
                                     <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden">
                                         <div className="overflow-x-auto w-full">
 <table className="w-full text-left font-sans">
                                             <thead className="bg-slate-800/50 text-slate-400 text-[10px] uppercase tracking-widest font-bold">
                                                 <tr>
-                                                    <th className="px-6 py-4">Transaction ID</th>
-                                                    <th className="px-6 py-4">Amount</th>
-                                                    <th className="px-6 py-4">Gateway</th>
-                                                    <th className="px-6 py-4">Status</th>
-                                                    <th className="px-6 py-4">Date</th>
+                                                    <th className="px-6 py-4">{t('tenantManager.transaction_id')}</th>
+                                                    <th className="px-6 py-4">{t('tenantManager.amount')}</th>
+                                                    <th className="px-6 py-4">{t('tenantManager.gateway')}</th>
+                                                    <th className="px-6 py-4">{t('tenantManager.status')}</th>
+                                                    <th className="px-6 py-4">{t('tenantManager.date')}</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-800 text-slate-300">
                                                 {transactions.length === 0 ? (
                                                     <tr>
-                                                        <td colSpan="5" className="px-6 py-8 text-center text-slate-500">No transactions recorded.</td>
+                                                        <td colSpan="5" className="px-6 py-8 text-center text-slate-500">{t('tenantManager.no_transactions')}</td>
                                                     </tr>
                                                 ) : transactions.map(tx => (
                                                     <tr key={tx.id} className="hover:bg-slate-800/30 transition-colors">
@@ -720,14 +726,14 @@ export default function TenantManager() {
                                 <DollarSign className="w-6 h-6 text-emerald-500" />
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-white">Manual Payment Entry</h3>
-                                <p className="text-xs text-slate-500">Add balance for {selectedTenant?.business}</p>
+                                <h3 className="text-xl font-bold text-white">{t('tenantManager.manual_payment_entry')}</h3>
+                                <p className="text-xs text-slate-500">{t('tenantManager.add_balance_for', { business: selectedTenant?.business })}</p>
                             </div>
                         </div>
 
                         <div className="space-y-4">
                             <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Amount (SAR)</label>
+                                <label className="text-xs font-bold text-slate-500 uppercase block mb-2">{t('tenantManager.amount_sar')}</label>
                                 <div className="relative">
                                     <DollarSign className="w-4 h-4 text-slate-500 absolute left-3 top-3.5" />
                                     <input
@@ -739,30 +745,30 @@ export default function TenantManager() {
                             </div>
 
                             <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Payment Method</label>
+                                <label className="text-xs font-bold text-slate-500 uppercase block mb-2">{t('tenantManager.payment_method')}</label>
                                 <select className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500">
-                                    <option>Bank Transfer</option>
-                                    <option>Cash</option>
-                                    <option>STC Pay</option>
-                                    <option>Credit Card</option>
-                                    <option>Other</option>
+                                    <option>{t('tenantManager.bank_transfer')}</option>
+                                    <option>{t('tenantManager.cash')}</option>
+                                    <option>{t('tenantManager.stc_pay')}</option>
+                                    <option>{t('tenantManager.credit_card')}</option>
+                                    <option>{t('tenantManager.other')}</option>
                                 </select>
                             </div>
 
                             <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Reference Number (Optional)</label>
+                                <label className="text-xs font-bold text-slate-500 uppercase block mb-2">{t('tenantManager.reference_optional')}</label>
                                 <input
                                     type="text"
-                                    placeholder="e.g., TRX-123456"
+                                    placeholder={t('tenantManager.reference_placeholder')}
                                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500"
                                 />
                             </div>
 
                             <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Notes</label>
+                                <label className="text-xs font-bold text-slate-500 uppercase block mb-2">{t('tenantManager.notes')}</label>
                                 <textarea
                                     rows="3"
-                                    placeholder="Add any relevant notes about this payment..."
+                                    placeholder={t('tenantManager.notes_placeholder')}
                                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 resize-none"
                                 />
                             </div>
@@ -773,10 +779,10 @@ export default function TenantManager() {
                                 onClick={() => setShowPaymentModal(false)}
                                 className="flex-1 py-3 text-slate-400 font-bold hover:text-white transition-colors"
                             >
-                                Cancel
+                                {t('tenantManager.cancel')}
                             </button>
                             <button className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition-colors shadow-lg shadow-emerald-900/20">
-                                Add Payment
+                                {t('tenantManager.add_payment')}
                             </button>
                         </div>
                     </div>
@@ -789,8 +795,8 @@ export default function TenantManager() {
                     <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden relative">
                         <div className="flex justify-between items-center mb-8">
                             <div>
-                                <h3 className="text-xl font-bold text-white">Add New Tenant</h3>
-                                <p className="text-sm text-slate-500 mt-1">Create a new business account and system access.</p>
+                                <h3 className="text-xl font-bold text-white">{t('tenantManager.add_new_tenant')}</h3>
+                                <p className="text-sm text-slate-500 mt-1">{t('tenantManager.add_tenant_desc')}</p>
                             </div>
                             <button 
                                 onClick={() => setShowAddModal(false)}
@@ -803,51 +809,51 @@ export default function TenantManager() {
                         <form onSubmit={handleCreateTenant} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="col-span-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Business Name</label>
+                                    <label className="text-xs font-bold text-slate-500 uppercase block mb-2">{t('tenantManager.business_name')}</label>
                                     <input
                                         type="text"
                                         required
                                         value={newTenant.business_name}
                                         onChange={(e) => setNewTenant({...newTenant, business_name: e.target.value})}
                                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500"
-                                        placeholder="e.g. Al-Hudhud Logistics"
+                                        placeholder={t('tenantManager.business_placeholder')}
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Contact Person</label>
+                                    <label className="text-xs font-bold text-slate-500 uppercase block mb-2">{t('tenantManager.contact_person')}</label>
                                     <input
                                         type="text"
                                         required
                                         value={newTenant.contact_name}
                                         onChange={(e) => setNewTenant({...newTenant, contact_name: e.target.value})}
                                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500"
-                                        placeholder="Full Name"
+                                        placeholder={t('tenantManager.full_name')}
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Email Address</label>
+                                    <label className="text-xs font-bold text-slate-500 uppercase block mb-2">{t('tenantManager.email_address')}</label>
                                     <input
                                         type="email"
                                         required
                                         value={newTenant.email}
                                         onChange={(e) => setNewTenant({...newTenant, email: e.target.value})}
                                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500"
-                                        placeholder="email@example.com"
+                                        placeholder={t('tenantManager.email_placeholder')}
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Phone Number</label>
+                                    <label className="text-xs font-bold text-slate-500 uppercase block mb-2">{t('tenantManager.phone_number')}</label>
                                     <input
                                         type="text"
                                         required
                                         value={newTenant.phone}
                                         onChange={(e) => setNewTenant({...newTenant, phone: e.target.value})}
                                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500"
-                                        placeholder="9665XXXXXXXX"
+                                        placeholder={t('tenantManager.phone_placeholder')}
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Initial Password</label>
+                                    <label className="text-xs font-bold text-slate-500 uppercase block mb-2">{t('tenantManager.initial_password')}</label>
                                     <input
                                         type="password"
                                         required
@@ -855,7 +861,7 @@ export default function TenantManager() {
                                         value={newTenant.password}
                                         onChange={(e) => setNewTenant({...newTenant, password: e.target.value})}
                                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500"
-                                        placeholder="••••••••"
+                                        placeholder={t('tenantManager.password_placeholder')}
                                     />
                                 </div>
                             </div>
@@ -866,14 +872,14 @@ export default function TenantManager() {
                                     onClick={() => setShowAddModal(false)}
                                     className="flex-1 py-3 text-slate-400 font-bold hover:text-white transition-colors"
                                 >
-                                    Cancel
+                                    {t('tenantManager.cancel')}
                                 </button>
                                 <button 
                                     type="submit"
                                     disabled={createLoading}
                                     className="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-rose-900/20 disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
-                                    {createLoading ? 'Creating...' : 'Create Tenant'}
+                                    {createLoading ? t('tenantManager.creating') : t('tenantManager.create_tenant')}
                                 </button>
                             </div>
                         </form>

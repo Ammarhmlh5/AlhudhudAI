@@ -314,7 +314,7 @@ const TenantsList = () => {
                   <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
                     tn.subscription === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-800 text-slate-400'
                   }`}>
-                    {tn.subscription === 'active' ? t('customers.active') : tn.subscription === 'grace_period' ? 'Grace' : t('customers.sub_none')}
+                    {tn.subscription === 'active' ? t('customers.active') : tn.subscription === 'grace_period' ? t('customers.sub_grace') : t('customers.sub_none')}
                   </span>
                 </td>
                 <td className="px-8 py-6">

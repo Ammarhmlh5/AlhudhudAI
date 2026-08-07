@@ -46,7 +46,7 @@ export default function Login() {
                         <ShieldCheck className="w-10 h-10 text-white" />
                     </div>
                     <h1 className="text-4xl font-black text-white tracking-tighter uppercase mb-2">
-                        Hudhud<span className="text-rose-500">B2B</span>
+                        {t('brand.name')}<span className="text-rose-500">{t('brand.suffix')}</span>
                     </h1>
                     <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-[10px]">{t('brand.tagline')}</p>
                 </div>

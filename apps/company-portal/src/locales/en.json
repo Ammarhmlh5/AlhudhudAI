@@ -1,0 +1,71 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "invoices": "Invoices",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "dashboard": {
+    "title": "Company Portal",
+    "balance": "Current Balance",
+    "balance_description": "Available for subscription packages and service fees",
+    "usage": "Package Usage",
+    "usage_no_subscription": "No active subscription currently.",
+    "subscription": "Current Subscription",
+    "subscription_no": "No active subscription. Choose a package below to subscribe.",
+    "status": "Subscription Status",
+    "start_date": "Start Date",
+    "end_date": "End Date",
+    "auto_renew": "Auto Renewal",
+    "enable_auto_renew": "Enable Auto Renewal",
+    "disable_auto_renew": "Disable Auto Renewal",
+    "packages": "Subscription Packages",
+    "subscribe_now": "Subscribe Now",
+    "current_subscription": "Current Subscription",
+    "messages": "messages",
+    "unlimited": "Unlimited",
+    "overage_rate": "Additional {{rate}} per extra message",
+    "rollover": "Rollover unused messages",
+    "transactions": "Recent Transactions",
+    "no_transactions": "No transactions yet.",
+    "view_all_invoices": "View All Invoices"
+  },
+  "invoices": {
+    "title": "Invoices",
+    "description": "View and download tax invoices",
+    "no_invoices": "No Invoices",
+    "no_invoices_desc": "No invoices have been issued yet.",
+    "invoice_number": "Invoice Number",
+    "customer": "Customer",
+    "amount": "Amount",
+    "vat": "VAT",
+    "total": "Total",
+    "date": "Date",
+    "actions": "Actions",
+    "view": "View",
+    "download": "Download",
+    "currency": "SAR"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "success": "Success",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "close": "Close",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "monthly": "monthly"
+  },
+  "dashboard": {
+    "type": "Type",
+    "amount": "Amount",
+    "date": "Date",
+    "messages_unlimited": "Unlimited",
+    "remaining": "Remaining",
+    "package": "Package",
+    "error_subscribe": "Failed to subscribe.",
+    "error_auto_renew": "Failed to update auto-renewal."
+  }
+}

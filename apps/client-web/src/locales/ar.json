@@ -14,5 +14,146 @@
   "app": {
     "welcome": "مرحباً بعودتك",
     "coming_soon": "هذه الصفحة قيد التطوير وسيتم توفيرها قريباً..."
+  },
+  "common": {
+    "search": "بحث",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "status": "الحالة",
+    "actions": "إجراءات",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "loading": "جارٍ التحميل...",
+    "n/a": "غير متوفر",
+    "none": "لا شيء",
+    "close": "إغلاق",
+    "confirm": "تأكيد",
+    "back": "رجوع"
+  },
+  "settingsManager": {
+    "title": "الإعدادات المتقدمة",
+    "profile": "ملف الشركة",
+    "security": "الأمان وواجهة API",
+    "billing": "المركز المالي",
+    "alerts": "التنبيهات",
+    "business_name": "الاسم التجاري",
+    "contact_email": "البريد الإلكتروني للتواصل",
+    "serial_number": "الرقم التسلسلي",
+    "subscription_plan": "باقة الاشتراك",
+    "basic_plan": "الباقة الأساسية",
+    "contact_support_note": "* لتحديث بيانات الشركة، يرجى التواصل مع الدعم.",
+    "api_key_title": "مفتاح ربط النظام المحاسبي",
+    "api_key_desc": "استخدم هذا المفتاح لربط برنامجك المحاسبي أو نظام ERP.",
+    "regenerate": "تجديد",
+    "change_password": "تغيير كلمة المرور",
+    "current_password": "كلمة المرور الحالية",
+    "new_password": "كلمة المرور الجديدة (8 أحرف على الأقل)",
+    "password_changed": "تم تغيير كلمة المرور بنجاح!",
+    "updating": "جارٍ التحديث...",
+    "save_changes": "حفظ التغييرات",
+    "error_connecting": "خطأ في الاتصال بالخادم",
+    "payment_methods": "وسائل الدفع",
+    "loading_payment_methods": "جارٍ تحميل وسائل الدفع...",
+    "card_ending_in": "تنتهي بـ {{last4}}",
+    "expires_on": "تنتهي صلاحيتها {{month}}/{{year}}",
+    "primary": "رئيسية",
+    "no_payment_methods": "لا توجد وسائل دفع محفوظة.",
+    "add_payment_service": "إضافة وسيلة دفع",
+    "auto_recharge_active": "إعادة الشحن التلقائي مفعّلة",
+    "auto_recharge_desc": "إعادة شحن 50$ عندما يقل الرصيد عن 10$.",
+    "notifications_admin": "إعدادات التنبيهات تُدار من قبل مدير النظام."
+  },
+  "waitingMessages": {
+    "title": "الرسائل بانتظار الربط",
+    "subtitle": "رسائل معلقة في النظام بانتظار اتصال أجهزتك.",
+    "status_hibernate": "الحالة: سبات",
+    "messages_buffered": "{{count}} رسالة في الانتظار",
+    "search_placeholder": "بحث في الرسائل المعلقة...",
+    "recipient": "المستلم",
+    "content": "المحتوى",
+    "wait_reason": "سبب الانتظار",
+    "age": "المدة",
+    "empty": "لا توجد رسائل معلقة حالياً في وضع الانتظار.",
+    "offline_device": "جهاز غير متصل",
+    "note_label": "ملاحظة:",
+    "note_prefix": "الرسائل في",
+    "note_suffix": "تُحفظ في قائمة انتظار محلية على الخادم، وسيتم دفعها تلقائياً إلى أجهزتك بمجرد إنشاء الاتصال. لا تتم التسوية المالية إلا عند التسليم الناجح.",
+    "wait_mode": "وضع الانتظار"
+  },
+  "deviceManager": {
+    "title": "إدارة الأجهزة والقنوات",
+    "tab_channels": "قنوات الهواتف",
+    "tab_phones": "الهواتف المسجلة",
+    "create_channel": "إنشاء قناة هاتف جديدة",
+    "default_badge": "افتراضي",
+    "extra_badge": "إضافي",
+    "default_name": "قناة هاتف"
+  },
+  "messagesReport": {
+    "flat_view": "رسائل فردية",
+    "grouped_view": "دفعات الإرسال",
+    "batch_prefix": "الدفعة:",
+    "ext_prefix": "مرجع خارجي:",
+    "device_prefix": "الجهاز:",
+    "system": "النظام",
+    "batch_ref": "رقم عملية الإرسال",
+    "msg_ref": "مرجع الرسالة",
+    "batch_data": "بيانات الدفعة",
+    "api_sync": "مزامنة الأنظمة المحاسبية"
+  },
+  "financeDashboard": {
+    "tab_balance": "الرصيد",
+    "tab_packages": "الباقات"
+  },
+  "login": {
+    "subtitle": "تسجيل الدخول إلى لوحة التحكم",
+    "business_email": "البريد الإلكتروني للشركة",
+    "password": "كلمة المرور",
+    "authenticating": "جارٍ تسجيل الدخول...",
+    "sign_in": "تسجيل الدخول",
+    "no_account": "ليس لديك حساب؟",
+    "register_now": "سجّل الآن",
+    "invalid_credentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+  },
+  "register": {
+    "subtitle": "إنشاء حساب تجاري",
+    "business_email": "البريد الإلكتروني للشركة",
+    "code": "الرمز",
+    "phone_number": "رقم الهاتف",
+    "password": "كلمة المرور",
+    "confirm_password": "تأكيد كلمة المرور",
+    "creating": "جارٍ إنشاء الحساب...",
+    "register_now": "إنشاء الحساب",
+    "have_account": "لديك حساب بالفعل؟",
+    "sign_in": "تسجيل الدخول",
+    "passwords_mismatch": "كلمتا المرور غير متطابقتين",
+    "registration_failed": "فشل التسجيل"
+  },
+  "protectedRoute": {
+    "loading_dashboard": "جارٍ تحميل لوحة التحكم...",
+    "unauthorized": "وصول غير مصرح",
+    "not_authorized": "غير مصرح لك بالوصول إلى لوحة تحكم المستأجرين. هذه المنطقة مخصصة لأصحاب الأعمال والموظفين المصرح لهم.",
+    "switch_account": "تبديل الحساب"
+  },
+  "customers": {
+    "title": "العملاء"
+  },
+  "subscriptionInfo": {
+    "cash_balance": "الرصيد النقدي",
+    "quota_balance": "رصيد الرسائل"
+  },
+  "dashboard": {
+    "connected": "الخادم متصل",
+    "disconnected": "الخادم غير متصل",
+    "signal_mode": "وضع الإشارة",
+    "push_mode": "وضع الدفع"
+  },
+  "excelImport": {
+    "no_valid_rows": "لم يتم العثور على صفوف صالحة. يرجى التحقق من ربط الأعمدة.",
+    "column_mapping": "ربط الأعمدة",
+    "phone_badge": "هاتف",
+    "message_badge": "رسالة"
   }
 }

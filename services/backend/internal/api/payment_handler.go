@@ -52,9 +52,9 @@ type InitiatePaymentRequest struct {
 // @Failure 500 {object} ErrorResponse
 // @Router /api/v1/payments/initiate [post]
 func (ph *PaymentHandler) InitiatePayment(c *gin.Context) {
-	// Get tenant ID from context
-	tenantID, exists := c.Get("tenant_id")
-	if !exists {
+	// Get tenant ID from context (stored as a string by AuthMiddleware)
+	tenantID, err := uuid.Parse(c.GetString("tenant_id"))
+	if err != nil || tenantID == uuid.Nil {
 		c.JSON(http.StatusUnauthorized, ErrorResponse{
 			Success: false,
 			Error: ErrorDetail{
@@ -92,7 +92,7 @@ func (ph *PaymentHandler) InitiatePayment(c *gin.Context) {
 
 	// Create payment request
 	paymentReq := &payment.CreatePaymentRequest{
-		TenantID:       tenantID.(uuid.UUID),
+		TenantID:       tenantID,
 		Amount:         req.Amount,
 		Currency:       req.Currency,
 		PaymentGateway: req.PaymentGateway,
@@ -130,9 +130,9 @@ func (ph *PaymentHandler) InitiatePayment(c *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /api/v1/payments/{transaction_id} [get]
 func (ph *PaymentHandler) GetPaymentStatus(c *gin.Context) {
-	// Get tenant ID from context
-	tenantID, exists := c.Get("tenant_id")
-	if !exists {
+	// Get tenant ID from context (stored as a string by AuthMiddleware)
+	tenantID, err := uuid.Parse(c.GetString("tenant_id"))
+	if err != nil || tenantID == uuid.Nil {
 		c.JSON(http.StatusUnauthorized, ErrorResponse{
 			Success: false,
 			Error: ErrorDetail{
@@ -158,7 +158,7 @@ func (ph *PaymentHandler) GetPaymentStatus(c *gin.Context) {
 
 	// Get payment status
 	isSuperAdmin := c.GetString("user_type") == "SUPER_ADMIN"
-	transaction, err := ph.paymentManager.GetPaymentStatus(c.Request.Context(), tenantID.(uuid.UUID), isSuperAdmin, transactionID)
+	transaction, err := ph.paymentManager.GetPaymentStatus(c.Request.Context(), tenantID, isSuperAdmin, transactionID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, ErrorResponse{
 			Success: false,
@@ -187,9 +187,9 @@ func (ph *PaymentHandler) GetPaymentStatus(c *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /api/v1/payments [get]
 func (ph *PaymentHandler) ListPaymentTransactions(c *gin.Context) {
-	// Get tenant ID from context
-	tenantID, exists := c.Get("tenant_id")
-	if !exists {
+	// Get tenant ID from context (stored as a string by AuthMiddleware)
+	tenantID, err := uuid.Parse(c.GetString("tenant_id"))
+	if err != nil || tenantID == uuid.Nil {
 		c.JSON(http.StatusUnauthorized, ErrorResponse{
 			Success: false,
 			Error: ErrorDetail{
@@ -206,7 +206,7 @@ func (ph *PaymentHandler) ListPaymentTransactions(c *gin.Context) {
 
 	// List transactions
 	isSuperAdmin := c.GetString("user_type") == "SUPER_ADMIN"
-	transactions, err := ph.paymentManager.ListPaymentTransactions(c.Request.Context(), tenantID.(uuid.UUID), isSuperAdmin, limit, offset)
+	transactions, err := ph.paymentManager.ListPaymentTransactions(c.Request.Context(), tenantID, isSuperAdmin, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Success: false,

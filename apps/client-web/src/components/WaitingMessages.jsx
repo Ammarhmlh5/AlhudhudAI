@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import apiClient from '../api/axios';
 import { Clock, AlertCircle, RefreshCcw, Smartphone, Settings, Info, Search } from 'lucide-react';
 import { useSocket } from '../contexts/SocketContext';
+import { useTranslation } from 'react-i18next';
 
 const WaitingMessages = () => {
+    const { t } = useTranslation();
     const [messages, setMessages] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -34,16 +36,16 @@ const WaitingMessages = () => {
         <div className="animate-in slide-in-from-right-8 duration-500">
             <div className="flex items-center justify-between mb-8">
                 <div>
-                    <h2 className="text-3xl font-bold">بانتظار الربط (Wait Mode)</h2>
+                    <h2 className="text-3xl font-bold">{t('waitingMessages.title')}</h2>
                     <p className="text-slate-400 text-sm mt-1">
-                        رسائل معلقة في النظام بانتظار اتصال أجهزتك (Hibernation Mode).
+                        {t('waitingMessages.subtitle')}
                     </p>
                 </div>
                 <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex items-center gap-4">
                     <AlertCircle className="w-6 h-6 text-amber-500" />
                     <div>
-                        <div className="text-xs text-amber-500 font-bold uppercase tracking-widest">Status: Hibernate</div>
-                        <div className="text-sm text-slate-300 font-bold">{filteredMessages.length} Messages Buffered</div>
+                        <div className="text-xs text-amber-500 font-bold uppercase tracking-widest">{t('waitingMessages.status_hibernate')}</div>
+                        <div className="text-sm text-slate-300 font-bold">{t('waitingMessages.messages_buffered', { count: filteredMessages.length })}</div>
                     </div>
                 </div>
             </div>
@@ -54,7 +56,7 @@ const WaitingMessages = () => {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                     <input
                         type="text"
-                        placeholder="Search waiting messages..."
+                        placeholder={t('waitingMessages.search_placeholder')}
                         className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-amber-500/50 transition-colors"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -70,11 +72,11 @@ const WaitingMessages = () => {
                     <table className="w-full text-left">
                         <thead>
                             <tr className="bg-slate-900/50 border-b border-slate-800">
-                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Recipient</th>
-                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Content</th>
-                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Wait Reason</th>
-                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Age</th>
-                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-right">Actions</th>
+                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">{t('waitingMessages.recipient')}</th>
+                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">{t('waitingMessages.content')}</th>
+                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">{t('waitingMessages.wait_reason')}</th>
+                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">{t('waitingMessages.age')}</th>
+                                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-right">{t('common.actions')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/50">
@@ -85,7 +87,7 @@ const WaitingMessages = () => {
                                             <div className="bg-slate-800 p-6 rounded-full">
                                                 <Clock className="w-10 h-10 text-slate-400" />
                                             </div>
-                                            <p className="text-slate-500 italic">No messages are currently in wait mode.</p>
+                                            <p className="text-slate-500 italic">{t('waitingMessages.empty')}</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -101,7 +103,7 @@ const WaitingMessages = () => {
                                         <div className="flex items-center gap-2">
                                             <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                                             <span className="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded-md border border-amber-500/20">
-                                                {msg.wait_reason || 'OFFLINE Device'}
+                                                {msg.wait_reason || t('waitingMessages.offline_device')}
                                             </span>
                                         </div>
                                     </td>
@@ -129,7 +131,8 @@ const WaitingMessages = () => {
             <div className="mt-6 flex items-start gap-4 p-4 bg-slate-900/30 rounded-2xl border border-slate-800/50">
                 <Info className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
                 <p className="text-[11px] text-slate-500 leading-relaxed">
-                    <strong>Note:</strong> Messages in <span className="text-amber-500">Wait Mode</span> are queued locally on the server. They will be automatically pushed (Fast-Forward) to your devices as soon as a connection is established. Financial settlement occurs only upon successful delivery.
+                    <strong>{t('waitingMessages.note_label')}</strong>{' '}
+                    {t('waitingMessages.note_prefix')} <span className="text-amber-500">{t('waitingMessages.wait_mode')}</span> {t('waitingMessages.note_suffix')}
                 </p>
             </div>
         </div>

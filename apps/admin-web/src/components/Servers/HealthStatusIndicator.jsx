@@ -48,7 +48,7 @@ const HealthStatusIndicator = ({ status, size = 'md', showLabel = true, showIcon
           bgColor: 'bg-slate-500/10',
           borderColor: 'border-slate-500/20',
           icon: Activity,
-          label: 'Unknown',
+          label: t('companies.unknown'),
           dotColor: 'bg-slate-500'
         };
     }

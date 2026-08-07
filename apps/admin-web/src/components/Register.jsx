@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserPlus, Mail, Lock, AlertCircle, Loader, Smartphone, Globe } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { API_BASE_URL } from '../config';
 
 export default function Register() {
+    const { t } = useTranslation();
     const { login } = useAuth(); // We'll assume auto-login or just redirect to login
     const navigate = useNavigate();
 
@@ -31,7 +33,7 @@ export default function Register() {
         setError('');
 
         if (formData.password !== formData.confirm_password) {
-            setError("Passwords do not match");
+            setError(t('auth.passwords_mismatch'));
             return;
         }
 
@@ -49,7 +51,7 @@ export default function Register() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Registration failed');
+                throw new Error(data.error || t('auth.registration_failed'));
             }
 
             // Auto-login or redirect
@@ -66,7 +68,7 @@ export default function Register() {
             navigate('/');
 
         } catch (err) {
-            setError(err.message || 'Registration failed');
+            setError(err.message || t('auth.registration_failed'));
             setLoading(false);
         }
     };
@@ -83,7 +85,7 @@ export default function Register() {
                         <UserPlus className="w-10 h-10 text-white" />
                     </div>
                     <h1 className="text-4xl font-black text-white mb-2">ALHudhudAI</h1>
-                    <p className="text-slate-400 text-sm font-medium">Create New Tenant Account</p>
+                    <p className="text-slate-400 text-sm font-medium">{t('auth.create_tenant_account')}</p>
                 </div>
 
                 {/* Register Card */}
@@ -102,7 +104,7 @@ export default function Register() {
                         {/* Email Input */}
                         <div>
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                                Email Address
+                                {t('auth.email_address')}
                             </label>
                             <div className="relative">
                                 <Mail className="w-5 h-5 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -123,7 +125,7 @@ export default function Register() {
                         <div className="grid grid-cols-3 gap-4">
                             <div className="col-span-1">
                                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                                    Code
+                                    {t('auth.code')}
                                 </label>
                                 <div className="relative">
                                     <Globe className="w-5 h-5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -141,7 +143,7 @@ export default function Register() {
                             </div>
                             <div className="col-span-2">
                                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                                    Phone Number
+                                    {t('auth.phone_number')}
                                 </label>
                                 <div className="relative">
                                     <Smartphone className="w-5 h-5 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -162,7 +164,7 @@ export default function Register() {
                         {/* Password Input */}
                         <div>
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                                Password
+                                {t('auth.password')}
                             </label>
                             <div className="relative">
                                 <Lock className="w-5 h-5 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -182,7 +184,7 @@ export default function Register() {
                         {/* Confirm Password */}
                         <div>
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                                Confirm Password
+                                {t('auth.confirm_password')}
                             </label>
                             <div className="relative">
                                 <Lock className="w-5 h-5 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -208,12 +210,12 @@ export default function Register() {
                             {loading ? (
                                 <>
                                     <Loader className="w-5 h-5 animate-spin" />
-                                    Creating Account...
+                                    {t('auth.creating_account')}
                                 </>
                             ) : (
                                 <>
                                     <UserPlus className="w-5 h-5" />
-                                    Register Now
+                                    {t('auth.register_now')}
                                 </>
                             )}
                         </button>
@@ -222,9 +224,9 @@ export default function Register() {
                     {/* Footer Info */}
                     <div className="mt-6 pt-6 border-t border-slate-800 text-center">
                         <p className="text-sm text-slate-500">
-                            Already have an account?{' '}
+                            {t('auth.already_have_account')}{' '}
                             <Link to="/login" className="text-blue-400 hover:text-blue-300 font-bold transition-colors">
-                                Sign In
+                                {t('auth.sign_in')}
                             </Link>
                         </p>
                     </div>
@@ -232,7 +234,7 @@ export default function Register() {
 
                 {/* Version */}
                 <p className="text-center text-xs text-slate-600 mt-6">
-                    ALHudhudAI Admin Panel v2.0.0
+                    {t('auth.version', { brand: 'ALHudhudAI', version: 'v2.0.0' })}
                 </p>
             </div>
         </div>

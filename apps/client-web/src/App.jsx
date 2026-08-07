@@ -121,6 +121,7 @@ function MainApp() {
 
 function App() {
   const { user, loading } = useAuth();
+  const { t } = useTranslation();
   const [csrfInitialized, setCsrfInitialized] = useState(false);
 
   // Initialize CSRF protection on app mount (only once)
@@ -137,7 +138,7 @@ function App() {
     }
   }, [csrfInitialized]);
 
-  if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Loading...</div>;
+  if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">{t('common.loading')}</div>;
 
   return (
     <Routes>

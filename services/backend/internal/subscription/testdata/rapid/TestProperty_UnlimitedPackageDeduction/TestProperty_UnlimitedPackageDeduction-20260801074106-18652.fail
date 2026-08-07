@@ -1,0 +1,7 @@
+# 2026/08/01 07:41:06.329269 [TestProperty_UnlimitedPackageDeduction] [rapid] draw message_count: 1
+# 2026/08/01 07:41:06.338340 [TestProperty_UnlimitedPackageDeduction] Failed to set tenant context: ERROR: syntax error at or near "$1" (SQLSTATE 42601)
+# 
+v0.4.8#12015558734712505220
+0x0
+0x0
+0x0

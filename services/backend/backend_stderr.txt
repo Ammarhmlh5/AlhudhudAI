@@ -1,0 +1,3 @@
+{"level":"info","ts":"2026-07-09T08:31:20.334+0300","caller":"backend/main.go:78","msg":"Starting ALHudhudAI Backend - Global Standard Edition"}
+{"level":"info","ts":"2026-07-09T08:31:20.537+0300","caller":"backend/main.go:79","msg":"Current APP_ENV","app_env":""}
+{"level":"fatal","ts":"2026-07-09T08:31:20.605+0300","caller":"backend/main.go:89","msg":"Configuration validation failed","error":"REDIS_PASSWORD is empty. Redis is running without authentication.\nThis is a security risk. Please generate a secure random password using:\n  openssl rand -base64 32\nThen update REDIS_PASSWORD in your .env file and redis.conf with the generated value."}

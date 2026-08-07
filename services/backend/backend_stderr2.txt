@@ -1,0 +1,84 @@
+{"level":"info","ts":"2026-07-09T08:33:01.999+0300","caller":"backend/main.go:78","msg":"Starting ALHudhudAI Backend - Global Standard Edition"}
+{"level":"info","ts":"2026-07-09T08:33:02.060+0300","caller":"backend/main.go:79","msg":"Current APP_ENV","app_env":""}
+{"level":"info","ts":"2026-07-09T08:33:02.105+0300","caller":"backend/main.go:93","msg":"Configuration loaded successfully","db_host":"localhost","db_port":"5433","db_name":"al_hudhud_new","redis_host":"localhost","redis_port":"6379","server_port":"8085","app_env":"development","batch_size":100,"worker_count":10}
+{"level":"info","ts":"2026-07-09T08:33:02.111+0300","caller":"backend/main.go:107","msg":"JWT configuration loaded","expiry_hours":24}
+{"level":"info","ts":"2026-07-09T08:33:02.112+0300","caller":"backend/main.go:110","msg":"Initializing database connection..."}
+2026/07/09 08:33:02 Successfully connected to PostgreSQL via sql.DB
+{"level":"info","ts":"2026-07-09T08:33:02.330+0300","caller":"db/gorm.go:64","msg":"Connection to PostgreSQL established successfully via GORM"}
+{"level":"info","ts":"2026-07-09T08:33:02.451+0300","caller":"db/gorm.go:85","msg":"PgxPool initialized successfully","max_conns":50,"min_conns":10}
+{"level":"info","ts":"2026-07-09T08:33:02.483+0300","caller":"db/gorm.go:95","msg":"Running auto-migrations for Global Standard models..."}
+{"level":"warn","ts":"2026-07-09T08:33:04.908+0300","caller":"db/gorm.go:101","msg":"Ignored non-fatal migration error","error":"ERROR: constraint \"uni_roles_name\" of relation \"roles\" does not exist (SQLSTATE 42704)"}
+{"level":"warn","ts":"2026-07-09T08:33:04.959+0300","caller":"db/gorm.go:101","msg":"Ignored non-fatal migration error","error":"ERROR: constraint \"uni_permissions_name\" of relation \"permissions\" does not exist (SQLSTATE 42704)"}
+{"level":"warn","ts":"2026-07-09T08:33:05.181+0300","caller":"db/gorm.go:101","msg":"Ignored non-fatal migration error","error":"ERROR: constraint \"uni_roles_name\" of relation \"roles\" does not exist (SQLSTATE 42704)"}
+{"level":"warn","ts":"2026-07-09T08:33:05.459+0300","caller":"db/gorm.go:101","msg":"Ignored non-fatal migration error","error":"ERROR: constraint \"uni_roles_name\" of relation \"roles\" does not exist (SQLSTATE 42704)"}
+{"level":"warn","ts":"2026-07-09T08:33:07.345+0300","caller":"db/gorm.go:101","msg":"Ignored non-fatal migration error","error":"ERROR: cannot alter type of a column used by a view or rule (SQLSTATE 0A000)"}
+{"level":"info","ts":"2026-07-09T08:33:07.396+0300","caller":"db/gorm.go:108","msg":"Running auto-migrations for Tenant models in public schema..."}
+{"level":"info","ts":"2026-07-09T08:33:10.998+0300","caller":"db/gorm.go:120","msg":"Auto-migrations completed"}
+2026/07/09 08:33:10 Starting database seeding...
+2026/07/09 08:33:11 Permissions seeded successfully
+2026/07/09 08:33:11 Roles seeded successfully
+2026/07/09 08:33:11 Super Admin already exists, skipping creation
+2026/07/09 08:33:11 Test Tenant Email: tenant@test.sa, Password: CHECK CONSOLE LOGS AT CREATION
+2026/07/09 08:33:11 Staff user seeded: support@alhudhud.sa (Support Agent) | Password: !BxUE28UKjvBNM9J
+2026/07/09 08:33:11 Staff user seeded: accountant@alhudhud.sa (Accountant) | Password: T8EwuIEw^TP!S1#P
+2026/07/09 08:33:11 Staff user seeded: tech@alhudhud.sa (Technical Admin) | Password: dv%YPK!*B0guQKLb
+2026/07/09 08:33:11 Database seeding completed successfully
+{"level":"info","ts":"2026-07-09T08:33:11.466+0300","caller":"redis/redis.go:58","msg":"Redis connection established","addr":"localhost:6379","db":0}
+{"level":"info","ts":"2026-07-09T08:33:11.481+0300","caller":"backend/main.go:137","msg":"Pricing cache warmed up successfully"}
+{"level":"info","ts":"2026-07-09T08:33:11.482+0300","caller":"ws/hub.go:128","msg":"WebSocket Hub is running"}
+{"level":"info","ts":"2026-07-09T08:33:11.482+0300","caller":"dispatcher/manager.go:41","msg":"TenantDispatcher Manager starting..."}
+{"level":"info","ts":"2026-07-09T08:33:11.483+0300","caller":"ws/hub.go:677","msg":"Connection monitor started","check_interval":1,"reconnect_timeout":5}
+{"level":"info","ts":"2026-07-09T08:33:11.572+0300","caller":"db/schema.go:85","msg":"Migrating schema","schema":"tenant_9f10d696_9f93_4c67_ae62_68305801ef92"}
+{"level":"info","ts":"2026-07-09T08:33:11.580+0300","caller":"ws/hub.go:1019","msg":"Subscribed to Redis dispatch channels"}
+{"level":"info","ts":"2026-07-09T08:33:11.692+0300","caller":"dispatcher/tenant_dispatcher.go:103","msg":"TenantDispatcher started (Isolated River Queue)","tenant_id":"9f10d696-9f93-4c67-ae62-68305801ef92","business_name":"Test Business"}
+{"level":"info","ts":"2026-07-09T08:33:11.776+0300","caller":"db/schema.go:85","msg":"Migrating schema","schema":"tenant_867594b8_d6e4_45f3_9c8b_f8d2461fea4e"}
+{"level":"info","ts":"2026-07-09T08:33:11.801+0300","caller":"dispatcher/tenant_dispatcher.go:103","msg":"TenantDispatcher started (Isolated River Queue)","tenant_id":"867594b8-d6e4-45f3-9c8b-f8d2461fea4e","business_name":"Test Business Refund"}
+{"level":"info","ts":"2026-07-09T08:33:11.846+0300","caller":"db/schema.go:85","msg":"Migrating schema","schema":"tenant_c1a64adc_e709_4d8f_900a_bcfa38c4f94e"}
+{"level":"info","ts":"2026-07-09T08:33:11.864+0300","caller":"dispatcher/tenant_dispatcher.go:103","msg":"TenantDispatcher started (Isolated River Queue)","tenant_id":"c1a64adc-e709-4d8f-900a-bcfa38c4f94e","business_name":"Test Business Commit"}
+{"level":"info","ts":"2026-07-09T08:33:11.924+0300","caller":"db/schema.go:85","msg":"Migrating schema","schema":"tenant_c05ea1cc_8eeb_4a77_8bc8_b001289fe5cf"}
+{"level":"info","ts":"2026-07-09T08:33:11.937+0300","caller":"dispatcher/tenant_dispatcher.go:103","msg":"TenantDispatcher started (Isolated River Queue)","tenant_id":"c05ea1cc-8eeb-4a77-8bc8-b001289fe5cf","business_name":"Test Business"}
+{"level":"info","ts":"2026-07-09T08:33:11.997+0300","caller":"db/schema.go:85","msg":"Migrating schema","schema":"tenant_5c83e4d4_3d0b_4c67_ac3a_9726babb2c0f"}
+{"level":"info","ts":"2026-07-09T08:33:12.013+0300","caller":"dispatcher/tenant_dispatcher.go:103","msg":"TenantDispatcher started (Isolated River Queue)","tenant_id":"5c83e4d4-3d0b-4c67-ac3a-9726babb2c0f","business_name":"Test Business Refund"}
+{"level":"info","ts":"2026-07-09T08:33:12.061+0300","caller":"db/schema.go:85","msg":"Migrating schema","schema":"tenant_14b9bccc_6c72_48a0_8415_ed29cb8d6e8f"}
+{"level":"info","ts":"2026-07-09T08:33:12.082+0300","caller":"dispatcher/tenant_dispatcher.go:103","msg":"TenantDispatcher started (Isolated River Queue)","tenant_id":"14b9bccc-6c72-48a0-8415-ed29cb8d6e8f","business_name":"Test Business Commit"}
+{"level":"info","ts":"2026-07-09T08:33:12.130+0300","caller":"db/schema.go:85","msg":"Migrating schema","schema":"tenant_321241a5_3cb5_4ad9_919a_bb79bdeebb43"}
+{"level":"info","ts":"2026-07-09T08:33:12.148+0300","caller":"dispatcher/tenant_dispatcher.go:103","msg":"TenantDispatcher started (Isolated River Queue)","tenant_id":"321241a5-3cb5-4ad9-919a-bb79bdeebb43","business_name":"Tenant alhomely10@gmail.com"}
+{"level":"info","ts":"2026-07-09T08:33:12.197+0300","caller":"db/schema.go:85","msg":"Migrating schema","schema":"tenant_cd2fa5fc_00b0_44b0_bfed_7e8e3da1b4ef"}
+{"level":"info","ts":"2026-07-09T08:33:12.215+0300","caller":"dispatcher/tenant_dispatcher.go:103","msg":"TenantDispatcher started (Isolated River Queue)","tenant_id":"cd2fa5fc-00b0-44b0-bfed-7e8e3da1b4ef","business_name":"Tenant alhomely5@gmail.com"}
+{"level":"info","ts":"2026-07-09T08:33:12.254+0300","caller":"db/schema.go:85","msg":"Migrating schema","schema":"tenant_3e9a92a4_b55d_4395_9134_d8194baf0ddf"}
+{"level":"info","ts":"2026-07-09T08:33:12.269+0300","caller":"dispatcher/tenant_dispatcher.go:103","msg":"TenantDispatcher started (Isolated River Queue)","tenant_id":"3e9a92a4-b55d-4395-9134-d8194baf0ddf","business_name":"Tenant test@example.com"}
+{"level":"info","ts":"2026-07-09T08:33:12.269+0300","caller":"dispatcher/manager.go:58","msg":"TenantDispatcher Manager started","active_tenants":9}
+{"level":"info","ts":"2026-07-09T08:33:12.270+0300","caller":"orchestrator/service.go:25","msg":"Message Orchestrator service started - Ensuring Reliability"}
+{"level":"info","ts":"2026-07-09T08:33:12.271+0300","caller":"channel/service.go:199","msg":"starting channel health check background task"}
+{"level":"info","ts":"2026-07-09T08:33:12.272+0300","caller":"backend/main.go:197","msg":"Channel health check started"}
+{"level":"info","ts":"2026-07-09T08:33:12.272+0300","caller":"backend/main.go:223","msg":"Referral system initialized with Redis caching","enabled":true,"code_length":8,"max_uses":100,"cache_ttl":"5m"}
+{"level":"info","ts":"2026-07-09T08:33:12.273+0300","caller":"backend/main.go:262","msg":"Referral handler initialized"}
+{"level":"info","ts":"2026-07-09T08:33:12.271+0300","caller":"backend/main.go:176","msg":"Registration cleanup job started"}
+{"level":"info","ts":"2026-07-09T08:33:12.271+0300","caller":"admin/stats_refresher.go:17","msg":"Admin statistics refresher started","interval":60}
+{"level":"info","ts":"2026-07-09T08:33:12.288+0300","caller":"alerting/config.go:164","msg":"Database alert channel registered (persistent storage enabled)"}
+{"level":"info","ts":"2026-07-09T08:33:12.289+0300","caller":"alerting/config.go:167","msg":"New alerting system initialized successfully"}
+{"level":"info","ts":"2026-07-09T08:33:12.290+0300","caller":"backend/main.go:298","msg":"Unified system alerting initialized successfully"}
+{"level":"info","ts":"2026-07-09T08:33:12.290+0300","caller":"backend/main.go:304","msg":"Balance monitoring started"}
+{"level":"info","ts":"2026-07-09T08:33:12.290+0300","caller":"worker/fast_processor.go:94","msg":"Starting Fast Message Processor","batch_size":50,"worker_count":10}
+{"level":"info","ts":"2026-07-09T08:33:12.290+0300","caller":"backend/main.go:320","msg":"Fast Message Processor started successfully","batch_size":50,"worker_count":10,"ticker_ms":100}
+{"level":"info","ts":"2026-07-09T08:33:12.291+0300","caller":"backend/main.go:330","msg":"Alert monitoring started for queue health and error rates"}
+{"level":"info","ts":"2026-07-09T08:33:12.291+0300","caller":"worker/fast_processor.go:116","msg":"Fast processor worker started","worker_id":4}
+{"level":"info","ts":"2026-07-09T08:33:12.291+0300","caller":"worker/fast_processor.go:116","msg":"Fast processor worker started","worker_id":0}
+{"level":"info","ts":"2026-07-09T08:33:12.291+0300","caller":"worker/fast_processor.go:116","msg":"Fast processor worker started","worker_id":1}
+{"level":"info","ts":"2026-07-09T08:33:12.291+0300","caller":"worker/fast_processor.go:116","msg":"Fast processor worker started","worker_id":2}
+{"level":"info","ts":"2026-07-09T08:33:12.291+0300","caller":"worker/fast_processor.go:116","msg":"Fast processor worker started","worker_id":3}
+{"level":"info","ts":"2026-07-09T08:33:12.291+0300","caller":"worker/fast_processor.go:116","msg":"Fast processor worker started","worker_id":8}
+{"level":"info","ts":"2026-07-09T08:33:12.291+0300","caller":"worker/fast_processor.go:116","msg":"Fast processor worker started","worker_id":5}
+{"level":"info","ts":"2026-07-09T08:33:12.291+0300","caller":"worker/fast_processor.go:116","msg":"Fast processor worker started","worker_id":6}
+{"level":"info","ts":"2026-07-09T08:33:12.291+0300","caller":"backend/main.go:842","msg":"Low balance monitoring started"}
+{"level":"info","ts":"2026-07-09T08:33:12.291+0300","caller":"worker/fast_processor.go:116","msg":"Fast processor worker started","worker_id":7}
+{"level":"info","ts":"2026-07-09T08:33:12.291+0300","caller":"worker/fast_processor.go:116","msg":"Fast processor worker started","worker_id":9}
+{"level":"info","ts":"2026-07-09T08:33:12.291+0300","caller":"worker/fast_processor.go:502","msg":"Queue health monitoring started"}
+{"level":"info","ts":"2026-07-09T08:33:12.291+0300","caller":"worker/fast_processor.go:586","msg":"Error rate monitoring started"}
+{"level":"warn","ts":"2026-07-09T08:33:12.339+0300","caller":"alhudhud/worker.go:105","msg":"Failed to refresh active official gateway config","error":"record not found"}
+{"level":"info","ts":"2026-07-09T08:33:12.339+0300","caller":"alhudhud/worker.go:80","msg":"Alhudhud Official Gateway Worker started with Per-Tenant Parallelism"}
+{"level":"info","ts":"2026-07-09T08:33:12.340+0300","caller":"private/worker.go:66","msg":"Private Gateway Worker started with Per-Tenant Parallelism"}
+{"level":"info","ts":"2026-07-09T08:33:12.414+0300","caller":"backend/main.go:488","msg":"Rate limiting enabled for API routes (Redis-based)","limit":100,"window":"1 minute","mode":"redis"}
+{"level":"info","ts":"2026-07-09T08:33:12.479+0300","caller":"backend/main.go:774","msg":"Referral API endpoints registered successfully"}
+{"level":"info","ts":"2026-07-09T08:33:12.481+0300","caller":"backend/main.go:799","msg":"Server listening","port":"8085"}
+{"level":"fatal","ts":"2026-07-09T08:33:12.482+0300","caller":"backend/main.go:801","msg":"listen: ","error":"listen tcp :8085: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted."}

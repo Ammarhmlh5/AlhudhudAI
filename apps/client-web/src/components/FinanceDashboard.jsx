@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { usePackages, useSubscription, useUsage, useSubscribe, useUpdateAutoRenew } from '../hooks/usePackages';
 import { CreditCard, Wallet, Zap, TrendingUp, Award, CheckCircle2, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const BILLING_CYCLE_LABELS = {
   monthly: 'شهري',
@@ -23,6 +24,7 @@ const formatNumber = (value) => {
 };
 
 export default function FinanceDashboard() {
+  const { t } = useTranslation();
   const { tenant } = useAuth();
   const { packages, loading: packagesLoading } = usePackages();
   const { subscription, loading: subLoading, refetch: refetchSubscription } = useSubscription();
@@ -105,7 +107,7 @@ export default function FinanceDashboard() {
             activeTab === 'balance' ? 'bg-rose-500 text-white' : 'bg-slate-900 text-slate-400 hover:text-white'
           }`}
         >
-          الرصيد
+          {t('financeDashboard.tab_balance')}
         </button>
         <button
           onClick={() => setActiveTab('packages')}
@@ -113,7 +115,7 @@ export default function FinanceDashboard() {
             activeTab === 'packages' ? 'bg-rose-500 text-white' : 'bg-slate-900 text-slate-400 hover:text-white'
           }`}
         >
-          الباقات
+          {t('financeDashboard.tab_packages')}
         </button>
       </div>
 

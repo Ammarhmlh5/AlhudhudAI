@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { ADMIN_API_URL } from '../config';
 import { useAuth } from '../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 
 export default function Register() {
+    const { t } = useTranslation();
     const { user, loginWithToken } = useAuth();
     const navigate = useNavigate();
 
@@ -37,7 +39,7 @@ export default function Register() {
         setError('');
 
         if (formData.password !== formData.confirm_password) {
-            setError("Passwords do not match");
+            setError(t('register.passwords_mismatch'));
             return;
         }
 
@@ -55,7 +57,7 @@ export default function Register() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Registration failed');
+                throw new Error(data.error || t('register.registration_failed'));
             }
 
             // Auto-login using the token from registration response
@@ -63,7 +65,7 @@ export default function Register() {
             navigate('/');
 
         } catch (err) {
-            setError(err.message || 'Registration failed');
+            setError(err.message || t('register.registration_failed'));
             setLoading(false);
         }
     };
@@ -77,7 +79,7 @@ export default function Register() {
                         <span className="text-white text-3xl font-bold">H</span>
                     </div>
                     <h1 className="text-4xl font-black text-white mb-2">ALHudhudAI</h1>
-                    <p className="text-slate-400 text-sm font-medium">Create Business Account</p>
+                    <p className="text-slate-400 text-sm font-medium">{t('register.subtitle')}</p>
                 </div>
 
                 {/* Register Card */}
@@ -93,7 +95,7 @@ export default function Register() {
                         {/* Email Input */}
                         <div>
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                                Business Email
+                                {t('register.business_email')}
                             </label>
                             <input
                                 type="email"
@@ -111,7 +113,7 @@ export default function Register() {
                         <div className="grid grid-cols-3 gap-4">
                             <div className="col-span-1">
                                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                                    Code
+                                    {t('register.code')}
                                 </label>
                                 <input
                                     type="text"
@@ -126,7 +128,7 @@ export default function Register() {
                             </div>
                             <div className="col-span-2">
                                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                                    Phone Number
+                                    {t('register.phone_number')}
                                 </label>
                                 <input
                                     type="tel"
@@ -144,7 +146,7 @@ export default function Register() {
                         {/* Password Input */}
                         <div>
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                                Password
+                                {t('register.password')}
                             </label>
                             <input
                                 type="password"
@@ -161,7 +163,7 @@ export default function Register() {
                         {/* Confirm Password */}
                         <div>
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                                Confirm Password
+                                {t('register.confirm_password')}
                             </label>
                             <input
                                 type="password"
@@ -181,16 +183,16 @@ export default function Register() {
                             disabled={loading}
                             className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
                         >
-                            {loading ? 'Creating Account...' : 'Register Now'}
+                            {loading ? t('register.creating') : t('register.register_now')}
                         </button>
                     </form>
 
                     {/* Footer Info */}
                     <div className="mt-6 pt-6 border-t border-slate-800 text-center">
                         <p className="text-sm text-slate-500">
-                            Already have an account?{' '}
+                            {t('register.have_account')}{' '}
                             <Link to="/login" className="text-rose-400 hover:text-rose-300 font-bold transition-colors">
-                                Sign In
+                                {t('register.sign_in')}
                             </Link>
                         </p>
                     </div>

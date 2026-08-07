@@ -152,13 +152,13 @@ const HealthHistoryChart = ({ history = [] }) => {
           </p>
         </div>
         <div className="bg-slate-900 border border-slate-800 rounded-lg p-3">
-          <p className="text-xs text-slate-500">Avg</p>
+          <p className="text-xs text-slate-500">{t('serversList.avg')}</p>
           <p className="text-lg font-bold text-white">
             {Math.round(chartData.points.reduce((sum, p) => sum + p.value, 0) / chartData.points.length)}ms
           </p>
         </div>
         <div className="bg-slate-900 border border-slate-800 rounded-lg p-3">
-          <p className="text-xs text-slate-500">Max</p>
+          <p className="text-xs text-slate-500">{t('serversList.max')}</p>
           <p className="text-lg font-bold text-white">
             {chartData.maxResponseTime}ms
           </p>

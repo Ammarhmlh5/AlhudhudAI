@@ -1,0 +1,3 @@
+# 2026/08/01 07:41:05.754861 [TestProperty_SubscriptionIdempotency] Failed to set tenant context: ERROR: syntax error at or near "$1" (SQLSTATE 42601)
+# 
+v0.4.8#11612302154500881898

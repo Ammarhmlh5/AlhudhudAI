@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/al-hudhud/backend/internal/auth"
+	"github.com/al-hudhud/backend/internal/balance"
 	"github.com/al-hudhud/backend/internal/db"
 	"github.com/al-hudhud/backend/internal/models"
 	"github.com/al-hudhud/backend/internal/ws"
@@ -19,11 +20,13 @@ import (
 
 type Handler struct {
 	service *Service
+	balance balance.Manager
 }
 
-func NewHandler(svc *Service) *Handler {
+func NewHandler(svc *Service, balance balance.Manager) *Handler {
 	return &Handler{
 		service: svc,
+		balance: balance,
 	}
 }
 

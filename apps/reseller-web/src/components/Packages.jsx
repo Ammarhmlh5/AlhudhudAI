@@ -18,6 +18,16 @@ const Packages = () => {
   const { updateAutoRenew, loading: updatingRenew } = useUpdateAutoRenew();
   const [actionMessage, setActionMessage] = useState(null);
 
+  const SUBSCRIPTION_STATUS_KEYS = {
+    active: 'customers.active',
+    cancelled: 'packages.status_cancelled',
+    expired: 'packages.status_expired',
+    grace_period: 'packages.status_grace',
+    suspended: 'packages.status_suspended'
+  };
+
+  const statusLabel = (status) => t(SUBSCRIPTION_STATUS_KEYS[status] || status);
+
   const currentPackage = packages.find(
     (pkg) => subscription && Number(pkg.id) === Number(subscription.package_id)
   );
@@ -70,7 +80,7 @@ const Packages = () => {
         <div className="glass-card flex items-center justify-between px-6 py-4">
           <span className={`text-sm font-bold ${subscribeError ? 'text-rose-500' : 'text-emerald-500'}`}>
             <CheckCircle2 className="inline w-4 h-4 mr-2" />
-            {subscribeError || actionMessage}
+            {subscribeError ? t(subscribeError) : actionMessage}
           </span>
           <button onClick={() => setActionMessage(null)} className="text-slate-500 hover:text-white transition-all">
             ✕
@@ -94,7 +104,7 @@ const Packages = () => {
                 ? 'bg-emerald-500/10 text-emerald-500'
                 : 'bg-amber-500/10 text-amber-500'
             }`}>
-              {subscription.status === 'active' ? t('customers.active') : subscription.status}
+              {subscription.status === 'active' ? t('customers.active') : statusLabel(subscription.status)}
             </span>
           </div>
 
@@ -103,7 +113,7 @@ const Packages = () => {
               <CreditCard className="w-5 h-5 text-rose-500 mb-3" />
               <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">{t('packages.package_messages')}</p>
               <p className="text-2xl font-black text-white">
-                {isUnlimited ? t('packages.unlimited') : `${formatNumber(includedMessages)} / ${t('packages.messages_month').replace(' / month', 'month')}`}
+                {isUnlimited ? t('packages.unlimited') : t('packages.messages_count', { count: formatNumber(includedMessages) })}
               </p>
             </div>
             <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800">

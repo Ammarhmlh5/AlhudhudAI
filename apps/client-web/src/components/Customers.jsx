@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../api/axios';
 import { MessageSquare, User, Search, ArrowRight, Clock, CheckCircle, XCircle, ChevronLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const Customers = () => {
+    const { t } = useTranslation();
     const [allMessages, setAllMessages] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -111,7 +113,7 @@ const Customers = () => {
         <div className="animate-in fade-in slide-in-from-right-8 duration-500">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                 <div>
-                    <h2 className="text-3xl font-bold">العملاء (Customers)</h2>
+                    <h2 className="text-3xl font-bold">{t('customers.title')}</h2>
                     <p className="text-slate-400 text-sm mt-1">تتبع العملاء عبر تاريخ المراسلات.</p>
                 </div>
 

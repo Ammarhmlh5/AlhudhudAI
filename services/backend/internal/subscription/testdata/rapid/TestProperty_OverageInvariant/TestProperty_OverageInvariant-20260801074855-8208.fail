@@ -1,0 +1,42 @@
+# 2026/08/01 07:48:55.289542 [TestProperty_OverageInvariant] [rapid] draw overage_rate: 0.08549821304040961
+# 2026/08/01 07:48:55.289542 [TestProperty_OverageInvariant] [rapid] draw num_operations: 4
+# 2026/08/01 07:48:55.289542 [TestProperty_OverageInvariant] [rapid] draw overage_0: 10
+# 2026/08/01 07:48:55.289542 [TestProperty_OverageInvariant] [rapid] draw overage_1: 2
+# 2026/08/01 07:48:55.289542 [TestProperty_OverageInvariant] [rapid] draw overage_2: 1
+# 2026/08/01 07:48:55.289542 [TestProperty_OverageInvariant] [rapid] draw overage_3: 5
+# 2026/08/01 07:48:55.321580 [TestProperty_OverageInvariant] 
+# 	Error Trace:	C:/ALHudhud/ALHudhud/ALHudhudAI/services/backend/internal/subscription/manager_property_test.go:1332
+# 	            				C:/Users/Admin/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:371
+# 	            				C:/Users/Admin/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:380
+# 	            				C:/Users/Admin/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:205
+# 	            				C:/Users/Admin/go/pkg/mod/pgregory.net/rapid@v1.2.0/engine.go:120
+# 	            				C:/ALHudhud/ALHudhud/ALHudhudAI/services/backend/internal/subscription/manager_property_test.go:1291
+# 	            				C:/Program Files/Go/src/runtime/asm_amd64.s:1771
+# 	Error:      	Should be true
+# 	Test:       	TestProperty_OverageInvariant
+# 	Messages:   	Invariant (cost = rate * messages) must hold after operation 3: expected 1.53896783472737298, got 1.55, diff 0.01103216527262702
+# 
+v0.4.8#13049503454013593560
+0xafcc7ea000484
+0xf00653242a3de
+0x8091c54bb8863
+0x0
+0x0
+0x1f
+0x5e335fcf46619
+0x1cf605c6a64a05
+0x101daf3937deb1
+0x2
+0xfa0e6ff330bcb
+0x1fccf72f90b396
+0xffffffffffffffff
+0x1f1dadbc19a7be
+0x43097b9fc2778
+0x1
+0x64d082bd890d4
+0xe83d98a65ae25
+0x0
+0x1121f9373187ee
+0x19ff0a2454dac1
+0xa
+0x4

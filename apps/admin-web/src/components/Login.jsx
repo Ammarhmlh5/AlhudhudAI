@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { LogIn, Mail, Lock, AlertCircle, Loader } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function Login() {
+    const { t } = useTranslation();
     const { user, login } = useAuth();
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
@@ -26,7 +28,7 @@ export default function Login() {
             await login(email, password);
             navigate('/', { replace: true });
         } catch (err) {
-            setError(err.response?.data?.error || err.message || 'Invalid email or password');
+            setError(err.response?.data?.error || err.message || t('auth.invalid_credentials'));
             setLoading(false);
         }
     };
@@ -43,7 +45,7 @@ export default function Login() {
                         <LogIn className="w-10 h-10 text-white" />
                     </div>
                     <h1 className="text-4xl font-black text-white mb-2">ALHudhudAI</h1>
-                    <p className="text-slate-400 text-sm font-medium">Admin Panel Login</p>
+                    <p className="text-slate-400 text-sm font-medium">{t('auth.admin_panel_login')}</p>
                 </div>
 
                 {/* Login Card */}
@@ -62,7 +64,7 @@ export default function Login() {
                         {/* Email Input */}
                         <div>
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                                Email Address
+                                {t('auth.email_address')}
                             </label>
                             <div className="relative">
                                 <Mail className="w-5 h-5 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -81,7 +83,7 @@ export default function Login() {
                         {/* Password Input */}
                         <div>
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                                Password
+                                {t('auth.password')}
                             </label>
                             <div className="relative">
                                 <Lock className="w-5 h-5 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -106,12 +108,12 @@ export default function Login() {
                             {loading ? (
                                 <>
                                     <Loader className="w-5 h-5 animate-spin" />
-                                    <span>Signing in...</span>
+                                    <span>{t('auth.signing_in')}</span>
                                 </>
                             ) : (
                                 <>
                                     <LogIn className="w-5 h-5" />
-                                    <span>Sign In</span>
+                                    <span>{t('auth.sign_in')}</span>
                                 </>
                             )}
                         </button>
@@ -120,7 +122,7 @@ export default function Login() {
 
                 {/* Version */}
                 <p className="text-center text-xs text-slate-600 mt-6">
-                    ALHudhudAI Admin Panel v2.0.0
+                    {t('auth.version', { brand: 'ALHudhudAI', version: 'v2.0.0' })}
                 </p>
             </div>
         </div>

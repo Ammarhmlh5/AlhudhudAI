@@ -36,7 +36,7 @@ export default function ServersList() {
       setServers(response.data.servers || []);
       setError(null);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to load servers');
+      setError(err.response?.data?.error || t('serversList.load_failed'));
     } finally {
       setLoading(false);
     }
@@ -79,7 +79,7 @@ export default function ServersList() {
         
         <button onClick={fetchServers} className="flex items-center gap-2 px-6 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-slate-400 hover:text-white transition-all group">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
-            <span className="text-sm font-bold uppercase tracking-wider">Refresh Nodes</span>
+            <span className="text-sm font-bold uppercase tracking-wider">{t('serversList.refresh')}</span>
         </button>
       </div>
 
@@ -222,14 +222,14 @@ function ServerCard({ server, onClick, styles }) {
             <div className="bg-slate-950/50 p-3 rounded-2xl border border-slate-800">
                 <div className="flex items-center gap-2 text-slate-500 mb-1">
                     <Activity className="w-3 h-3" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Latency</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider">{t('serversList.latency')}</span>
                 </div>
                 <div className="text-sm font-black text-white font-mono">{server.response_time_ms}ms</div>
             </div>
             <div className="bg-slate-950/50 p-3 rounded-2xl border border-slate-800">
                 <div className="flex items-center gap-2 text-slate-500 mb-1">
                     <AlertCircle className="w-3 h-3" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Errors</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider">{t('serversList.errors')}</span>
                 </div>
                 <div className="text-sm font-black text-white font-mono">{server.error_rate?.toFixed(1) || 0}%</div>
             </div>
@@ -238,10 +238,10 @@ function ServerCard({ server, onClick, styles }) {
         <div className="flex items-center justify-between text-xs px-1">
           <div className="flex items-center gap-2 text-slate-500">
             <Globe className="w-3 h-3" />
-            <span className="font-bold">{server.location || 'Global Node'}</span>
+            <span className="font-bold">{server.location || t('serversList.global_node')}</span>
           </div>
           <div className="text-slate-600 font-medium">
-            {server.tenant_name || 'System Server'}
+            {server.tenant_name || t('serversList.system_server')}
           </div>
         </div>
       </div>
@@ -278,41 +278,41 @@ function ServerDetailsModal({ server, onClose, getHealthStyles }) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <MetricBlock icon={Cpu} label="CPU Load" value="24%" sub="Stable" />
-            <MetricBlock icon={HardDrive} label="Disk Usage" value="62%" sub="High Velocity" />
-            <MetricBlock icon={Network} label="Network In" value="1.2 GB/s" sub="Uplink Active" />
+            <MetricBlock icon={Cpu} label={t('serversList.cpu_load')} value="24%" sub={t('serversList.stable')} />
+            <MetricBlock icon={HardDrive} label={t('serversList.disk_usage')} value="62%" sub={t('serversList.high_velocity')} />
+            <MetricBlock icon={Network} label={t('serversList.network_in')} value="1.2 GB/s" sub={t('serversList.uplink_active')} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="bg-slate-950 border border-slate-800 rounded-3xl p-8">
                 <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                     <RefreshCw className="w-5 h-5 text-indigo-500" />
-                    Deployment Stats
+                    {t('serversList.deployment_stats')}
                 </h3>
                 <div className="space-y-4">
-                    <InfoRow label="Endpoint URL" value={server.url} mono />
-                    <InfoRow label="Assigned Tenant" value={server.tenant_name || 'Global'} />
-                    <InfoRow label="Average Ping" value={`${server.response_time_ms}ms`} />
-                    <InfoRow label="Total Uptime" value="99.98%" />
+                    <InfoRow label={t('serversList.endpoint_url')} value={server.url} mono />
+                    <InfoRow label={t('serversList.assigned_tenant')} value={server.tenant_name || t('serversList.global')} />
+                    <InfoRow label={t('serversList.average_ping')} value={`${server.response_time_ms}ms`} />
+                    <InfoRow label={t('serversList.total_uptime')} value="99.98%" />
                 </div>
             </div>
 
             <div className="bg-slate-950 border border-slate-800 rounded-3xl p-8">
                 <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                     <Clock className="w-5 h-5 text-rose-500" />
-                    Recent Logs
+                    {t('serversList.recent_logs')}
                 </h3>
                 <div className="space-y-3">
-                    <LogEntry time="2m ago" msg="Health check completed" type="success" />
-                    <LogEntry time="15m ago" msg="Database connection pool refreshed" type="info" />
-                    <LogEntry time="1h ago" msg="Periodic background scan finished" type="info" />
-                    <LogEntry time="3h ago" msg="System updated to v4.2.1" type="warning" />
+                    <LogEntry time={t('serversList.time_2m')} msg={t('serversList.log_health_check')} type="success" />
+                    <LogEntry time={t('serversList.time_15m')} msg={t('serversList.log_db_pool')} type="info" />
+                    <LogEntry time={t('serversList.time_1h')} msg={t('serversList.log_background_scan')} type="info" />
+                    <LogEntry time={t('serversList.time_3h')} msg={t('serversList.log_system_update')} type="warning" />
                 </div>
             </div>
           </div>
 
           <button onClick={onClose} className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-indigo-900/20 transition-all">
-            Close Console
+            {t('serversList.close_console')}
           </button>
         </div>
       </div>

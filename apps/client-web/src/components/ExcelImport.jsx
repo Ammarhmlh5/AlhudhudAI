@@ -2,8 +2,10 @@ import React, { useState, useRef } from 'react';
 import { FileSpreadsheet, Upload, AlertCircle, CheckCircle, X, ChevronRight, Settings } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import apiClient from '../api/axios';
+import { useTranslation } from 'react-i18next';
 
 const ExcelImport = () => {
+    const { t } = useTranslation();
     const [dragActive, setDragActive] = useState(false);
     const [file, setFile] = useState(null);
     const [uploading, setUploading] = useState(false);
@@ -106,7 +108,7 @@ const ExcelImport = () => {
         if (ingestionPayload.messages.length === 0) {
             setUploadStatus('error');
             setUploading(false);
-            alert("No valid rows found. Please check mapping.");
+            alert(t('excelImport.no_valid_rows'));
             return;
         }
 
@@ -192,7 +194,7 @@ const ExcelImport = () => {
                         <div className="glass-card p-8">
                             <div className="flex items-center gap-3 mb-6">
                                 <Settings className="w-5 h-5 text-rose-500" />
-                                <h3 className="text-lg font-bold">ربط الأعمدة (Column Mapping)</h3>
+                                <h3 className="text-lg font-bold">{t('excelImport.column_mapping')}</h3>
                             </div>
 
                             <div className="grid md:grid-cols-2 gap-8">
@@ -280,8 +282,8 @@ const ExcelImport = () => {
                                             {columns.map(col => (
                                                 <th key={col} className={`px-6 py-4 ${mapping.phone === col ? 'text-blue-400 bg-blue-500/5' : ''} ${mapping.message === col ? 'text-purple-400 bg-purple-500/5' : ''}`}>
                                                     {col}
-                                                    {mapping.phone === col && <span className="ml-2 inline-block px-2 py-0.5 bg-blue-500/20 rounded text-[9px] text-blue-300">Phone</span>}
-                                                    {mapping.message === col && <span className="ml-2 inline-block px-2 py-0.5 bg-purple-500/20 rounded text-[9px] text-purple-300">Message</span>}
+                                                    {mapping.phone === col && <span className="ml-2 inline-block px-2 py-0.5 bg-blue-500/20 rounded text-[9px] text-blue-300">{t('excelImport.phone_badge')}</span>}
+                                                    {mapping.message === col && <span className="ml-2 inline-block px-2 py-0.5 bg-purple-500/20 rounded text-[9px] text-purple-300">{t('excelImport.message_badge')}</span>}
                                                 </th>
                                             ))}
                                         </tr>

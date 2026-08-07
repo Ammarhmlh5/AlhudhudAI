@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { FileText, TrendingUp, Globe, Smartphone } from 'lucide-react';
 import { API_BASE_URL } from '../config';
+import { useTranslation } from 'react-i18next';
 
 export default function TariffSummary() {
+    const { t } = useTranslation();
     const [tariffs, setTariffs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
@@ -46,7 +48,7 @@ export default function TariffSummary() {
     if (loading) {
         return (
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8">
-                <div className="text-center py-8 text-slate-500">Loading tariffs...</div>
+                <div className="text-center py-8 text-slate-500">{t('tariffSummary.loading_tariffs')}</div>
             </div>
         );
     }
@@ -59,18 +61,18 @@ export default function TariffSummary() {
                         <FileText className="w-6 h-6 text-rose-500" />
                     </div>
                     <div>
-                        <h2 className="text-xl font-black text-white">Active Tariffs</h2>
-                        <p className="text-xs text-slate-500">Current pricing rates</p>
+                        <h2 className="text-xl font-black text-white">{t('tariffSummary.title')}</h2>
+                        <p className="text-xs text-slate-500">{t('tariffSummary.description')}</p>
                     </div>
                 </div>
                 <div className="flex gap-4">
                     <div className="text-right">
                         <div className="text-2xl font-black text-white">{stats.active_tariffs}</div>
-                        <div className="text-xs text-slate-500">Active</div>
+                        <div className="text-xs text-slate-500">{t('tariffSummary.active')}</div>
                     </div>
                     <div className="text-right">
                         <div className="text-2xl font-black text-emerald-400">${stats.avg_rate.toFixed(3)}</div>
-                        <div className="text-xs text-slate-500">Avg Rate</div>
+                        <div className="text-xs text-slate-500">{t('tariffSummary.avg_rate')}</div>
                     </div>
                 </div>
             </div>
@@ -78,7 +80,7 @@ export default function TariffSummary() {
             {tariffs.length === 0 ? (
                 <div className="text-center py-8 text-slate-500">
                     <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p>No tariffs configured yet</p>
+                    <p>{t('tariffSummary.no_tariffs')}</p>
                 </div>
             ) : (
                 <div className="space-y-3">
@@ -97,10 +99,10 @@ export default function TariffSummary() {
                                 </div>
                                 <div>
                                     <div className="font-bold text-white">
-                                        {tariff.country_code} - {tariff.network_operator || 'All Networks'}
+                                        {tariff.country_code} - {tariff.network_operator || t('tariffSummary.all_networks')}
                                     </div>
                                     <div className="text-xs text-slate-500">
-                                        {tariff.message_type || 'Standard'} Message
+                                        {t('tariffSummary.message_label', { type: tariff.message_type === 'unicode' ? t('tariffSummary.message_type_unicode') : t('tariffSummary.message_type_standard') })}
                                     </div>
                                 </div>
                             </div>
@@ -109,7 +111,7 @@ export default function TariffSummary() {
                                     ${parseFloat(tariff.cost_per_message || 0).toFixed(4)}
                                 </div>
                                 <div className={`text-xs ${tariff.is_active ? 'text-emerald-500' : 'text-slate-500'}`}>
-                                    {tariff.is_active ? 'Active' : 'Inactive'}
+                                    {tariff.is_active ? t('tariffSummary.active') : t('tariffSummary.inactive')}
                                 </div>
                             </div>
                         </div>
@@ -122,7 +124,7 @@ export default function TariffSummary() {
                     href="/tariffs"
                     className="text-sm text-rose-400 hover:text-rose-300 font-bold flex items-center gap-2 transition-colors"
                 >
-                    View All Tariffs
+                    {t('tariffSummary.view_all_tariffs')}
                     <TrendingUp className="w-4 h-4" />
                 </a>
             </div>

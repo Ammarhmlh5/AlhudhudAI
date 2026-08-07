@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { Users, UserPlus, Shield, Activity, Lock, Eye, Edit, Trash, CheckSquare, Search, FileText, Plus, Download, XCircle } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import apiClient from '../api/axios';
+import { useTranslation } from 'react-i18next';
 
 export default function StaffManager() {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState('list');
     const [showModal, setShowModal] = useState(false);
 
@@ -62,7 +64,10 @@ export default function StaffManager() {
 
     const handleBulkAction = async (action) => {
         if (!selectedIds.length) return;
-        if (!confirm(`Are you sure you want to ${action} ${selectedIds.length} staff members?`)) return;
+        if (!confirm(t('staffManager.bulk_confirm', {
+            action: t(`staffManager.action_${action}`),
+            count: selectedIds.length
+        }))) return;
 
         try {
             const url = action === 'delete' 
@@ -91,22 +96,22 @@ export default function StaffManager() {
     };
 
     const allPermissions = [
-        { module: 'Dashboard', actions: ['view_stats'] },
-        { module: 'Tenants', actions: ['view_list', 'edit_tenant', 'suspend_tenant'] },
-        { module: 'Finance', actions: ['view_income', 'approve_payments', 'refund_payments'] },
-        { module: 'Support', actions: ['view_tickets', 'reply_tickets', 'delete_tickets'] },
-        { module: 'System', actions: ['manage_staff', 'manage_gateways', 'view_logs'] },
+        { module: t('staffManager.module_dashboard'), actions: ['view_stats'] },
+        { module: t('staffManager.module_tenants'), actions: ['view_list', 'edit_tenant', 'suspend_tenant'] },
+        { module: t('staffManager.module_finance'), actions: ['view_finances', 'view_income', 'approve_payments', 'refund_payments'] },
+        { module: t('staffManager.module_support'), actions: ['view_tickets', 'reply_tickets', 'delete_tickets'] },
+        { module: t('staffManager.module_system'), actions: ['manage_staff', 'manage_gateways', 'view_logs'] },
     ];
 
     const exportToCSV = () => {
-        const headers = ['Name', 'Email', 'Role', 'Status', 'Department'];
+        const headers = [t('staffManager.col_employee'), t('staffManager.col_role'), 'Email', t('staffManager.col_status'), t('staffManager.col_department')];
         const csvContent = [
             headers.join(','),
             ...users.map(u => [
                 `"${u.full_name || u.name || ''}"`,
                 `"${u.user?.email || u.email || ''}"`,
                 `"${u.role?.name || u.role || ''}"`,
-                `"${u.is_active || u.status === 'Active' ? 'Active' : 'Deactivated'}"`,
+                `"${u.is_active || u.status === 'Active' ? t('staffManager.active') : t('staffManager.deactivated')}"`,
                 `"${u.department || u.last_login || ''}"`
             ].join(','))
         ].join('\n');
@@ -135,14 +140,14 @@ export default function StaffManager() {
                 <div>
                     <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                         <Users className="w-6 h-6 text-rose-500" />
-                        Staff & Permissions
+                        {t('staffManager.title')}
                     </h2>
-                    <p className="text-slate-400 text-sm mt-1">Manage employees, define access roles, and audit activities.</p>
+                    <p className="text-slate-400 text-sm mt-1">{t('staffManager.description')}</p>
                 </div>
                 <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
-                    <button onClick={() => setActiveTab('list')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'list' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>Staff List</button>
-                    <button onClick={() => setActiveTab('roles')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'roles' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>Roles & Access</button>
-                    <button onClick={() => setActiveTab('logs')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'logs' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>Activity Reports</button>
+                    <button onClick={() => setActiveTab('list')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'list' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>{t('staffManager.tab_list')}</button>
+                    <button onClick={() => setActiveTab('roles')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'roles' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>{t('staffManager.tab_roles')}</button>
+                    <button onClick={() => setActiveTab('logs')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'logs' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>{t('staffManager.tab_logs')}</button>
                 </div>
             </div>
 
@@ -154,7 +159,7 @@ export default function StaffManager() {
                                 <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3.5" />
                                 <input
                                     type="text"
-                                    placeholder="Search staff..."
+                                    placeholder={t('staffManager.search_placeholder')}
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-rose-500 outline-none w-64"
@@ -166,7 +171,7 @@ export default function StaffManager() {
                                 onChange={handleFilterChange}
                                 className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-300 focus:ring-1 focus:ring-rose-500 outline-none w-40"
                             >
-                                <option value="">All Roles</option>
+                                <option value="">{t('staffManager.all_roles')}</option>
                                 {roles.map(r => (
                                     <option key={r.id} value={r.id}>{r.name}</option>
                                 ))}
@@ -177,21 +182,21 @@ export default function StaffManager() {
                                 onChange={handleFilterChange}
                                 className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-300 focus:ring-1 focus:ring-rose-500 outline-none w-40"
                             >
-                                <option value="">All Departments</option>
-                                <option value="Management">Management</option>
-                                <option value="IT">IT</option>
-                                <option value="Support">Support</option>
-                                <option value="Sales">Sales</option>
-                                <option value="Finance">Finance</option>
-                                <option value="Marketing">Marketing</option>
-                                <option value="Customer Success">Customer Success</option>
+                                <option value="">{t('staffManager.all_departments')}</option>
+                                <option value="Management">{t('staffManager.department_management')}</option>
+                                <option value="IT">{t('staffManager.department_it')}</option>
+                                <option value="Support">{t('staffManager.department_support')}</option>
+                                <option value="Sales">{t('staffManager.department_sales')}</option>
+                                <option value="Finance">{t('staffManager.department_finance')}</option>
+                                <option value="Marketing">{t('staffManager.department_marketing')}</option>
+                                <option value="Customer Success">{t('staffManager.department_customer_success')}</option>
                             </select>
-                            <button onClick={exportToCSV} className="p-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition-colors" title="Export to CSV">
+                            <button onClick={exportToCSV} className="p-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition-colors" title={t('staffManager.export_csv')}>
                                 <Download className="w-4 h-4" />
                             </button>
                         </div>
                         <button onClick={() => setShowModal(true)} className="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shrink-0">
-                            <UserPlus className="w-4 h-4" /> Add New Staff
+                            <UserPlus className="w-4 h-4" /> {t('staffManager.add_new_staff')}
                         </button>
                     </div>
                     <div className="overflow-x-auto w-full">
@@ -201,11 +206,11 @@ export default function StaffManager() {
                                 <th className="px-6 py-4 w-10">
                                     <CheckSquare className="w-4 h-4 opacity-20" />
                                 </th>
-                                <th className="px-6 py-4">Employee</th>
-                                <th className="px-6 py-4">Role</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4">Department</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
+                                <th className="px-6 py-4">{t('staffManager.col_employee')}</th>
+                                <th className="px-6 py-4">{t('staffManager.col_role')}</th>
+                                <th className="px-6 py-4">{t('staffManager.col_status')}</th>
+                                <th className="px-6 py-4">{t('staffManager.col_department')}</th>
+                                <th className="px-6 py-4 text-right">{t('staffManager.col_actions')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800 text-slate-300">
@@ -231,7 +236,7 @@ export default function StaffManager() {
                                     <td className="px-6 py-4">
                                         <span className={`text-xs font-bold flex items-center gap-1 ${user.is_active || user.status === 'Active' ? 'text-emerald-400' : 'text-slate-500'}`}>
                                             <span className={`w-2 h-2 rounded-full ${user.is_active || user.status === 'Active' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-600'}`} /> 
-                                            {user.is_active || user.status === 'Active' ? 'Active' : 'Deactivated'}
+                                            {user.is_active || user.status === 'Active' ? t('staffManager.active') : t('staffManager.deactivated')}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-xs font-mono text-slate-500">{user.department || user.last_login || '-'}</td>
@@ -247,14 +252,14 @@ export default function StaffManager() {
                     {selectedIds.length > 0 && (
                         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-700 shadow-2xl rounded-2xl p-4 flex items-center gap-6 animate-in slide-in-from-bottom-8 z-50">
                             <div className="text-sm font-bold text-white pl-2">
-                                <span className="text-rose-500">{selectedIds.length}</span> Staff Selected
+                                <span className="text-rose-500">{selectedIds.length}</span> {t('staffManager.staff_selected')}
                             </div>
                             <div className="h-8 w-px bg-slate-800" />
                             <div className="flex gap-2">
-                                <button onClick={() => handleBulkAction('activate')} className="px-4 py-2 bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-xl text-xs font-bold transition-all">Activate</button>
-                                <button onClick={() => handleBulkAction('deactivate')} className="px-4 py-2 bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white rounded-xl text-xs font-bold transition-all">Deactivate</button>
+                                <button onClick={() => handleBulkAction('activate')} className="px-4 py-2 bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-xl text-xs font-bold transition-all">{t('staffManager.activate')}</button>
+                                <button onClick={() => handleBulkAction('deactivate')} className="px-4 py-2 bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white rounded-xl text-xs font-bold transition-all">{t('staffManager.deactivate')}</button>
                                 <button onClick={() => handleBulkAction('delete')} className="px-4 py-2 bg-rose-600/10 text-rose-400 hover:bg-rose-600 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2">
-                                    <Trash className="w-3 h-3" /> Delete
+                                    <Trash className="w-3 h-3" /> {t('staffManager.delete')}
                                 </button>
                             </div>
                             <button onClick={() => setSelectedIds([])} className="p-2 text-slate-500 hover:text-white transition-colors">
@@ -275,11 +280,11 @@ export default function StaffManager() {
                                     <h4 className="font-bold text-white">{role.name}</h4>
                                     <Shield className="w-4 h-4 text-slate-500 group-hover:text-rose-500 transition-colors" />
                                 </div>
-                                <p className="text-xs text-slate-500 mt-2">{role.permissions.includes('all') ? 'Full System Access' : `${role.permissions.length} Limited Permissions`}</p>
+                                <p className="text-xs text-slate-500 mt-2">{role.permissions.includes('all') ? t('staffManager.full_system_access') : t('staffManager.limited_permissions', { count: role.permissions.length })}</p>
                             </div>
                         ))}
                         <button className="w-full py-3 border border-dashed border-slate-700 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors text-sm font-bold flex items-center justify-center gap-2">
-                            <Plus className="w-4 h-4" /> Create New Role
+                            <Plus className="w-4 h-4" /> {t('staffManager.create_new_role')}
                         </button>
                     </div>
 
@@ -287,7 +292,7 @@ export default function StaffManager() {
                     <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-3xl p-6">
                         <h3 className="font-bold text-white mb-6 flex items-center gap-2">
                             <Lock className="w-5 h-5 text-rose-500" />
-                            Access Control Matrix
+                            {t('staffManager.access_control_matrix')}
                         </h3>
                         <div className="space-y-6">
                             {allPermissions.map((mod, idx) => (
@@ -315,7 +320,7 @@ export default function StaffManager() {
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-lg font-bold text-white flex items-center gap-2">
                             <Activity className="w-5 h-5 text-rose-500" />
-                            Audit Log & Activity
+                            {t('staffManager.audit_log')}
                         </h3>
                         <div className="flex gap-2">
                             <input type="date" className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1 text-xs text-white" />
@@ -335,7 +340,7 @@ export default function StaffManager() {
                                         <div className="text-xs text-slate-500 mt-0.5 font-mono">{log.time}</div>
                                     </div>
                                 </div>
-                                <button className="text-xs text-slate-500 hover:text-white underline">Details</button>
+                                <button className="text-xs text-slate-500 hover:text-white underline">{t('staffManager.details')}</button>
                             </div>
                         ))}
                     </div>
@@ -345,28 +350,28 @@ export default function StaffManager() {
             {showModal && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-md w-full animate-in fade-in zoom-in-95">
-                        <h3 className="text-xl font-bold text-white mb-6">Add New Staff Member</h3>
+                        <h3 className="text-xl font-bold text-white mb-6">{t('staffManager.add_new_staff_member')}</h3>
                         <div className="space-y-4">
                             <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Full Name</label>
+                                <label className="text-xs font-bold text-slate-500 uppercase block mb-2">{t('staffManager.full_name')}</label>
                                 <input type="text" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500" />
                             </div>
                             <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Email Address</label>
+                                <label className="text-xs font-bold text-slate-500 uppercase block mb-2">{t('staffManager.email_address')}</label>
                                 <input type="email" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500" />
                             </div>
                             <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Assign Role</label>
+                                <label className="text-xs font-bold text-slate-500 uppercase block mb-2">{t('staffManager.assign_role')}</label>
                                 <select className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500">
-                                    <option>Support Agent</option>
-                                    <option>Accountant</option>
-                                    <option>Tech Admin</option>
+                                    <option>{t('staffManager.role_support_agent')}</option>
+                                    <option>{t('staffManager.role_accountant')}</option>
+                                    <option>{t('staffManager.role_tech_admin')}</option>
                                 </select>
                             </div>
                         </div>
                         <div className="flex gap-3 mt-8">
-                            <button onClick={() => setShowModal(false)} className="flex-1 py-3 text-slate-400 font-bold hover:text-white transition-colors">Cancel</button>
-                            <button className="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold transition-colors shadow-lg shadow-rose-900/20">Create Account</button>
+                            <button onClick={() => setShowModal(false)} className="flex-1 py-3 text-slate-400 font-bold hover:text-white transition-colors">{t('staffManager.cancel')}</button>
+                            <button className="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold transition-colors shadow-lg shadow-rose-900/20">{t('staffManager.create_account')}</button>
                         </div>
                     </div>
                 </div>

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../api/axios';
 import { Wallet, Zap, AlertCircle, Loader } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const SubscriptionInfo = () => {
+    const { t } = useTranslation();
     const [financeData, setFinanceData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -75,7 +77,7 @@ const SubscriptionInfo = () => {
                 {/* Cash Balance */}
                 <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/30 border border-slate-800/50">
                     <div>
-                        <p className="text-xs text-slate-500 mb-1">الرصيد النقدي (Cash)</p>
+                        <p className="text-xs text-slate-500 mb-1">{t('subscriptionInfo.cash_balance')}</p>
                         <p className="text-xl font-black text-white">
                             {financeData.cash?.toFixed(2)}{" "}
                             <span className="text-xs text-slate-500">{financeData.currency}</span>
@@ -89,7 +91,7 @@ const SubscriptionInfo = () => {
                         <Zap className="w-5 h-5 text-blue-400" />
                     </div>
                     <div className="flex-1">
-                        <p className="text-xs text-slate-500 mb-1">رصيد الرسائل (Quota)</p>
+                        <p className="text-xs text-slate-500 mb-1">{t('subscriptionInfo.quota_balance')}</p>
                         <p className="text-sm font-bold text-white">
                             {financeData.quota?.toLocaleString()} رسالة
                         </p>

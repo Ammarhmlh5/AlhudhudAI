@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { FileText, Plus, Edit, Trash2, Globe, Check, X, Calendar } from 'lucide-react';
 import { API_BASE_URL } from '../config';
+import { useTranslation } from 'react-i18next';
 
 export default function TariffSettings() {
+    const { t } = useTranslation();
     const [tariffs, setTariffs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -78,7 +80,7 @@ export default function TariffSettings() {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('Are you sure you want to delete this tariff?')) return;
+        if (!confirm(t('tariffSettings.delete_confirm'))) return;
         
         try {
             const res = await fetch(`${API_BASE_URL}/api/v1/admin/tariffs/${id}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
@@ -109,7 +111,7 @@ export default function TariffSettings() {
 
     if (loading) {
         return (
-            <div className="text-center py-12 text-slate-500">Loading tariffs...</div>
+            <div className="text-center py-12 text-slate-500">{t('tariffSettings.loading_tariffs')}</div>
         );
     }
 
@@ -119,15 +121,15 @@ export default function TariffSettings() {
                 <div>
                     <h3 className="text-xl font-black text-white flex items-center gap-2">
                         <FileText className="w-5 h-5 text-rose-500" />
-                        Tariff Management
+                        {t('tariffSettings.title')}
                     </h3>
-                    <p className="text-sm text-slate-500 mt-1">Configure pricing rates for different networks and countries</p>
+                    <p className="text-sm text-slate-500 mt-1">{t('tariffSettings.description')}</p>
                 </div>
                 <button
                     onClick={() => setShowModal(true)}
                     className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold text-sm transition-colors shadow-lg shadow-rose-900/20 flex items-center gap-2"
                 >
-                    <Plus className="w-4 h-4" /> Add Tariff
+                    <Plus className="w-4 h-4" /> {t('tariffSettings.add_tariff')}
                 </button>
             </div>
 
@@ -136,12 +138,12 @@ export default function TariffSettings() {
 <table className="w-full text-left">
                     <thead className="bg-slate-800/50 text-slate-400 text-[10px] uppercase tracking-widest font-bold">
                         <tr>
-                            <th className="px-6 py-4">Country/Network</th>
-                            <th className="px-6 py-4">Type</th>
-                            <th className="px-6 py-4">Rate</th>
-                            <th className="px-6 py-4">Effective From</th>
-                            <th className="px-6 py-4">Status</th>
-                            <th className="px-6 py-4 text-right">Actions</th>
+                            <th className="px-6 py-4">{t('tariffSettings.col_country_network')}</th>
+                            <th className="px-6 py-4">{t('tariffSettings.col_type')}</th>
+                            <th className="px-6 py-4">{t('tariffSettings.col_rate')}</th>
+                            <th className="px-6 py-4">{t('tariffSettings.col_effective_from')}</th>
+                            <th className="px-6 py-4">{t('tariffSettings.col_status')}</th>
+                            <th className="px-6 py-4 text-right">{t('tariffSettings.col_actions')}</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800 text-slate-300">
@@ -149,7 +151,7 @@ export default function TariffSettings() {
                             <tr>
                                 <td colSpan="6" className="px-6 py-12 text-center text-slate-500">
                                     <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                                    <p>No tariffs configured yet</p>
+                                    <p>{t('tariffSettings.no_tariffs')}</p>
                                 </td>
                             </tr>
                         ) : (
@@ -163,14 +165,14 @@ export default function TariffSettings() {
                                             <div>
                                                 <div className="font-bold text-white">{tariff.country_code}</div>
                                                 <div className="text-xs text-slate-500">
-                                                    {tariff.network_operator || 'All Networks'}
+                                                    {tariff.network_operator || t('tariffSettings.all_networks')}
                                                 </div>
                                             </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className="px-2 py-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-300">
-                                            {tariff.message_type || 'Standard'}
+                                            {tariff.message_type || t('tariffSettings.message_type_standard')}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
@@ -181,7 +183,7 @@ export default function TariffSettings() {
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2 text-xs text-slate-400">
                                             <Calendar className="w-4 h-4" />
-                                            {tariff.effective_from || 'N/A'}
+                                            {tariff.effective_from || t('tariffSettings.na')}
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
@@ -191,7 +193,7 @@ export default function TariffSettings() {
                                             <div className={`w-1.5 h-1.5 rounded-full ${
                                                 tariff.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'
                                             }`} />
-                                            {tariff.is_active ? 'Active' : 'Inactive'}
+                                            {tariff.is_active ? t('tariffSettings.active') : t('tariffSettings.inactive')}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right">
@@ -229,9 +231,9 @@ export default function TariffSettings() {
                                 </div>
                                 <div>
                                     <h3 className="text-xl font-bold text-white">
-                                        {editingTariff ? 'Edit Tariff' : 'Add New Tariff'}
+                                        {editingTariff ? t('tariffSettings.edit_tariff') : t('tariffSettings.add_new_tariff')}
                                     </h3>
-                                    <p className="text-xs text-slate-500">Configure pricing rate</p>
+                                    <p className="text-xs text-slate-500">{t('tariffSettings.configure_rate')}</p>
                                 </div>
                             </div>
                             <button
@@ -246,7 +248,7 @@ export default function TariffSettings() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-xs font-bold text-slate-500 uppercase block mb-2">
-                                        Country Code
+                                        {t('tariffSettings.country_code')}
                                     </label>
                                     <input
                                         type="text"
@@ -260,14 +262,14 @@ export default function TariffSettings() {
 
                                 <div>
                                     <label className="text-xs font-bold text-slate-500 uppercase block mb-2">
-                                        Network Operator
+                                        {t('tariffSettings.network_operator')}
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.network_operator}
                                         onChange={(e) => setFormData({...formData, network_operator: e.target.value})}
                                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500"
-                                        placeholder="Yemen Mobile (optional)"
+                                        placeholder={t('tariffSettings.network_operator_placeholder')}
                                     />
                                 </div>
                             </div>
@@ -275,21 +277,21 @@ export default function TariffSettings() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-xs font-bold text-slate-500 uppercase block mb-2">
-                                        Message Type
+                                        {t('tariffSettings.message_type')}
                                     </label>
                                     <select
                                         value={formData.message_type}
                                         onChange={(e) => setFormData({...formData, message_type: e.target.value})}
                                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500"
                                     >
-                                        <option value="standard">Standard</option>
-                                        <option value="unicode">Unicode</option>
+                                        <option value="standard">{t('tariffSettings.option_standard')}</option>
+                                        <option value="unicode">{t('tariffSettings.option_unicode')}</option>
                                     </select>
                                 </div>
 
                                 <div>
                                     <label className="text-xs font-bold text-slate-500 uppercase block mb-2">
-                                        Currency
+                                        {t('tariffSettings.currency')}
                                     </label>
                                     <select
                                         value={formData.currency}
@@ -306,7 +308,7 @@ export default function TariffSettings() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-xs font-bold text-slate-500 uppercase block mb-2">
-                                        Cost Per Message
+                                        {t('tariffSettings.cost_per_message')}
                                     </label>
                                     <input
                                         type="number"
@@ -321,7 +323,7 @@ export default function TariffSettings() {
 
                                 <div>
                                     <label className="text-xs font-bold text-slate-500 uppercase block mb-2">
-                                        Effective From
+                                        {t('tariffSettings.effective_from')}
                                     </label>
                                     <input
                                         type="date"
@@ -342,7 +344,7 @@ export default function TariffSettings() {
                                     className="w-5 h-5 rounded bg-slate-800 border-slate-700 text-rose-500 focus:ring-rose-500"
                                 />
                                 <label htmlFor="is_active" className="text-sm text-white font-medium cursor-pointer">
-                                    Active (Apply this tariff immediately)
+                                    {t('tariffSettings.active_label')}
                                 </label>
                             </div>
 
@@ -352,14 +354,14 @@ export default function TariffSettings() {
                                     onClick={handleCloseModal}
                                     className="flex-1 py-3 text-slate-400 font-bold hover:text-white transition-colors"
                                 >
-                                    Cancel
+                                    {t('tariffSettings.cancel')}
                                 </button>
                                 <button
                                     type="submit"
                                     className="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold transition-colors shadow-lg shadow-rose-900/20 flex items-center justify-center gap-2"
                                 >
                                     <Check className="w-4 h-4" />
-                                    {editingTariff ? 'Update Tariff' : 'Create Tariff'}
+                                    {editingTariff ? t('tariffSettings.update_tariff') : t('tariffSettings.create_tariff')}
                                 </button>
                             </div>
                         </form>

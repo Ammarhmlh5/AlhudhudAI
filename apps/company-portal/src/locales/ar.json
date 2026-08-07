@@ -1,0 +1,71 @@
+{
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "invoices": "الفواتير",
+    "settings": "الإعدادات",
+    "logout": "تسجيل خروج"
+  },
+  "dashboard": {
+    "title": "بوابة الشركات",
+    "balance": "الرصيد الحالي",
+    "balance_description": "متاح للاشتراك في الباقات ودفع رسوم الخدمات",
+    "usage": "استهلاك الباقة",
+    "usage_no_subscription": "لا توجد اشتراك نشط حالياً.",
+    "subscription": "الاشتراك الحالي",
+    "subscription_no": "لا يوجد اشتراك نشط. اختر باقة من الأسفل للاشتراك.",
+    "status": "حالة الاشتراك",
+    "start_date": "بداية الفترة",
+    "end_date": "نهاية الفترة",
+    "auto_renew": "التجديد التلقائي",
+    "enable_auto_renew": "تفعيل التجديد التلقائي",
+    "disable_auto_renew": "إيقاف التجديد التلقائي",
+    "packages": "باقات الاشتراك",
+    "subscribe_now": "اشترك الآن",
+    "current_subscription": "الاشتراك الحالي",
+    "messages": "رسائل",
+    "unlimited": "غير محدودة",
+    "overage_rate": "رسوم إضافية {{rate}} لكل رسالة زائدة",
+    "rollover": "ترحيل الرسائل المتبقية",
+    "transactions": "آخر العمليات",
+    "no_transactions": "لا توجد عمليات بعد.",
+    "view_all_invoices": "عرض جميع الفواتير"
+  },
+  "invoices": {
+    "title": "الفواتير",
+    "description": "عرض وتحميل الفواتير الضريبية",
+    "no_invoices": "لا توجد فواتير",
+    "no_invoices_desc": "لم يتم إصدار أي فواتير بعد.",
+    "invoice_number": "رقم الفاتورة",
+    "customer": "العميل",
+    "amount": "المبلغ",
+    "vat": "الضريبة",
+    "total": "الإجمالي",
+    "date": "التاريخ",
+    "actions": "الإجراءات",
+    "view": "عرض",
+    "download": "تحميل",
+    "currency": "ر.س"
+  },
+  "common": {
+    "loading": "جاري التحميل...",
+    "error": "حدث خطأ",
+    "success": "نجاح",
+    "cancel": "إلغاء",
+    "confirm": "تأكيد",
+    "save": "حفظ",
+    "close": "إغلاق",
+    "enabled": "مفعّل",
+    "disabled": "متوقف",
+    "monthly": "شهرياً"
+  },
+  "dashboard": {
+    "type": "النوع",
+    "amount": "المبلغ",
+    "date": "التاريخ",
+    "messages_unlimited": "∞",
+    "remaining": "متبقي",
+    "package": "باقة",
+    "error_subscribe": "فشل الاشتراك.",
+    "error_auto_renew": "تعذّر تحديث التجديد التلقائي."
+  }
+}

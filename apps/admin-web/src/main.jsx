@@ -5,6 +5,8 @@ import './index.css'
 import './i18n'
 import App from './App.jsx'
 
+document.documentElement.setAttribute('translate', 'no');
+
 createRoot(document.getElementById('root')).render(
   <BrowserRouter>
     <AuthProvider>

@@ -24,7 +24,13 @@ type Config struct {
 	JWT           JWTConfig
 	Monitoring    MonitoringConfig
 	Grafana       GrafanaConfig
+	Finance       FinanceConfig
 	Referral      ReferralConfig
+}
+
+// FinanceConfig holds finance microservice configuration
+type FinanceConfig struct {
+	ServiceURL string
 }
 
 // DatabaseConfig holds database connection configuration
@@ -188,6 +194,9 @@ func Load() (*Config, error) {
 			AdminPassword: getEnv("GRAFANA_ADMIN_PASSWORD", ""),
 			RootURL:       getEnv("GRAFANA_ROOT_URL", ""),
 			Plugins:       getEnv("GRAFANA_PLUGINS", ""),
+		},
+		Finance: FinanceConfig{
+			ServiceURL: getEnv("FINANCE_SERVICE_URL", "http://localhost:8081"),
 		},
 		Referral: ReferralConfig{
 			Enabled:        getEnvAsBool("REFERRAL_ENABLED", true),

@@ -1,28 +1,46 @@
 package api
 
 import (
+	"context"
+	"encoding/json"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	
+
 	"github.com/al-hudhud/backend/internal/payment"
 )
 
+// PaymentManager defines the subset of Payment.Manager needed by the API handler.
+type PaymentManager interface {
+	ProcessPayment(ctx context.Context, req *payment.CreatePaymentRequest) (*payment.PaymentIntentResponse, error)
+	HandleWebhookEvent(ctx context.Context, event *payment.WebhookEvent) error
+	GetPaymentStatus(ctx context.Context, tenantID uuid.UUID, isSuperAdmin bool, transactionID string) (*payment.PaymentTransaction, error)
+	ListPaymentTransactions(ctx context.Context, tenantID uuid.UUID, isSuperAdmin bool, limit, offset int) ([]*payment.PaymentTransaction, error)
+}
+
+// PayPalClient defines the subset of PayPal client methods used by the API handler.
+type PayPalClient interface {
+	CapturePayment(ctx context.Context, orderID string) (*payment.WebhookEvent, error)
+	GetOrderDetails(ctx context.Context, orderID string) (*payment.PayPalOrder, error)
+	VerifyWebhookSignature(ctx context.Context, transmissionID, transmissionTime, transmissionSig, certURL, authAlgo, webhookID string, body []byte) (bool, error)
+}
+
 // PaymentHandler handles payment-related HTTP requests
 type PaymentHandler struct {
-	paymentManager *payment.Manager
+	paymentManager PaymentManager
 	stripeClient   *payment.StripeClient
-	paypalClient   *payment.PayPalClient
+	paypalClient   PayPalClient
 }
 
 // NewPaymentHandler creates a new payment handler
 func NewPaymentHandler(
-	paymentManager *payment.Manager,
+	paymentManager PaymentManager,
 	stripeClient *payment.StripeClient,
-	paypalClient *payment.PayPalClient,
+	paypalClient PayPalClient,
 ) *PaymentHandler {
 	return &PaymentHandler{
 		paymentManager: paymentManager,
@@ -310,9 +328,74 @@ func (ph *PaymentHandler) StripeWebhook(c *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /api/v1/webhooks/paypal [post]
 func (ph *PaymentHandler) PayPalWebhook(c *gin.Context) {
+	// Read raw body for verification
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Success: false,
+			Error: ErrorDetail{
+				Code:    "INVALID_PAYLOAD",
+				Message: "Failed to read request body",
+			},
+		})
+		return
+	}
+
+	// Extract PayPal verification headers
+	transmissionID := c.GetHeader("PayPal-Transmission-Id")
+	transmissionTime := c.GetHeader("PayPal-Transmission-Time")
+	transmissionSig := c.GetHeader("PayPal-Transmission-Sig")
+	certURL := c.GetHeader("PayPal-Cert-Url")
+	authAlgo := c.GetHeader("PayPal-Auth-Algo")
+
+	// Allow skipping signature verification in development for local testing
+	// and integration test scenarios where a webhook ID is not available.
+	skipVerify := os.Getenv("PAYPAL_SKIP_WEBHOOK_VERIFY") == "true"
+
+	webhookID := os.Getenv("PAYPAL_WEBHOOK_ID")
+	if webhookID == "" && !skipVerify {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Success: false,
+			Error: ErrorDetail{
+				Code:    "MISSING_CONFIGURATION",
+				Message: "PAYPAL_WEBHOOK_ID is not configured",
+			},
+		})
+		return
+	}
+
+	var verified bool
+	if skipVerify {
+		verified = true
+	} else {
+		var verr error
+		verified, verr = ph.paypalClient.VerifyWebhookSignature(c.Request.Context(), transmissionID, transmissionTime, transmissionSig, certURL, authAlgo, webhookID, body)
+		if verr != nil {
+			c.JSON(http.StatusInternalServerError, ErrorResponse{
+				Success: false,
+				Error: ErrorDetail{
+					Code:    "WEBHOOK_VERIFY_FAILED",
+					Message: verr.Error(),
+				},
+			})
+			return
+		}
+	}
+	
+	if !verified {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Success: false,
+			Error: ErrorDetail{
+				Code:    "WEBHOOK_NOT_VERIFIED",
+				Message: "Webhook signature could not be verified",
+			},
+		})
+		return
+	}
+
 	// Parse webhook payload
 	var webhookPayload map[string]interface{}
-	if err := c.ShouldBindJSON(&webhookPayload); err != nil {
+	if err := json.Unmarshal(body, &webhookPayload); err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{
 			Success: false,
 			Error: ErrorDetail{
@@ -338,8 +421,7 @@ func (ph *PaymentHandler) PayPalWebhook(c *gin.Context) {
 
 	// Handle different event types
 	switch eventType {
-	case "PAYMENT.CAPTURE.COMPLETED":
-		// Extract order ID
+	case "PAYMENT.CAPTURE.COMPLETED", "CHECKOUT.ORDER.COMPLETED":
 		resource, ok := webhookPayload["resource"].(map[string]interface{})
 		if !ok {
 			c.JSON(http.StatusBadRequest, ErrorResponse{
@@ -352,9 +434,13 @@ func (ph *PaymentHandler) PayPalWebhook(c *gin.Context) {
 			return
 		}
 
-		// Get order details
 		orderID, ok := resource["id"].(string)
-		if !ok {
+		if !ok || orderID == "" {
+			supplementaryData, _ := resource["supplementary_data"].(map[string]interface{})
+			relatedIDs, _ := supplementaryData["related_ids"].(map[string]interface{})
+			orderID, ok = relatedIDs["order_id"].(string)
+		}
+		if !ok || orderID == "" {
 			c.JSON(http.StatusBadRequest, ErrorResponse{
 				Success: false,
 				Error: ErrorDetail{
@@ -365,20 +451,55 @@ func (ph *PaymentHandler) PayPalWebhook(c *gin.Context) {
 			return
 		}
 
-		// Capture payment
-		event, err := ph.paypalClient.CapturePayment(c.Request.Context(), orderID)
+		order, err := ph.paypalClient.GetOrderDetails(c.Request.Context(), orderID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, ErrorResponse{
 				Success: false,
 				Error: ErrorDetail{
-					Code:    "CAPTURE_FAILED",
+					Code:    "ORDER_LOOKUP_FAILED",
 					Message: err.Error(),
 				},
 			})
 			return
 		}
 
-		// Process webhook event
+		transactionID := ""
+		amount := 0.0
+		currency := ""
+		if len(order.PurchaseUnits) > 0 {
+			transactionID = order.PurchaseUnits[0].ReferenceID
+			currency = order.PurchaseUnits[0].Amount.CurrencyCode
+			amount, _ = strconv.ParseFloat(order.PurchaseUnits[0].Amount.Value, 64)
+		}
+		if transactionID == "" {
+			c.JSON(http.StatusBadRequest, ErrorResponse{
+				Success: false,
+				Error: ErrorDetail{
+					Code:    "MISSING_TRANSACTION_ID",
+					Message: "Transaction reference is required",
+				},
+			})
+			return
+		}
+
+		status := payment.StatusFailed
+		if eventType == "PAYMENT.CAPTURE.COMPLETED" || order.Status == "COMPLETED" {
+			status = payment.StatusCompleted
+		}
+
+		event := &payment.WebhookEvent{
+			Gateway:       payment.GatewayPayPal,
+			EventType:     eventType,
+			TransactionID: transactionID,
+			Status:        status,
+			Amount:        amount,
+			Currency:      currency,
+			Metadata: map[string]interface{}{
+				"paypal_order_id": order.ID,
+				"paypal_status":   order.Status,
+			},
+		}
+
 		if err := ph.paymentManager.HandleWebhookEvent(c.Request.Context(), event); err != nil {
 			c.JSON(http.StatusInternalServerError, ErrorResponse{
 				Success: false,
